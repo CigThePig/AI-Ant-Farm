@@ -435,6 +435,50 @@ function resetSimulation() {
 // ANT CLASS
 // ==============================
 
+function spreadQueenScent(qgx, qgy) {
+  const coreRadius = 3;
+  const reachRadius = 6;
+
+  // Anchor the queen's own tile as a solid beacon
+  scentToHome[qgy][qgx] = 1.0;
+
+  for (let dy = -reachRadius; dy <= reachRadius; dy++) {
+    const ny = qgy + dy;
+    if (ny <= 0 || ny >= CONSTANTS.GRID_H - 1) continue;
+
+    for (let dx = -reachRadius; dx <= reachRadius; dx++) {
+      const nx = qgx + dx;
+      if (nx <= 0 || nx >= CONSTANTS.GRID_W - 1) continue;
+
+      // Only let the scent flow through open spaces
+      if (grid[ny][nx] === TILES.SOIL || grid[ny][nx] === TILES.BEDROCK) continue;
+
+      const dist = Math.hypot(dx, dy);
+      if (dist > reachRadius) continue;
+
+      // Dense scent inside the chamber, softer haze creeping outward
+      let strength = 0;
+      if (dist < 0.5) strength = 0.7;
+      else if (dist <= coreRadius) strength = 0.35 + (coreRadius - dist) * 0.08;
+      else strength = Math.max(0.12, 0.22 - (dist - coreRadius) * 0.025);
+
+      scentToHome[ny][nx] = Math.min(1.0, scentToHome[ny][nx] + strength);
+    }
+  }
+
+  // A little push toward the entrance (upward toward the surface)
+  for (let step = 1; step <= 4; step++) {
+    const ny = qgy - step;
+    if (ny <= 0) break;
+    const nx = qgx;
+
+    if (grid[ny][nx] === TILES.SOIL || grid[ny][nx] === TILES.BEDROCK) break;
+
+    const taper = 0.35 - (step - 1) * 0.06;
+    scentToHome[ny][nx] = Math.min(1.0, scentToHome[ny][nx] + Math.max(0.12, taper));
+  }
+}
+
 class Ant {
   constructor(type, x, y) {
     this.type = type;
@@ -473,19 +517,7 @@ class Ant {
         qgy >= 0 && qgy < CONSTANTS.GRID_H &&
         scentToHome[qgy]
       ) {
-        scentToHome[qgy][qgx] = 1.0;
-
-        // Boost the immediate neighborhood to form a wider "home base" hotspot
-        for (let dy = -1; dy <= 1; dy++) {
-          const ny = qgy + dy;
-          if (ny < 0 || ny >= CONSTANTS.GRID_H || !scentToHome[ny]) continue;
-          for (let dx = -1; dx <= 1; dx++) {
-            const nx = qgx + dx;
-            if (nx < 0 || nx >= CONSTANTS.GRID_W) continue;
-            const strength = (dx === 0 && dy === 0) ? 1.0 : 0.9;
-            scentToHome[ny][nx] = Math.max(scentToHome[ny][nx], strength);
-          }
-        }
+        spreadQueenScent(qgx, qgy);
       }
 
       ANT_ANIM.step(this.animRig, { dt, travel: dt * 0.6, speedHint: 15 });
@@ -934,6 +966,13 @@ function loop(t) {
     for (let x = 0; x < CONSTANTS.GRID_W; x++) {
       if (scentToFood[y][x] > 0.01) scentToFood[y][x] *= decay; else scentToFood[y][x] = 0;
       if (scentToHome[y][x] > 0.01) scentToHome[y][x] *= decay; else scentToHome[y][x] = 0;
+
+      // Food emits its own attractor so ants can find it even before a trail exists
+      const foodAmount = foodGrid[y][x];
+      if (foodAmount > 0) {
+        const add = Math.min(0.5, 0.015 * foodAmount);
+        scentToFood[y][x] = Math.min(1.0, scentToFood[y][x] + add);
+      }
     }
   }
 
