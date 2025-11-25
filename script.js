@@ -766,6 +766,10 @@ function render() {
     ctx.translate(0, pose.bodyBob);
     ctx.rotate(pose.bodyTwist);
 
+    const body = (a.type === "queen") ? "#d07" : "#2a241f";
+    const body2 = (a.type === "queen") ? "#a05" : "#1b1714";
+    const hi = (a.type === "queen") ? "rgba(255,170,210,0.20)" : "rgba(255,255,255,0.10)";
+
     ctx.fillStyle = "rgba(0,0,0,0.35)";
     ctx.beginPath();
     ctx.ellipse(0, 4.8, 3.6, 2.2, 0, 0, Math.PI * 2);
@@ -775,26 +779,33 @@ function render() {
     for (const leg of pose.legs) {
       ctx.beginPath();
       // Fade leg alpha when it lifts (visual cue for stepping)
-      const alpha = 0.85 - (leg.lift * 0.5); 
+      const alpha = 0.85 - (leg.lift * 0.5);
       ctx.strokeStyle = `rgba(0,0,0,${alpha})`;
-      ctx.lineWidth = 0.8 + (1 - leg.lift)*0.4; // Thinner when lifted
+      ctx.lineWidth = 1.0 + (1 - leg.lift) * 0.5; // Thicker near the body
 
       ctx.moveTo(leg.anchor.x, leg.anchor.y);
-      
+
       // Calculate a simple "knee" joint for better visual articulation
       const midX = (leg.anchor.x + leg.foot.x) * 0.5;
       const midY = (leg.anchor.y + leg.foot.y) * 0.5;
       // Push knee outward/upward based on lift
-      const kneeOut = (leg.anchor.x > 0 ? 1 : -1) * (1.5 + leg.lift * 2.0);
-      
-      ctx.quadraticCurveTo(midX + kneeOut, midY - (leg.lift*2), leg.foot.x, leg.foot.y);
+      const kneeOut = (leg.anchor.x > 0 ? 1 : -1) * (2.4 + leg.lift * 2.6);
+      const kneeLift = 0.6 + (leg.lift * 2.4);
+
+      ctx.quadraticCurveTo(midX + kneeOut, midY - kneeLift, leg.foot.x, leg.foot.y);
       ctx.stroke();
+
+      // Shoulder pad to visually attach the leg to the thorax
+      ctx.save();
+      ctx.fillStyle = body2;
+      ctx.strokeStyle = "rgba(0,0,0,0.45)";
+      ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      ctx.ellipse(leg.anchor.x, leg.anchor.y, 1.2, 1.1, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
     }
-
-
-    const body = (a.type === "queen") ? "#d07" : "#2a241f";
-    const body2 = (a.type === "queen") ? "#a05" : "#1b1714";
-    const hi = (a.type === "queen") ? "rgba(255,170,210,0.20)" : "rgba(255,255,255,0.10)";
 
     ctx.fillStyle = body;
     ctx.strokeStyle = "rgba(0,0,0,0.55)";
