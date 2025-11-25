@@ -442,7 +442,8 @@ class Ant {
     this.angle = Math.random() * Math.PI * 2;
     this.hasFood = false;
     this.returnDir = null;
-    this.legPhase = Math.random();
+    this.animRig = ANT_ANIM.createRig(type);
+    this.stepDistance = 0;
 
     this.lastX = x; this.lastY = y;
     this.stuckT = 0;
@@ -457,6 +458,7 @@ class Ant {
   }
 
   update(dt) {
+    this.stepDistance = 0;
     if (this.type === "queen") {
       if (foodInStorage >= CONSTANTS.WORKER_COST) {
         foodInStorage -= CONSTANTS.WORKER_COST;
@@ -486,7 +488,7 @@ class Ant {
         }
       }
 
-      this.legPhase += dt * 5;
+      ANT_ANIM.step(this.animRig, { dt, travel: dt * 0.6, speedHint: 15 });
       return;
     }
 
@@ -518,7 +520,7 @@ class Ant {
 
     this.move(dt, 1.0);
     this.dropScent();
-    this.legPhase += dt * (CONFIG.workerSpeed / 3);
+    ANT_ANIM.step(this.animRig, { dt, travel: this.stepDistance, speedHint: CONFIG.workerSpeed });
   }
 
   sense(dt) {
@@ -609,8 +611,11 @@ class Ant {
         }
       }
     } else {
-      this.x += Math.cos(this.angle) * speed * dt;
-      this.y += Math.sin(this.angle) * speed * dt;
+      const dx = Math.cos(this.angle) * speed * dt;
+      const dy = Math.sin(this.angle) * speed * dt;
+      this.x += dx;
+      this.y += dy;
+      this.stepDistance = Math.hypot(dx, dy);
       this.interact();
     }
   }
@@ -757,22 +762,22 @@ function render() {
     const sc = a.type === "queen" ? 2.6 : 1.25;
     ctx.scale(sc, sc);
 
+    const pose = ANT_ANIM.getPose(a.animRig);
+    ctx.translate(0, pose.bodyBob);
+    ctx.rotate(pose.bodyTwist);
+
     ctx.fillStyle = "rgba(0,0,0,0.35)";
     ctx.beginPath();
     ctx.ellipse(0, 4.8, 3.6, 2.2, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    const w = Math.sin(a.legPhase);
-
     ctx.strokeStyle = "rgba(0,0,0,0.85)";
     ctx.lineWidth = 0.8;
     ctx.beginPath();
-    ctx.moveTo(0,-2); ctx.lineTo(-4-w,-3+w);
-    ctx.moveTo(0,0);  ctx.lineTo(-5+w,0);
-    ctx.moveTo(0,2);  ctx.lineTo(-4-w,3-w);
-    ctx.moveTo(0,-2); ctx.lineTo(4+w,-3+w);
-    ctx.moveTo(0,0);  ctx.lineTo(5-w,0);
-    ctx.moveTo(0,2);  ctx.lineTo(4+w,3-w);
+    for (const leg of pose.legs) {
+      ctx.moveTo(leg.anchor.x, leg.anchor.y);
+      ctx.lineTo(leg.foot.x, leg.foot.y);
+    }
     ctx.stroke();
 
     const body = (a.type === "queen") ? "#d07" : "#2a241f";
@@ -797,8 +802,8 @@ function render() {
     ctx.strokeStyle = "rgba(0,0,0,0.7)";
     ctx.lineWidth = 0.6;
     ctx.beginPath();
-    ctx.moveTo(-0.4, -4.0); ctx.lineTo(-1.8, -5.8);
-    ctx.moveTo( 0.4, -4.0); ctx.lineTo( 1.8, -5.8);
+    ctx.moveTo(-0.4, -4.0 - pose.headLift * 0.4); ctx.quadraticCurveTo(-1.2 - pose.antennaSway, -5.8 - pose.headLift, -2.0 - pose.antennaSway, -6.4 - pose.headLift * 0.4);
+    ctx.moveTo( 0.4, -4.0 - pose.headLift * 0.4); ctx.quadraticCurveTo( 1.2 + pose.antennaSway, -5.8 - pose.headLift,  2.0 + pose.antennaSway, -6.4 - pose.headLift * 0.4);
     ctx.stroke();
 
     if (a.hasFood) {
