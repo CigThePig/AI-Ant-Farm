@@ -462,6 +462,30 @@ class Ant {
         foodInStorage -= CONSTANTS.WORKER_COST;
         ants.push(new Ant("worker", this.x, this.y + 10));
       }
+
+      // Keep the nest as the strongest attractor by flooding the home scent map at the queen's position
+      const qgx = Math.floor(this.x / CONSTANTS.CELL_SIZE);
+      const qgy = Math.floor(this.y / CONSTANTS.CELL_SIZE);
+      if (
+        qgx >= 0 && qgx < CONSTANTS.GRID_W &&
+        qgy >= 0 && qgy < CONSTANTS.GRID_H &&
+        scentToHome[qgy]
+      ) {
+        scentToHome[qgy][qgx] = 1.0;
+
+        // Boost the immediate neighborhood to form a wider "home base" hotspot
+        for (let dy = -1; dy <= 1; dy++) {
+          const ny = qgy + dy;
+          if (ny < 0 || ny >= CONSTANTS.GRID_H || !scentToHome[ny]) continue;
+          for (let dx = -1; dx <= 1; dx++) {
+            const nx = qgx + dx;
+            if (nx < 0 || nx >= CONSTANTS.GRID_W) continue;
+            const strength = (dx === 0 && dy === 0) ? 1.0 : 0.9;
+            scentToHome[ny][nx] = Math.max(scentToHome[ny][nx], strength);
+          }
+        }
+      }
+
       this.legPhase += dt * 5;
       return;
     }
