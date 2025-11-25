@@ -19,23 +19,24 @@ const ANT_ANIM = (() => {
     0.5   // R3 (Group B)
   ];
 
-  // Adjusted anchors for a slightly wider, more stable stance
+  // Adjusted anchors to be TIGHTER to the body (closer to x=0)
+  // This prevents the "floating alongside body" look.
   const ANCHORS = {
     worker: [
-      { x: -2.5, y: -2.5 }, // L1
-      { x: -3.0, y: 0.0 },  // L2
-      { x: -2.5, y: 2.5 },  // L3
-      { x: 2.5, y: -2.5 },  // R1
-      { x: 3.0, y: 0.0 },   // R2
-      { x: 2.5, y: 2.5 },   // R3
+      { x: -1.2, y: -2.0 }, // L1 (Front)
+      { x: -1.4, y: 0.0 },  // L2 (Mid)
+      { x: -1.2, y: 2.5 },  // L3 (Back)
+      { x: 1.2, y: -2.0 },  // R1
+      { x: 1.4, y: 0.0 },   // R2
+      { x: 1.2, y: 2.5 },   // R3
     ],
     queen: [
-      { x: -4.0, y: -3.5 },
-      { x: -4.5, y: 0.0 },
-      { x: -4.0, y: 4.0 },
-      { x: 4.0, y: -3.5 },
-      { x: 4.5, y: 0.0 },
-      { x: 4.0, y: 4.0 },
+      { x: -2.0, y: -3.5 },
+      { x: -2.2, y: 0.0 },
+      { x: -2.0, y: 4.0 },
+      { x: 2.0, y: -3.5 },
+      { x: 2.2, y: 0.0 },
+      { x: 2.0, y: 4.0 },
     ]
   };
 
@@ -60,85 +61,66 @@ const ANT_ANIM = (() => {
   }
 
   function step(rig, opts) {
-    const { dt, travel = 0, speedHint = 1 } = opts;
-    
+    const { dt, travel = 0 } = opts;
+   
     // Smoothly interpolate step size based on movement
     const targetStride = clamp01(travel * 0.5); 
     rig.stepSize = lerp(rig.stepSize, targetStride, 1 - Math.exp(-dt * 10));
 
     // Calculate Global Phase
-    // Speed up animation when moving, slow idle breathe when still
     const gaitSpeed = rig.stepSize > 0.01 
-      ? (0.8 + rig.stepSize * 3.5) // Fast when moving
-      : 0.5; // Slow idle
+      ? (0.8 + rig.stepSize * 3.5) 
+      : 0.5;
       
     rig.phase = (rig.phase + dt * gaitSpeed) % 1;
 
-    // --- Body procedural animation ---
-    // Sharper, less floaty body bob based on the gait step
+    // Body Animation
     const walkBob = Math.sin(rig.phase * TAU * 2); 
     rig.bodyBob = walkBob * (0.2 + rig.stepSize * 0.4);
-    
-    // Twist body slightly into the step
     rig.bodyTwist = Math.cos(rig.phase * TAU) * 0.1 * rig.stepSize;
-    
-    // Head and Antennae (Secondary motion)
     rig.headLift = rig.stepSize * 0.5 + Math.sin(rig.phase * TAU) * 0.2;
     rig.antennaSway = Math.cos(rig.phase * TAU * 2.5) * (0.5 + rig.stepSize);
 
     const anchors = (rig.type === "queen") ? ANCHORS.queen : ANCHORS.worker;
-    const reach = (rig.type === "queen") ? 3.2 : 2.8; // Shorter reach = snappier look
-    const strideLen = (rig.type === "queen") ? 3.0 : 2.5;
+   
+    // INCREASED REACH: Since anchors are closer to body, legs must be longer
+    const reach = (rig.type === "queen") ? 5.0 : 4.5; 
+    const strideLen = (rig.type === "queen") ? 3.5 : 3.0;
 
     for (let i = 0; i < LEG_COUNT; i++) {
       const a = anchors[i];
-      
-      // Calculate local leg phase
       let legP = (rig.phase + LEG_PHASE_OFFSETS[i]) % 1;
       
-      // --- GAIT LOGIC ---
-      // 0.0 to 0.65: STANCE (Foot on ground, dragging back)
-      // 0.65 to 1.0: SWING (Foot in air, snapping forward)
-      
       const swingStart = 0.65;
-      let legOffset = 0; // -1 (back) to 1 (forward)
-      let legLift = 0;   // 0 (ground) to 1 (high)
+      let legOffset = 0; 
+      let legLift = 0;
 
       if (legP < swingStart) {
-        // STANCE PHASE: Move linearly from Front(+1) to Back(-1)
-        // This simulates the body moving forward over the planted foot
+        // STANCE
         const progress = legP / swingStart;
         legOffset = lerp(1, -1, progress);
-        legLift = 0; // Foot planted
+        legLift = 0; 
       } else {
-        // SWING PHASE: Move quickly from Back(-1) to Front(+1)
+        // SWING
         const progress = (legP - swingStart) / (1 - swingStart);
-        // Use a curve to snap the leg forward
         legOffset = lerp(-1, 1, Math.sin(progress * Math.PI / 2)); 
-        // Parabolic arc for lift
         legLift = Math.sin(progress * Math.PI); 
       }
 
-      // Apply to rig
-      // Scale movement by stepSize (if we stop, legs return to neutral 0)
       const currentStride = legOffset * strideLen * rig.stepSize;
       const currentLift = legLift * (1.5 + rig.stepSize) * rig.stepSize;
 
-      // X/Y calculations relative to body center
-      // Anchor position
       rig.legs[i].anchor.x = a.x;
       rig.legs[i].anchor.y = a.y;
 
-      // Foot Position
-      // X: Anchor X + outward reach + slight breathing motion
-      // Y: Anchor Y + stride offset
-      
       const side = a.x > 0 ? 1 : -1;
       
-      rig.legs[i].foot.x = a.x + (side * reach); 
-      rig.legs[i].foot.y = a.y + currentStride;
+      // Splay legs out slightly based on front/back position for a natural bug look
+      const splay = (i === 0 || i === 3) ? -0.5 : (i === 2 || i === 5) ? 0.5 : 0;
+      
+      rig.legs[i].foot.x = a.x + (side * reach) + (side * Math.abs(splay)*1.5); 
+      rig.legs[i].foot.y = a.y + currentStride + (splay * 2.0);
 
-      // Add a little randomization/wiggle to feet when idle
       if (rig.stepSize < 0.1) {
         rig.legs[i].foot.x += Math.sin(Date.now()*0.005 + i)*0.2;
       }

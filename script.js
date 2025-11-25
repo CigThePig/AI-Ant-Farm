@@ -777,34 +777,61 @@ function render() {
 
     // DRAW LEGS
     for (const leg of pose.legs) {
+      // 1. Calculate explicit Knee Position (2-Bone IK approximation)
+      // Vector from Hip (anchor) to Foot
+      const dx = leg.foot.x - leg.anchor.x;
+      const dy = leg.foot.y - leg.anchor.y;
+      const dist = Math.hypot(dx, dy);
+
+      // Midpoint
+      const midX = (leg.anchor.x + leg.foot.x) / 2;
+      const midY = (leg.anchor.y + leg.foot.y) / 2;
+
+      // Knee "Out" vector (perpendicular to leg direction)
+      // If right side (anchor.x > 0), knee points right. Left points left.
+      const side = leg.anchor.x > 0 ? 1 : -1;
+      
+      // How high the knee sticks up in the air
+      const kneeHeight = 2.5 + (leg.lift * 3.0); 
+
+      // Perpendicular vector (-dy, dx)
+      // We push the knee OUTWARD from the body
+      const perpX = -dy / dist * side;
+      const perpY = dx / dist * side;
+
+      // Final Knee Position
+      const kneeX = midX + perpX * kneeHeight;
+      const kneeY = midY + perpY * kneeHeight;
+
+      // 2. Draw Femur (Hip -> Knee)
       ctx.beginPath();
-      // Fade leg alpha when it lifts (visual cue for stepping)
       const alpha = 0.85 - (leg.lift * 0.5);
       ctx.strokeStyle = `rgba(0,0,0,${alpha})`;
-      ctx.lineWidth = 1.0 + (1 - leg.lift) * 0.5; // Thicker near the body
-
+      ctx.lineWidth = 1.2; // Thicker femur
+      ctx.lineCap = "round";
       ctx.moveTo(leg.anchor.x, leg.anchor.y);
-
-      // Calculate a simple "knee" joint for better visual articulation
-      const midX = (leg.anchor.x + leg.foot.x) * 0.5;
-      const midY = (leg.anchor.y + leg.foot.y) * 0.5;
-      // Push knee outward/upward based on lift
-      const kneeOut = (leg.anchor.x > 0 ? 1 : -1) * (2.4 + leg.lift * 2.6);
-      const kneeLift = 0.6 + (leg.lift * 2.4);
-
-      ctx.quadraticCurveTo(midX + kneeOut, midY - kneeLift, leg.foot.x, leg.foot.y);
+      ctx.lineTo(kneeX, kneeY);
       ctx.stroke();
 
-      // Shoulder pad to visually attach the leg to the thorax
-      ctx.save();
-      ctx.fillStyle = body2;
-      ctx.strokeStyle = "rgba(0,0,0,0.45)";
-      ctx.lineWidth = 0.6;
+      // 3. Draw Tibia (Knee -> Foot)
       ctx.beginPath();
-      ctx.ellipse(leg.anchor.x, leg.anchor.y, 1.2, 1.1, 0, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.lineWidth = 0.8; // Thinner tibia
+      ctx.moveTo(kneeX, kneeY);
+      ctx.lineTo(leg.foot.x, leg.foot.y);
       ctx.stroke();
-      ctx.restore();
+
+      // 4. Draw Joint circles (helps visualize the connection)
+      // Hip Joint (hidden mostly by body, but good for depth)
+      ctx.fillStyle = body2;
+      ctx.beginPath();
+      ctx.arc(leg.anchor.x, leg.anchor.y, 0.5, 0, Math.PI*2);
+      ctx.fill();
+
+      // Knee Joint
+      ctx.fillStyle = "rgba(0,0,0,0.6)";
+      ctx.beginPath();
+      ctx.arc(kneeX, kneeY, 0.4, 0, Math.PI*2);
+      ctx.fill();
     }
 
     ctx.fillStyle = body;
