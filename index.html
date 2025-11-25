@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Ant Colony v12: Control Panel</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="ui-overlay">
+    <div class="stats-box" id="stats-display">Loading...</div>
+  </div>
+
+  <button id="settings-btn">⚙️ Settings</button>
+
+  <div id="controls-container">
+    <div class="panel-head">
+      <div class="chip"><span class="dot"></span> Sim Config</div>
+      <div class="chip">LIVE</div>
+    </div>
+
+    <div id="sliders-area"></div>
+
+    <div class="action-row">
+      <button class="action-btn danger" id="reset-btn">RESET</button>
+    </div>
+
+    <div class="panel-foot">
+      Performance pheromones are ON: blurred scent updates every 2 frames.
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
