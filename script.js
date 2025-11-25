@@ -790,9 +790,11 @@ function render() {
       // Knee "Out" vector (perpendicular to leg direction)
       // If right side (anchor.x > 0), knee points right. Left points left.
       const side = leg.anchor.x > 0 ? 1 : -1;
-      
+
       // How high the knee sticks up in the air
-      const kneeHeight = 2.5 + (leg.lift * 3.0); 
+      const kneeHeight = 2.5 + (leg.lift * 3.0);
+      // Small forward bias keeps the bend from looking pinned behind the body
+      const kneeForwardBias = 0.16;
 
       // Perpendicular vector (-dy, dx)
       // We push the knee OUTWARD from the body
@@ -800,8 +802,8 @@ function render() {
       const perpY = dx / dist * side;
 
       // Final Knee Position
-      const kneeX = midX + perpX * kneeHeight;
-      const kneeY = midY + perpY * kneeHeight;
+      const kneeX = midX + perpX * kneeHeight + dx * kneeForwardBias;
+      const kneeY = midY + perpY * kneeHeight + dy * kneeForwardBias;
 
       // 2. Draw Femur (Hip -> Knee)
       ctx.beginPath();
