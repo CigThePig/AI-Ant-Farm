@@ -441,9 +441,17 @@ class Ant {
     this.x = x; this.y = y;
     this.angle = Math.random() * Math.PI * 2;
     this.hasFood = false;
+    this.returnDir = null;
     this.legPhase = Math.random();
 
     this.lastX = x; this.lastY = y;
+    this.stuckT = 0;
+    this.panicT = 0;
+  }
+
+  resetStuckTimer() {
+    this.lastX = this.x;
+    this.lastY = this.y;
     this.stuckT = 0;
     this.panicT = 0;
   }
@@ -501,16 +509,18 @@ class Ant {
     const weightedC = valC * CONFIG.forwardBias;
 
     if (Math.max(valL, valC, valR) > 0.05) {
-      if (weightedC > valL && weightedC > valR) return this.angle;
-      else if (valL > valR) return this.angle - sa;
-      else return this.angle + sa;
+      const best = (weightedC > valL && weightedC > valR)
+        ? this.angle
+        : (valL > valR ? this.angle - sa : this.angle + sa);
+
+      if (this.hasFood) this.returnDir = best;
+      return best;
     }
 
     if (this.hasFood) {
-      const isSurface = this.y < CONSTANTS.REGION_SPLIT * CONSTANTS.CELL_SIZE;
-      const tx = isSurface ? CONSTANTS.WORLD_W / 2 : ants[0].x;
-      const ty = isSurface ? (CONSTANTS.REGION_SPLIT * CONSTANTS.CELL_SIZE + 20) : ants[0].y;
-      return Math.atan2(ty - this.y, tx - this.x);
+      if (this.returnDir === null) this.returnDir = this.angle;
+      // Keep heading along the remembered return direction with light wander
+      return this.returnDir + (Math.random() - 0.5) * 0.4;
     } else {
       if (this.y > CONSTANTS.REGION_SPLIT * CONSTANTS.CELL_SIZE) {
         return -Math.PI / 2 + (Math.random() - 0.5) * 2.0;
@@ -606,6 +616,8 @@ class Ant {
     if (!this.hasFood && foodGrid[gy][gx] > 0) {
       foodGrid[gy][gx]--;
       this.hasFood = true;
+      this.returnDir = this.angle + Math.PI;
+      this.resetStuckTimer();
       this.angle += Math.PI;
       return;
     }
@@ -614,7 +626,9 @@ class Ant {
       const q = ants[0];
       if ((q.x - this.x) ** 2 + (q.y - this.y) ** 2 < 1600) {
         this.hasFood = false;
+        this.returnDir = null;
         foodInStorage++;
+        this.resetStuckTimer();
         this.angle += Math.PI;
       }
     }
