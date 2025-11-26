@@ -200,6 +200,19 @@ const DiggingSystem = (() => {
       const pher = digPheromone[y][x];
       const pherBonus = 1 + pher * 2.5;
 
+      let momentumBonus = 1;
+      if (ant.lastDigVector) {
+        const vx = tx - ant.x;
+        const vy = ty - ant.y;
+        const mag = Math.hypot(vx, vy);
+        if (mag > 0) {
+          const nx = vx / mag;
+          const ny = vy / mag;
+          const alignment = nx * ant.lastDigVector.x + ny * ant.lastDigVector.y;
+          if (alignment > 0) momentumBonus = 1 + alignment * 1.5;
+        }
+      }
+
       const nestDist = Math.hypot(tx - qx, ty - qy);
       const nestPenalty = 1 + nestDist / (cellSize * 10);
 
@@ -207,7 +220,7 @@ const DiggingSystem = (() => {
       const antPenalty = 1 + antDist / (cellSize * 4);
 
       const noise = Math.random() * 0.05;
-      const score = (upwardBias * airBonus * pherBonus * pressureBoost) / (nestPenalty * antPenalty) + noise;
+      const score = (upwardBias * airBonus * pherBonus * momentumBonus * pressureBoost) / (nestPenalty * antPenalty) + noise;
 
       if (score > bestScore) {
         bestScore = score;
@@ -296,6 +309,13 @@ const DiggingSystem = (() => {
     digHP[gy][gx] = 0;
     digPheromone[gy][gx] = 0;
     frontierMask[gy][gx] = 0;
+
+    const digVecX = (gx + 0.5) * cellSize - ant.x;
+    const digVecY = (gy + 0.5) * cellSize - ant.y;
+    const digMag = Math.hypot(digVecX, digVecY);
+    if (digMag > 0) {
+      ant.pendingDigVector = { x: digVecX / digMag, y: digVecY / digMag };
+    }
 
     // reinforce nearby frontier directions so others follow the same face
     for (const [nx, ny] of [[gx - 1, gy], [gx + 1, gy], [gx, gy - 1], [gx, gy + 1]]) {

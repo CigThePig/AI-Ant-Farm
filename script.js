@@ -728,6 +728,8 @@ class Ant {
 
     this.digTarget = null;
     this.digRetargetT = Math.random() * 0.4;
+    this.lastDigVector = null;
+    this.pendingDigVector = null;
   }
 
   resetStuckTimer() {
@@ -1006,6 +1008,11 @@ class Ant {
     const gx = Math.floor(this.x / CONSTANTS.CELL_SIZE);
     const gy = Math.floor(this.y / CONSTANTS.CELL_SIZE);
     if (gx < 0 || gx >= CONSTANTS.GRID_W || gy < 0 || gy >= CONSTANTS.GRID_H) return;
+
+    if (this.pendingDigVector) {
+      this.lastDigVector = this.pendingDigVector;
+      this.pendingDigVector = null;
+    }
 
     if (this.role === "cleaner" && !this.carryingWaste) {
       const pulled = takeWaste(gx, gy, WASTE.cleanerPickup);
