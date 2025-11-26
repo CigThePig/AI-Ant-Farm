@@ -173,11 +173,43 @@ const DiggingSystem = (() => {
     const wastePressure = (typeof ColonyState !== "undefined" && ColonyState.getWastePressure)
       ? ColonyState.getWastePressure()
       : 0.0;
+    const broodPressure = (typeof ColonyState !== "undefined" && ColonyState.getBroodPressure)
+      ? ColonyState.getBroodPressure()
+      : 0.0;
     if (spacePressure < 0.05) return null;
 
     const queen = (typeof ants !== "undefined" && ants[0]) ? ants[0] : null;
     const qx = queen ? queen.x : ant.x;
     const qy = queen ? queen.y : ant.y;
+
+    let diggingMode = broodPressure > 0.7 ? "expander" : "miner";
+    let favorSoftSoil = diggingMode === "miner" && spacePressure < 0.5;
+
+    let roomSeeds = [];
+    if (diggingMode === "expander") {
+      const grid = world.grid;
+      const openTiles = new Set([TILES.TUNNEL]);
+      if (typeof TILES.AIR !== "undefined") openTiles.add(TILES.AIR);
+      for (let y = regionSplit; y < height - 1; y++) {
+        const row = grid[y];
+        if (!row) continue;
+        for (let x = 1; x < width - 1; x++) {
+          if (row[x] !== TILES.TUNNEL) continue;
+          let openNeighbors = 0;
+          for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+            const nx = x + dx;
+            const ny = y + dy;
+            if (openTiles.has(grid[ny]?.[nx])) openNeighbors++;
+          }
+          if (openNeighbors <= 1) roomSeeds.push({ x, y });
+        }
+      }
+
+      if (!roomSeeds.length) {
+        diggingMode = "miner";
+        favorSoftSoil = spacePressure < 0.5;
+      }
+    }
 
     const pressureBoost = 0.6 + spacePressure * 1.4;
     let best = null;
@@ -220,7 +252,28 @@ const DiggingSystem = (() => {
       const antPenalty = 1 + antDist / (cellSize * 4);
 
       const noise = Math.random() * 0.05;
-      const score = (upwardBias * airBonus * pherBonus * momentumBonus * pressureBoost) / (nestPenalty * antPenalty) + noise;
+
+      let modeBonus = 1;
+      if (diggingMode === "expander" && roomSeeds.length) {
+        const targetRadius = 3.5;
+        const maxRadius = 4.5;
+        let bestSeedBias = 0;
+        for (const seed of roomSeeds) {
+          const dist = Math.hypot(x - seed.x, y - seed.y);
+          if (dist > maxRadius) continue;
+          const ringAlignment = Math.max(0, 1 - Math.abs(dist - targetRadius) / targetRadius);
+          const proximity = Math.max(0, 1 - dist / maxRadius);
+          const bias = ringAlignment * 4 + proximity * 2;
+          if (bias > bestSeedBias) bestSeedBias = bias;
+        }
+        modeBonus += bestSeedBias;
+      } else if (favorSoftSoil && world.gridTexture && world.gridTexture[y]) {
+        const hardness = world.gridTexture[y][x] ?? 0.5;
+        const softnessBonus = Math.max(0.4, 1.6 - hardness * 1.2);
+        modeBonus *= softnessBonus;
+      }
+
+      const score = ((upwardBias * airBonus * pherBonus * momentumBonus * pressureBoost * modeBonus) / (nestPenalty * antPenalty)) + noise;
 
       if (score > bestScore) {
         bestScore = score;

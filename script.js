@@ -389,6 +389,7 @@ let brood = [];
 
 const worldState = {
   grid: null,
+  gridTexture: null,
   particles: null,
   airLevels: null,
   storedFood: 0,
@@ -628,6 +629,7 @@ function resetSimulation() {
   }
 
   worldState.grid = grid;
+  worldState.gridTexture = gridTexture;
   worldState.particles = particles;
   worldState.wasteGrid = wasteGrid;
   worldState.wasteTotal = wasteTotal;
