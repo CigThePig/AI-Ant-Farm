@@ -50,6 +50,7 @@ const AirSystem = (() => {
   }
 
   function notifyTileOpened(x, y, grid) {
+    if (x <= 0 || x >= width - 1 || y <= 0 || y >= height - 1) return;
     if (!grid[y] || !isOpen(grid[y][x])) return;
 
     if (y < regionSplit) {
@@ -68,6 +69,7 @@ const AirSystem = (() => {
     for (const [dx, dy] of dirs) {
       const nx = x + dx;
       const ny = y + dy;
+      if (nx <= 0 || nx >= width - 1 || ny <= 0 || ny >= height - 1) continue;
       if (!grid[ny] || grid[ny][nx] === undefined) continue;
       if (!isOpen(grid[ny][nx])) continue;
       const candidate = airLevels[ny][nx] * SETTINGS.stepFalloff + SETTINGS.neighborBonus;
