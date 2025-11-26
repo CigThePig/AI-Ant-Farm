@@ -20,6 +20,7 @@ const DiggingSystem = (() => {
   let frontierList = [];
   let frontierUpdateMask = [];
   let frontierUpdateQueue = [];
+  const sharedFrontierTiles = { list: frontierList, mask: frontierMask };
   let decayCursor = 0;
 
   function init(constants) {
@@ -29,15 +30,17 @@ const DiggingSystem = (() => {
     cellSize = constants.CELL_SIZE;
 
     digPheromone = new Array(height);
-    frontierMask = new Array(height);
-    frontierUpdateMask = new Array(height);
+
+    frontierMask.length = 0;
+    frontierUpdateMask.length = 0;
     for (let y = 0; y < height; y++) {
       digPheromone[y] = new Float32Array(width);
       frontierMask[y] = new Uint8Array(width);
       frontierUpdateMask[y] = new Uint8Array(width);
     }
-    frontierList = [];
-    frontierUpdateQueue = [];
+
+    frontierList.length = 0;
+    frontierUpdateQueue.length = 0;
     decayCursor = regionSplit;
   }
 
@@ -221,6 +224,8 @@ const DiggingSystem = (() => {
     frontierUpdateQueue.length = 0;
     decayCursor = regionSplit;
     rebuildFrontier(grid);
+
+    world.frontierTiles = sharedFrontierTiles;
   }
 
   return {
