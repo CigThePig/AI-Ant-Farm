@@ -514,6 +514,8 @@ class Ant {
     this.animRig = ANT_ANIM.createRig(type);
     this.stepDistance = 0;
 
+    this.isDigger = type === "worker" && Math.random() < 0.6;
+
     this.lastX = x; this.lastY = y;
     this.stuckT = 0;
     this.panicT = 0;
@@ -566,7 +568,7 @@ class Ant {
       return;
     }
 
-    if (this.hasFood) {
+    if (this.hasFood || !this.isDigger) {
       this.digTarget = null;
     } else {
       this.digRetargetT -= dt;
