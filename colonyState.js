@@ -5,6 +5,7 @@ const ColonyState = (() => {
     nestTiles: 0,
     spacePressure: 0,
     foodPressure: 0,
+    wastePressure: 0,
   };
 
   const SETTINGS = {
@@ -59,6 +60,36 @@ const ColonyState = (() => {
     return clamp01(1 - fulfilled);
   }
 
+  function computeWastePressure(world, queen) {
+    if (!world || !world.wasteGrid || !queen) return 0;
+
+    const radius = SETTINGS.queenRoomRadius;
+    const cs = world.constants?.CELL_SIZE || 1;
+    const qgx = Math.floor(queen.x / cs);
+    const qgy = Math.floor(queen.y / cs);
+
+    let sum = 0;
+    let checked = 0;
+    for (let y = qgy - radius; y <= qgy + radius; y++) {
+      const row = world.wasteGrid[y];
+      if (!row) continue;
+      for (let x = qgx - radius; x <= qgx + radius; x++) {
+        if (row[x] !== undefined) {
+          sum += row[x];
+          checked++;
+        }
+      }
+    }
+
+    if (checked === 0) return 0;
+    const avg = sum / checked;
+    const total = world.wasteTotal ?? sum;
+
+    const localPressure = clamp01(avg * 0.5);
+    const globalPressure = clamp01((total / Math.max(1, state.nestTiles)) * 0.2);
+    return clamp01(localPressure * 0.6 + globalPressure * 0.4);
+  }
+
   function updateColonyState(world, ants) {
     state.antCount = ants?.length || 0;
     state.storedFood = world?.storedFood ?? 0;
@@ -68,12 +99,14 @@ const ColonyState = (() => {
 
     state.spacePressure = computeSpacePressure();
     state.foodPressure = computeFoodPressure();
+    state.wastePressure = computeWastePressure(world, queen);
   }
 
   return {
     updateColonyState,
     getSpacePressure: () => state.spacePressure,
     getFoodPressure: () => state.foodPressure,
+    getWastePressure: () => state.wastePressure,
     getState: () => ({ ...state }),
   };
 })();

@@ -34,6 +34,9 @@ const ROLE_SETTINGS = {
   baseDiggerFraction: 0.28,
   minDiggerFraction: 0.12,
   maxDiggerFraction: 0.78,
+  baseCleanerFraction: 0.06,
+  maxCleanerFraction: 0.28,
+  cleanerPressureGain: 0.45,
 };
 
 const CONSTANTS = {
@@ -62,6 +65,16 @@ const SCENT = {
 
 const AIR = {
   UPDATE_EVERY_FRAMES: 4,
+};
+
+const WASTE = {
+  dropChancePerSecond: 0.18,
+  dropAmount: 0.25,
+  maxTile: 6,
+  cleanerSightRadius: 7,
+  cleanerPickup: 1.2,
+  cleanerDumpY: 2,
+  spoilageRate: 0.008,
 };
 
 const scentRawCanvas = document.createElement('canvas');
@@ -364,11 +377,13 @@ canvas.addEventListener("pointerleave", removeEv);
 let grid = [];
 let gridTexture = [];
 let foodGrid = [];
+let wasteGrid = [];
 let scentToFood = [];
 let scentToHome = [];
 let ants = [];
 let particles = [];
 let foodInStorage = 0;
+let wasteTotal = 0;
 let roleReassignTimer = 0;
 
 const worldState = {
@@ -376,6 +391,8 @@ const worldState = {
   particles: null,
   airLevels: null,
   storedFood: 0,
+  wasteGrid: null,
+  wasteTotal: 0,
   constants: CONSTANTS,
   onTunnelDug: (gx, gy) => {
     updateEdgesAround(gx, gy, grid);
@@ -398,9 +415,32 @@ const worldState = {
 function clamp01(v){ return Math.max(0, Math.min(1, v)); }
 function hsl(h,s,l){ return `hsl(${h} ${s}% ${l}%)`; }
 
+function addWaste(gx, gy, amount) {
+  if (!wasteGrid[gy] || wasteGrid[gy][gx] === undefined) return;
+  const amt = Math.min(WASTE.maxTile, amount);
+  const next = Math.min(WASTE.maxTile, wasteGrid[gy][gx] + amt);
+  wasteTotal += next - wasteGrid[gy][gx];
+  wasteGrid[gy][gx] = next;
+}
+
+function takeWaste(gx, gy, amount) {
+  if (!wasteGrid[gy] || wasteGrid[gy][gx] === undefined) return 0;
+  const available = Math.min(amount, wasteGrid[gy][gx]);
+  wasteGrid[gy][gx] -= available;
+  wasteTotal -= available;
+  if (wasteGrid[gy][gx] < 0.001) wasteGrid[gy][gx] = 0;
+  return available;
+}
+
+function getWaste(gx, gy) {
+  if (!wasteGrid[gy]) return 0;
+  return wasteGrid[gy][gx] || 0;
+}
+
 function computeDesiredRoleFractions() {
   const spacePressure = ColonyState?.getSpacePressure ? ColonyState.getSpacePressure() : 0.3;
   const foodPressure = ColonyState?.getFoodPressure ? ColonyState.getFoodPressure() : 0.3;
+  const wastePressure = ColonyState?.getWastePressure ? ColonyState.getWastePressure() : 0.0;
 
   let diggerFrac = ROLE_SETTINGS.baseDiggerFraction;
   diggerFrac += spacePressure * 0.45;
@@ -408,17 +448,31 @@ function computeDesiredRoleFractions() {
   diggerFrac = clamp01(diggerFrac);
   diggerFrac = Math.min(ROLE_SETTINGS.maxDiggerFraction, Math.max(ROLE_SETTINGS.minDiggerFraction, diggerFrac));
 
-  const foragerFrac = clamp01(1 - diggerFrac);
-  return { digger: diggerFrac, forager: foragerFrac };
+  let cleanerFrac = ROLE_SETTINGS.baseCleanerFraction + wastePressure * ROLE_SETTINGS.cleanerPressureGain;
+  cleanerFrac = clamp01(Math.min(ROLE_SETTINGS.maxCleanerFraction, cleanerFrac));
+
+  const remaining = clamp01(1 - cleanerFrac);
+  diggerFrac = clamp01(diggerFrac * remaining);
+  const foragerFrac = clamp01(1 - diggerFrac - cleanerFrac);
+  return { digger: diggerFrac, forager: foragerFrac, cleaner: cleanerFrac };
 }
 
 function pickRoleForNewWorker() {
   const workers = ants.filter(a => a.type === "worker");
   const desired = computeDesiredRoleFractions();
-  const currentDiggers = workers.filter(a => a.role === "digger").length;
-  const desiredDiggers = Math.round((workers.length + 1) * desired.digger);
+  const counts = {
+    digger: workers.filter(a => a.role === "digger").length,
+    cleaner: workers.filter(a => a.role === "cleaner").length,
+  };
 
-  return currentDiggers < desiredDiggers ? "digger" : "forager";
+  const desiredCounts = {
+    digger: Math.round((workers.length + 1) * desired.digger),
+    cleaner: Math.round((workers.length + 1) * desired.cleaner),
+  };
+
+  if (counts.cleaner < desiredCounts.cleaner) return "cleaner";
+  if (counts.digger < desiredCounts.digger) return "digger";
+  return "forager";
 }
 
 function updateRoles(dt) {
@@ -430,29 +484,63 @@ function updateRoles(dt) {
   if (!workers.length) return;
 
   const desired = computeDesiredRoleFractions();
-  const desiredDiggers = Math.round(workers.length * desired.digger);
-  const currentDiggers = workers.filter(a => a.role === "digger").length;
-  const diff = desiredDiggers - currentDiggers;
+  const desiredCounts = {
+    digger: Math.round(workers.length * desired.digger),
+    cleaner: Math.round(workers.length * desired.cleaner),
+  };
+  desiredCounts.forager = Math.max(0, workers.length - desiredCounts.digger - desiredCounts.cleaner);
 
-  const shift = Math.min(ROLE_SETTINGS.batchSize, Math.abs(diff));
-  if (shift === 0) return;
+  const counts = {
+    digger: workers.filter(a => a.role === "digger").length,
+    cleaner: workers.filter(a => a.role === "cleaner").length,
+    forager: workers.filter(a => a.role === "forager").length,
+  };
 
-  if (diff > 0) {
-    const candidates = workers.filter(a => a.role !== "digger");
-    for (let i = 0; i < shift && candidates.length; i++) {
-      const idx = Math.floor(Math.random() * candidates.length);
-      const ant = candidates.splice(idx, 1)[0];
-      ant.role = "digger";
-      ant.digRetargetT = 0;
+  function surplus(role) { return counts[role] - desiredCounts[role]; }
+
+  function pullFrom(role) {
+    const pool = workers.filter(a => a.role === role);
+    if (!pool.length) return null;
+    const idx = Math.floor(Math.random() * pool.length);
+    return pool[idx];
+  }
+
+  function assign(toRole, fromRole) {
+    const ant = pullFrom(fromRole);
+    if (!ant) return false;
+    ant.role = toRole;
+    if (toRole === "digger") ant.digRetargetT = 0;
+    if (toRole !== "digger") ant.digTarget = null;
+    counts[toRole]++;
+    counts[fromRole]--;
+    return true;
+  }
+
+  let iterations = ROLE_SETTINGS.batchSize;
+  while (iterations-- > 0) {
+    const needCleaner = desiredCounts.cleaner - counts.cleaner;
+    const needDigger = desiredCounts.digger - counts.digger;
+
+    if (needCleaner > 0) {
+      const donor = surplus("forager") > surplus("digger") ? "forager" : "digger";
+      if (!assign("cleaner", donor)) break;
+      continue;
     }
-  } else {
-    const candidates = workers.filter(a => a.role === "digger");
-    for (let i = 0; i < shift && candidates.length; i++) {
-      const idx = Math.floor(Math.random() * candidates.length);
-      const ant = candidates.splice(idx, 1)[0];
-      ant.role = "forager";
-      ant.digTarget = null;
+
+    if (needDigger > 0) {
+      const donor = surplus("forager") > surplus("cleaner") ? "forager" : "cleaner";
+      if (!assign("digger", donor)) break;
+      continue;
     }
+
+    const needForager = desiredCounts.forager - counts.forager;
+    if (needForager > 0) {
+      const donor = surplus("digger") > surplus("cleaner") ? "digger" : "cleaner";
+      if (!assign("forager", donor)) break;
+      continue;
+    }
+
+    break;
   }
 }
 
@@ -460,17 +548,20 @@ function resetSimulation() {
   grid = [];
   gridTexture = [];
   foodGrid = [];
+  wasteGrid = [];
   scentToFood = [];
   scentToHome = [];
   ants = [];
   particles = [];
   foodInStorage = 0;
+  wasteTotal = 0;
   roleReassignTimer = 0;
 
   for (let y = 0; y < CONSTANTS.GRID_H; y++) {
     grid[y] = new Uint8Array(CONSTANTS.GRID_W);
     gridTexture[y] = new Float32Array(CONSTANTS.GRID_W);
     foodGrid[y] = new Uint8Array(CONSTANTS.GRID_W);
+    wasteGrid[y] = new Float32Array(CONSTANTS.GRID_W);
     scentToFood[y] = new Float32Array(CONSTANTS.GRID_W);
     scentToHome[y] = new Float32Array(CONSTANTS.GRID_W);
 
@@ -517,6 +608,8 @@ function resetSimulation() {
 
   worldState.grid = grid;
   worldState.particles = particles;
+  worldState.wasteGrid = wasteGrid;
+  worldState.wasteTotal = wasteTotal;
   AirSystem.reset(worldState);
   DiggingSystem.reset(worldState);
 
@@ -598,6 +691,9 @@ class Ant {
     this.animRig = ANT_ANIM.createRig(type);
     this.stepDistance = 0;
 
+    this.carryingWaste = false;
+    this.cleanTarget = null;
+
     if (type === "queen") this.role = "queen";
     else this.role = role || (type === "worker" ? "forager" : "forager");
 
@@ -614,6 +710,71 @@ class Ant {
     this.lastY = this.y;
     this.stuckT = 0;
     this.panicT = 0;
+  }
+
+  maybeDropWaste(dt) {
+    const chance = WASTE.dropChancePerSecond * dt;
+    if (Math.random() > chance) return;
+    const gx = Math.floor(this.x / CONSTANTS.CELL_SIZE);
+    const gy = Math.floor(this.y / CONSTANTS.CELL_SIZE);
+    if (grid[gy] && grid[gy][gx] === TILES.TUNNEL) {
+      addWaste(gx, gy, WASTE.dropAmount);
+    }
+  }
+
+  findLocalWasteTarget(radius) {
+    const gx = Math.floor(this.x / CONSTANTS.CELL_SIZE);
+    const gy = Math.floor(this.y / CONSTANTS.CELL_SIZE);
+    let best = null;
+    let bestAmt = 0.4;
+
+    for (let y = gy - radius; y <= gy + radius; y++) {
+      const row = wasteGrid[y];
+      if (!row) continue;
+      for (let x = gx - radius; x <= gx + radius; x++) {
+        const amt = row[x];
+        if (amt === undefined || amt <= bestAmt) continue;
+        if (grid[y] && grid[y][x] !== TILES.TUNNEL) continue;
+        bestAmt = amt;
+        best = { x, y };
+      }
+    }
+    return best;
+  }
+
+  cleanerSense() {
+    const gx = Math.floor(this.x / CONSTANTS.CELL_SIZE);
+    const gy = Math.floor(this.y / CONSTANTS.CELL_SIZE);
+
+    if (this.carryingWaste) {
+      if (gy < Math.max(1, CONSTANTS.REGION_SPLIT - WASTE.cleanerDumpY)) {
+        this.carryingWaste = false;
+        this.cleanTarget = null;
+        return this.angle + (Math.random() - 0.5) * 0.6;
+      }
+      const targetY = (CONSTANTS.REGION_SPLIT - 2) * CONSTANTS.CELL_SIZE;
+      return Math.atan2(targetY - this.y, (gx + 0.5) * CONSTANTS.CELL_SIZE - this.x);
+    }
+
+    if (this.cleanTarget) {
+      const amt = getWaste(this.cleanTarget.x, this.cleanTarget.y);
+      if (amt > 0.1) {
+        return Math.atan2((this.cleanTarget.y + 0.5) * CONSTANTS.CELL_SIZE - this.y, (this.cleanTarget.x + 0.5) * CONSTANTS.CELL_SIZE - this.x);
+      }
+      this.cleanTarget = null;
+    }
+
+    const local = this.findLocalWasteTarget(WASTE.cleanerSightRadius);
+    if (local) {
+      this.cleanTarget = local;
+      return Math.atan2((local.y + 0.5) * CONSTANTS.CELL_SIZE - this.y, (local.x + 0.5) * CONSTANTS.CELL_SIZE - this.x);
+    }
+
+    if (gy > CONSTANTS.REGION_SPLIT * 1.2) {
+      return -Math.PI / 2 + (Math.random() - 0.5) * 1.6;
+    }
+
+    return this.angle + (Math.random() - 0.5) * 0.6;
   }
 
   update(dt) {
@@ -646,6 +807,8 @@ class Ant {
       this.lastX = this.x; this.lastY = this.y;
       this.stuckT = 0;
     }
+
+    this.maybeDropWaste(dt);
 
     if (this.panicT > 0) {
       this.panicT -= dt;
@@ -681,6 +844,10 @@ class Ant {
   }
 
   sense(dt) {
+    if (this.role === "cleaner" && !this.hasFood) {
+      return this.cleanerSense();
+    }
+
     if (!this.hasFood && this.digTarget) {
       const { x, y } = this.digTarget;
       if (!grid[y] || grid[y][x] !== TILES.SOIL) {
@@ -698,12 +865,21 @@ class Ant {
     const valC = this.sample(g, 0, sd);
     const valR = this.sample(g, sa, sd);
 
-    const weightedC = valC * CONFIG.forwardBias;
+    const wasteL = this.sampleWaste(-sa, sd);
+    const wasteC = this.sampleWaste(0, sd);
+    const wasteR = this.sampleWaste(sa, sd);
 
-    if (Math.max(valL, valC, valR) > 0.05) {
-      const best = (weightedC > valL && weightedC > valR)
+    const adjust = (v, w) => v * (1 - Math.min(0.5, w * 0.12));
+    const adjL = adjust(valL, wasteL);
+    const adjC = adjust(valC, wasteC);
+    const adjR = adjust(valR, wasteR);
+
+    const weightedC = adjC * CONFIG.forwardBias;
+
+    if (Math.max(adjL, adjC, adjR) > 0.05) {
+      const best = (weightedC > adjL && weightedC > adjR)
         ? this.angle
-        : (valL > valR ? this.angle - sa : this.angle + sa);
+        : (adjL > adjR ? this.angle - sa : this.angle + sa);
 
       if (this.hasFood) this.returnDir = best;
       return best;
@@ -736,8 +912,20 @@ class Ant {
     return 0;
   }
 
+  sampleWaste(angOff, dist) {
+    const tx = this.x + Math.cos(this.angle + angOff) * dist;
+    const ty = this.y + Math.sin(this.angle + angOff) * dist;
+    const gx = Math.floor(tx / CONSTANTS.CELL_SIZE);
+    const gy = Math.floor(ty / CONSTANTS.CELL_SIZE);
+    if (gx >= 0 && gx < CONSTANTS.GRID_W && gy >= 0 && gy < CONSTANTS.GRID_H) return getWaste(gx, gy);
+    return 0;
+  }
+
   move(dt, speedMult) {
-    const speed = CONFIG.workerSpeed * speedMult;
+    const cgx = Math.floor(this.x / CONSTANTS.CELL_SIZE);
+    const cgy = Math.floor(this.y / CONSTANTS.CELL_SIZE);
+    const wasteSlow = 1 - Math.min(0.35, getWaste(cgx, cgy) * 0.08);
+    const speed = CONFIG.workerSpeed * speedMult * wasteSlow;
     const look = 6;
 
     const nx = this.x + Math.cos(this.angle) * look;
@@ -794,6 +982,16 @@ class Ant {
     const gx = Math.floor(this.x / CONSTANTS.CELL_SIZE);
     const gy = Math.floor(this.y / CONSTANTS.CELL_SIZE);
     if (gx < 0 || gx >= CONSTANTS.GRID_W || gy < 0 || gy >= CONSTANTS.GRID_H) return;
+
+    if (this.role === "cleaner" && !this.carryingWaste) {
+      const pulled = takeWaste(gx, gy, WASTE.cleanerPickup);
+      if (pulled > 0) {
+        this.carryingWaste = true;
+        this.cleanTarget = null;
+        this.resetStuckTimer();
+        return;
+      }
+    }
 
     if (!this.hasFood && foodGrid[gy][gx] > 0) {
       foodGrid[gy][gx]--;
@@ -1081,7 +1279,20 @@ function loop(t) {
   const dt = Math.min((t - lastT) / 1000, 0.1);
   lastT = t;
 
+  const queen = ants[0];
+  if (queen) {
+    const spoil = Math.max(0, foodInStorage - 6) * WASTE.spoilageRate * dt;
+    if (spoil > 0.0001) {
+      foodInStorage = Math.max(0, foodInStorage - spoil);
+      const qgx = Math.floor(queen.x / CONSTANTS.CELL_SIZE);
+      const qgy = Math.floor(queen.y / CONSTANTS.CELL_SIZE);
+      addWaste(qgx, qgy, spoil * 0.8);
+    }
+  }
+
   worldState.storedFood = foodInStorage;
+  worldState.wasteTotal = wasteTotal;
+  worldState.wasteGrid = wasteGrid;
   ColonyState.updateColonyState(worldState, ants);
 
   DiggingSystem.updateFrontierTiles(worldState);
@@ -1128,7 +1339,7 @@ function loop(t) {
 
   const fps = Math.round(1 / Math.max(dt, 0.00001));
   statsDisplay.innerHTML =
-    `<span class="dim">Ants</span>: ${ants.length} &nbsp;|&nbsp; <span class="dim">Food</span>: ${foodInStorage} &nbsp;|&nbsp; <span class="dim">FPS</span>: ${fps}`;
+    `<span class="dim">Ants</span>: ${ants.length} &nbsp;|&nbsp; <span class="dim">Food</span>: ${foodInStorage.toFixed(1)} &nbsp;|&nbsp; <span class="dim">Waste</span>: ${wasteTotal.toFixed(1)} &nbsp;|&nbsp; <span class="dim">FPS</span>: ${fps}`;
 }
 
 // ==============================
