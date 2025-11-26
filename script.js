@@ -52,6 +52,10 @@ const SCENT = {
   ALPHA: 0.70                // overlay strength
 };
 
+const AIR = {
+  UPDATE_EVERY_FRAMES: 4,
+};
+
 const scentRawCanvas = document.createElement('canvas');
 const scentRawCtx = scentRawCanvas.getContext('2d');
 const scentBlurCanvas = document.createElement('canvas');
@@ -59,6 +63,7 @@ const scentBlurCtx = scentBlurCanvas.getContext('2d');
 
 let scentImageData = null;
 let scentFrameCounter = 0;
+let airFrameCounter = 0;
 
 function initScentBuffers() {
   scentRawCanvas.width = CONSTANTS.GRID_W;
@@ -123,6 +128,7 @@ function initEdgeCanvas() {
 
 function isSolid(t) { return t === TILES.SOIL || t === TILES.BEDROCK; }
 
+AirSystem.init(CONSTANTS);
 DiggingSystem.init(CONSTANTS);
 
 function drawEdgesForCell(gx, gy, grid) {
@@ -359,8 +365,12 @@ let foodInStorage = 0;
 const worldState = {
   grid: null,
   particles: null,
+  airLevels: null,
   constants: CONSTANTS,
-  onTunnelDug: (gx, gy) => updateEdgesAround(gx, gy, grid),
+  onTunnelDug: (gx, gy) => {
+    updateEdgesAround(gx, gy, grid);
+    AirSystem.notifyTileOpened(gx, gy, grid);
+  },
   spawnDigParticles: (gx, gy) => {
     for (let k = 0; k < 3; k++) {
       particles.push({
@@ -438,6 +448,7 @@ function resetSimulation() {
 
   worldState.grid = grid;
   worldState.particles = particles;
+  AirSystem.reset(worldState);
   DiggingSystem.reset(worldState);
 
   ants.push(new Ant("queen", qx, qy));
@@ -454,6 +465,7 @@ function resetSimulation() {
   // Fresh scent texture
   updateScentTexture(scentToFood, scentToHome);
   scentFrameCounter = 0;
+  airFrameCounter = 0;
 }
 
 // ==============================
@@ -997,6 +1009,11 @@ function loop(t) {
   lastT = t;
 
   DiggingSystem.updateFrontierTiles(worldState);
+
+  airFrameCounter++;
+  if ((airFrameCounter % AIR.UPDATE_EVERY_FRAMES) === 0) {
+    AirSystem.updateAirField(worldState);
+  }
 
   // Decay pheromones (full grid)
   const decay = CONFIG.scentDecay;
