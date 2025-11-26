@@ -1,6 +1,7 @@
 const DiggingSystem = (() => {
   const SETTINGS = {
     pheromoneDeposit: 0.9,
+    pheromoneBurst: 1.25,
     neighborDeposit: 0.35,
     decay: 0.995,
     minStrength: 0.01,
@@ -9,6 +10,10 @@ const DiggingSystem = (() => {
     frontierSampleCount: 32,
     frontierQueueBudget: 120,
     decayRowsPerTick: 6,
+    baseTileHP: 3.2,
+    hardnessJitter: 1.4,
+    depthHardness: 1.0,
+    digDamage: 1.0,
   };
 
   let width = 0;
@@ -17,6 +22,7 @@ const DiggingSystem = (() => {
   let cellSize = 1;
 
   let digPheromone = [];
+  let digHP = [];
   let frontierMask = [];
   let frontierList = [];
   let frontierUpdateMask = [];
@@ -31,11 +37,13 @@ const DiggingSystem = (() => {
     cellSize = constants.CELL_SIZE;
 
     digPheromone = new Array(height);
+    digHP = new Array(height);
 
     frontierMask.length = 0;
     frontierUpdateMask.length = 0;
     for (let y = 0; y < height; y++) {
       digPheromone[y] = new Float32Array(width);
+      digHP[y] = new Float32Array(width);
       frontierMask[y] = new Uint8Array(width);
       frontierUpdateMask[y] = new Uint8Array(width);
     }
@@ -204,11 +212,52 @@ const DiggingSystem = (() => {
     addFrontier(gx, gy + 1, grid);
   }
 
+  function seededNoise(x, y) {
+    const s = Math.sin(x * 12.9898 + y * 78.233 + 0.5) * 43758.5453;
+    return s - Math.floor(s);
+  }
+
+  function computeTileHP(x, y, grid) {
+    if (grid[y][x] !== TILES.SOIL) return 0;
+    const depthNorm = Math.max(0, (y - regionSplit) / Math.max(1, height - regionSplit));
+    const noise = seededNoise(x, y) - 0.5;
+    const hp =
+      SETTINGS.baseTileHP +
+      SETTINGS.depthHardness * depthNorm +
+      SETTINGS.hardnessJitter * noise;
+    return Math.max(SETTINGS.digDamage, hp);
+  }
+
+  function depositBurst(cx, cy, radius, strength, grid) {
+    const minX = Math.max(0, cx - radius);
+    const maxX = Math.min(width - 1, cx + radius);
+    const minY = Math.max(0, cy - radius);
+    const maxY = Math.min(height - 1, cy + radius);
+
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        if (grid[y][x] !== TILES.SOIL) continue;
+        const dist = Math.hypot(x - cx, y - cy);
+        if (dist > radius + 0.01) continue;
+        const falloff = Math.max(0, 1 - dist / (radius || 1));
+        const deposit = strength * falloff;
+        if (deposit > digPheromone[y][x]) digPheromone[y][x] = deposit;
+      }
+    }
+  }
+
   function applyDigAction(ant, world, gx, gy) {
     const grid = world.grid;
     if (!grid[gy] || grid[gy][gx] !== TILES.SOIL) return false;
 
+    digHP[gy][gx] -= SETTINGS.digDamage;
+    if (digHP[gy][gx] > 0) {
+      digPheromone[gy][gx] = Math.max(digPheromone[gy][gx], SETTINGS.neighborDeposit);
+      return true;
+    }
+
     grid[gy][gx] = TILES.TUNNEL;
+    digHP[gy][gx] = 0;
     digPheromone[gy][gx] = 0;
     frontierMask[gy][gx] = 0;
 
@@ -219,8 +268,10 @@ const DiggingSystem = (() => {
       }
     }
 
+    depositBurst(gx, gy, 2, SETTINGS.pheromoneBurst, grid);
+
     reinforceNeighbors(gx, gy, grid);
-    enqueueFrontierNeighborhood(gx, gy, 1);
+    enqueueFrontierNeighborhood(gx, gy, 2);
     if (typeof world.onTunnelDug === 'function') world.onTunnelDug(gx, gy);
     if (typeof world.spawnDigParticles === 'function') world.spawnDigParticles(gx, gy);
 
@@ -231,6 +282,12 @@ const DiggingSystem = (() => {
   function reset(world) {
     const grid = world.grid;
     for (let y = 0; y < height; y++) digPheromone[y].fill(0);
+    for (let y = 0; y < height; y++) {
+      const hpRow = digHP[y];
+      for (let x = 0; x < width; x++) {
+        hpRow[x] = computeTileHP(x, y, grid);
+      }
+    }
     for (let y = 0; y < height; y++) frontierUpdateMask[y].fill(0);
     frontierUpdateQueue.length = 0;
     decayCursor = regionSplit;
