@@ -123,6 +123,8 @@ function initEdgeCanvas() {
 
 function isSolid(t) { return t === TILES.SOIL || t === TILES.BEDROCK; }
 
+DiggingSystem.init(CONSTANTS);
+
 function drawEdgesForCell(gx, gy, grid) {
   const t = grid[gy][gx];
   if (t !== TILES.TUNNEL && t !== TILES.GRASS) return;
@@ -354,6 +356,25 @@ let ants = [];
 let particles = [];
 let foodInStorage = 0;
 
+const worldState = {
+  grid: null,
+  particles: null,
+  constants: CONSTANTS,
+  onTunnelDug: (gx, gy) => updateEdgesAround(gx, gy, grid),
+  spawnDigParticles: (gx, gy) => {
+    for (let k = 0; k < 3; k++) {
+      particles.push({
+        x: (gx + 0.5) * CONSTANTS.CELL_SIZE,
+        y: (gy + 0.5) * CONSTANTS.CELL_SIZE,
+        vx: (Math.random() - 0.5) * 50,
+        vy: (Math.random() - 0.5) * 50,
+        life: 0.5,
+        c: '#9a6b39'
+      });
+    }
+  },
+};
+
 function clamp01(v){ return Math.max(0, Math.min(1, v)); }
 function hsl(h,s,l){ return `hsl(${h} ${s}% ${l}%)`; }
 
@@ -414,6 +435,10 @@ function resetSimulation() {
       grid[y][x] = TILES.TUNNEL;
     }
   }
+
+  worldState.grid = grid;
+  worldState.particles = particles;
+  DiggingSystem.reset(worldState);
 
   ants.push(new Ant("queen", qx, qy));
   for (let i = 0; i < 6; i++) ants.push(new Ant("worker", qx, qy));
@@ -492,6 +517,9 @@ class Ant {
     this.lastX = x; this.lastY = y;
     this.stuckT = 0;
     this.panicT = 0;
+
+    this.digTarget = null;
+    this.digRetargetT = Math.random() * 0.4;
   }
 
   resetStuckTimer() {
@@ -538,6 +566,16 @@ class Ant {
       return;
     }
 
+    if (this.hasFood) {
+      this.digTarget = null;
+    } else {
+      this.digRetargetT -= dt;
+      if (this.digRetargetT <= 0) {
+        this.digTarget = DiggingSystem.chooseDigTarget(this, worldState);
+        this.digRetargetT = 0.6 + Math.random() * 0.6;
+      }
+    }
+
     const desired = this.sense(dt);
 
     let diff = desired - this.angle;
@@ -556,6 +594,15 @@ class Ant {
   }
 
   sense(dt) {
+    if (!this.hasFood && this.digTarget) {
+      const { x, y } = this.digTarget;
+      if (!grid[y] || grid[y][x] !== TILES.SOIL) {
+        this.digTarget = null;
+      } else {
+        return Math.atan2((y + 0.5) * CONSTANTS.CELL_SIZE - this.y, (x + 0.5) * CONSTANTS.CELL_SIZE - this.x);
+      }
+    }
+
     const g = this.hasFood ? scentToHome : scentToFood;
     const sa = CONFIG.sensorAngle;
     const sd = CONFIG.sensorDist;
@@ -621,25 +668,12 @@ class Ant {
       const gy = Math.floor(ny / CONSTANTS.CELL_SIZE);
 
       if (grid[gy] && grid[gy][gx] === TILES.SOIL) {
-        const facingUp = Math.sin(this.angle) < -0.5;
-        const isDeep = this.y > CONSTANTS.REGION_SPLIT * CONSTANTS.CELL_SIZE;
+        const digPher = DiggingSystem.getDigPheromone();
+        const targetMatch = this.digTarget && this.digTarget.x === gx && this.digTarget.y === gy;
+        const sharedFrontier = digPher[gy][gx] > 0.08;
 
-        if (!this.hasFood && Math.random() < (0.05 + (isDeep && facingUp ? 0.3 : 0))) {
-          grid[gy][gx] = TILES.TUNNEL;
-
-          // NEW: update edge overlay locally around the dig
-          updateEdgesAround(gx, gy, grid);
-
-          for (let k = 0; k < 3; k++) {
-            particles.push({
-              x: (gx + 0.5) * CONSTANTS.CELL_SIZE,
-              y: (gy + 0.5) * CONSTANTS.CELL_SIZE,
-              vx: (Math.random() - 0.5) * 50,
-              vy: (Math.random() - 0.5) * 50,
-              life: 0.5,
-              c: '#9a6b39'
-            });
-          }
+        if (!this.hasFood && (targetMatch || sharedFrontier)) {
+          if (DiggingSystem.applyDigAction(this, worldState, gx, gy)) return;
         }
       }
     } else {
@@ -959,6 +993,8 @@ function loop(t) {
 
   const dt = Math.min((t - lastT) / 1000, 0.1);
   lastT = t;
+
+  DiggingSystem.updateFrontierTiles(worldState);
 
   // Decay pheromones (full grid)
   const decay = CONFIG.scentDecay;
