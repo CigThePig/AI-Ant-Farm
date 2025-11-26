@@ -170,6 +170,9 @@ const DiggingSystem = (() => {
     const spacePressure = (typeof ColonyState !== "undefined" && ColonyState.getSpacePressure)
       ? ColonyState.getSpacePressure()
       : 0.3;
+    const wastePressure = (typeof ColonyState !== "undefined" && ColonyState.getWastePressure)
+      ? ColonyState.getWastePressure()
+      : 0.0;
     if (spacePressure < 0.05) return null;
 
     const queen = (typeof ants !== "undefined" && ants[0]) ? ants[0] : null;
@@ -189,10 +192,10 @@ const DiggingSystem = (() => {
       const tx = (x + 0.5) * cellSize;
       const ty = (y + 0.5) * cellSize;
       const depthNorm = Math.max(0, (y - regionSplit) / Math.max(1, height - regionSplit));
-      const upwardBias = 1 + (1 - depthNorm) * 0.35;
+      const upwardBias = 1 + (1 - depthNorm) * (0.35 + wastePressure * 0.25);
 
       const airLevel = airField && airField[y] ? airField[y][x] : 0;
-      const airBonus = 1 + airLevel * 1.6;
+      const airBonus = 1 + airLevel * (1.6 + wastePressure * 0.8);
 
       const pher = digPheromone[y][x];
       const pherBonus = 1 + pher * 2.5;
