@@ -382,6 +382,7 @@ let scentToFood = [];
 let scentToHome = [];
 let ants = [];
 let particles = [];
+let trophallaxisEvents = [];
 let foodInStorage = 0;
 let wasteTotal = 0;
 let roleReassignTimer = 0;
@@ -714,6 +715,8 @@ class Ant {
     this.angle = Math.random() * Math.PI * 2;
     this.hasFood = false;
     this.returnDir = null;
+    this.maxEnergy = 100;
+    this.energy = this.maxEnergy;
     this.animRig = ANT_ANIM.createRig(type);
     this.stepDistance = 0;
 
@@ -828,6 +831,16 @@ class Ant {
       return;
     }
 
+    this.energy = Math.max(0, Math.min(this.maxEnergy, this.energy - 2.5 * dt));
+
+    if (this.hasFood && this.energy < 30) {
+      this.hasFood = false;
+      this.energy = this.maxEnergy;
+      this.returnDir = null;
+    }
+
+    this.shareEnergy();
+
     this.stuckT += dt;
     if (this.stuckT > CONFIG.stuckThreshold) {
       const d2 = (this.x - this.lastX) ** 2 + (this.y - this.lastY) ** 2;
@@ -869,6 +882,25 @@ class Ant {
     this.move(dt, 1.0);
     this.dropScent();
     ANT_ANIM.step(this.animRig, { dt, travel: this.stepDistance, speedHint: CONFIG.workerSpeed });
+  }
+
+  shareEnergy() {
+    const maxDist2 = CONSTANTS.CELL_SIZE * CONSTANTS.CELL_SIZE;
+    for (const other of ants) {
+      if (other === this) continue;
+
+      const dx = other.x - this.x;
+      const dy = other.y - this.y;
+      if ((dx * dx + dy * dy) >= maxDist2) continue;
+
+      if ((this.energy > 80 || this.hasFood) && other.energy < 40) {
+        const transferAmount = 30;
+        this.energy = Math.max(0, this.energy - transferAmount);
+        other.energy = Math.min(other.maxEnergy, other.energy + transferAmount);
+
+        trophallaxisEvents.push({ x1: this.x, y1: this.y, x2: other.x, y2: other.y, life: 0.2 });
+      }
+    }
   }
 
   sense(dt) {
@@ -1161,6 +1193,19 @@ function render() {
     }
   }
 
+  if (trophallaxisEvents.length) {
+    ctx.save();
+    ctx.strokeStyle = "rgba(255,230,90,0.85)";
+    ctx.lineWidth = 1.3;
+    for (const e of trophallaxisEvents) {
+      ctx.beginPath();
+      ctx.moveTo(e.x1, e.y1);
+      ctx.lineTo(e.x2, e.y2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   // Ants
   for (const a of ants) {
     ctx.save();
@@ -1395,6 +1440,11 @@ function loop(t) {
 
   updateRoles(dt);
   ants.forEach(a => a.update(dt));
+
+  for (let i = trophallaxisEvents.length - 1; i >= 0; i--) {
+    trophallaxisEvents[i].life -= dt;
+    if (trophallaxisEvents[i].life <= 0) trophallaxisEvents.splice(i, 1);
+  }
 
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
