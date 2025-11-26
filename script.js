@@ -28,6 +28,14 @@ const CONFIG = {
   stuckThreshold: 0.5,
 };
 
+const ROLE_SETTINGS = {
+  reassessPeriod: 2.5,
+  batchSize: 3,
+  baseDiggerFraction: 0.28,
+  minDiggerFraction: 0.12,
+  maxDiggerFraction: 0.78,
+};
+
 const CONSTANTS = {
   CELL_SIZE: 12,
   GRID_W: 160,
@@ -361,11 +369,13 @@ let scentToHome = [];
 let ants = [];
 let particles = [];
 let foodInStorage = 0;
+let roleReassignTimer = 0;
 
 const worldState = {
   grid: null,
   particles: null,
   airLevels: null,
+  storedFood: 0,
   constants: CONSTANTS,
   onTunnelDug: (gx, gy) => {
     updateEdgesAround(gx, gy, grid);
@@ -388,6 +398,64 @@ const worldState = {
 function clamp01(v){ return Math.max(0, Math.min(1, v)); }
 function hsl(h,s,l){ return `hsl(${h} ${s}% ${l}%)`; }
 
+function computeDesiredRoleFractions() {
+  const spacePressure = ColonyState?.getSpacePressure ? ColonyState.getSpacePressure() : 0.3;
+  const foodPressure = ColonyState?.getFoodPressure ? ColonyState.getFoodPressure() : 0.3;
+
+  let diggerFrac = ROLE_SETTINGS.baseDiggerFraction;
+  diggerFrac += spacePressure * 0.45;
+  diggerFrac -= foodPressure * 0.30;
+  diggerFrac = clamp01(diggerFrac);
+  diggerFrac = Math.min(ROLE_SETTINGS.maxDiggerFraction, Math.max(ROLE_SETTINGS.minDiggerFraction, diggerFrac));
+
+  const foragerFrac = clamp01(1 - diggerFrac);
+  return { digger: diggerFrac, forager: foragerFrac };
+}
+
+function pickRoleForNewWorker() {
+  const workers = ants.filter(a => a.type === "worker");
+  const desired = computeDesiredRoleFractions();
+  const currentDiggers = workers.filter(a => a.role === "digger").length;
+  const desiredDiggers = Math.round((workers.length + 1) * desired.digger);
+
+  return currentDiggers < desiredDiggers ? "digger" : "forager";
+}
+
+function updateRoles(dt) {
+  roleReassignTimer -= dt;
+  if (roleReassignTimer > 0) return;
+  roleReassignTimer = ROLE_SETTINGS.reassessPeriod;
+
+  const workers = ants.filter(a => a.type === "worker");
+  if (!workers.length) return;
+
+  const desired = computeDesiredRoleFractions();
+  const desiredDiggers = Math.round(workers.length * desired.digger);
+  const currentDiggers = workers.filter(a => a.role === "digger").length;
+  const diff = desiredDiggers - currentDiggers;
+
+  const shift = Math.min(ROLE_SETTINGS.batchSize, Math.abs(diff));
+  if (shift === 0) return;
+
+  if (diff > 0) {
+    const candidates = workers.filter(a => a.role !== "digger");
+    for (let i = 0; i < shift && candidates.length; i++) {
+      const idx = Math.floor(Math.random() * candidates.length);
+      const ant = candidates.splice(idx, 1)[0];
+      ant.role = "digger";
+      ant.digRetargetT = 0;
+    }
+  } else {
+    const candidates = workers.filter(a => a.role === "digger");
+    for (let i = 0; i < shift && candidates.length; i++) {
+      const idx = Math.floor(Math.random() * candidates.length);
+      const ant = candidates.splice(idx, 1)[0];
+      ant.role = "forager";
+      ant.digTarget = null;
+    }
+  }
+}
+
 function resetSimulation() {
   grid = [];
   gridTexture = [];
@@ -397,6 +465,7 @@ function resetSimulation() {
   ants = [];
   particles = [];
   foodInStorage = 0;
+  roleReassignTimer = 0;
 
   for (let y = 0; y < CONSTANTS.GRID_H; y++) {
     grid[y] = new Uint8Array(CONSTANTS.GRID_W);
@@ -452,10 +521,13 @@ function resetSimulation() {
   DiggingSystem.reset(worldState);
 
   ants.push(new Ant("queen", qx, qy));
-  for (let i = 0; i < 6; i++) ants.push(new Ant("worker", qx, qy));
+  ColonyState.updateColonyState(worldState, ants);
+  for (let i = 0; i < 6; i++) ants.push(new Ant("worker", qx, qy, pickRoleForNewWorker()));
 
   // Build edges once per reset
   rebuildEdgeOverlay(grid);
+
+  ColonyState.updateColonyState(worldState, ants);
 
   // Reset Camera
   ZOOM = 1.0;
@@ -517,7 +589,7 @@ function spreadQueenScent(qgx, qgy) {
 }
 
 class Ant {
-  constructor(type, x, y) {
+  constructor(type, x, y, role = null) {
     this.type = type;
     this.x = x; this.y = y;
     this.angle = Math.random() * Math.PI * 2;
@@ -526,7 +598,8 @@ class Ant {
     this.animRig = ANT_ANIM.createRig(type);
     this.stepDistance = 0;
 
-    this.isDigger = type === "worker" && Math.random() < 0.6;
+    if (type === "queen") this.role = "queen";
+    else this.role = role || (type === "worker" ? "forager" : "forager");
 
     this.lastX = x; this.lastY = y;
     this.stuckT = 0;
@@ -548,7 +621,7 @@ class Ant {
     if (this.type === "queen") {
       if (foodInStorage >= CONSTANTS.WORKER_COST) {
         foodInStorage -= CONSTANTS.WORKER_COST;
-        ants.push(new Ant("worker", this.x, this.y + 10));
+        ants.push(new Ant("worker", this.x, this.y + 10, pickRoleForNewWorker()));
       }
 
       // Keep the nest as the strongest attractor by flooding the home scent map at the queen's position
@@ -580,7 +653,7 @@ class Ant {
       return;
     }
 
-    if (this.hasFood || !this.isDigger) {
+    if (this.hasFood || this.role !== "digger") {
       this.digTarget = null;
     } else {
       this.digRetargetT -= dt;
@@ -1008,6 +1081,9 @@ function loop(t) {
   const dt = Math.min((t - lastT) / 1000, 0.1);
   lastT = t;
 
+  worldState.storedFood = foodInStorage;
+  ColonyState.updateColonyState(worldState, ants);
+
   DiggingSystem.updateFrontierTiles(worldState);
 
   airFrameCounter++;
@@ -1031,6 +1107,7 @@ function loop(t) {
     }
   }
 
+  updateRoles(dt);
   ants.forEach(a => a.update(dt));
 
   for (let i = particles.length - 1; i >= 0; i--) {

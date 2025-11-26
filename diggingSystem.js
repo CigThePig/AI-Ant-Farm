@@ -160,17 +160,23 @@ const DiggingSystem = (() => {
   }
 
   function chooseDigTarget(ant, world) {
-    if (ant.hasFood || !ant.isDigger) return null;
+    if (ant.hasFood || ant.role !== "digger") return null;
     if (ant.y < regionSplit * cellSize) return null;
 
     const frontier = world.frontierTiles;
     const airField = world.airLevels;
     if (!frontier || !frontier.list.length) return null;
 
+    const spacePressure = (typeof ColonyState !== "undefined" && ColonyState.getSpacePressure)
+      ? ColonyState.getSpacePressure()
+      : 0.3;
+    if (spacePressure < 0.05) return null;
+
     const queen = (typeof ants !== "undefined" && ants[0]) ? ants[0] : null;
     const qx = queen ? queen.x : ant.x;
     const qy = queen ? queen.y : ant.y;
 
+    const pressureBoost = 0.6 + spacePressure * 1.4;
     let best = null;
     let bestScore = -Infinity;
     const samples = Math.min(SETTINGS.frontierSampleCount, frontier.list.length);
@@ -198,7 +204,7 @@ const DiggingSystem = (() => {
       const antPenalty = 1 + antDist / (cellSize * 4);
 
       const noise = Math.random() * 0.05;
-      const score = (upwardBias * airBonus * pherBonus) / (nestPenalty * antPenalty) + noise;
+      const score = (upwardBias * airBonus * pherBonus * pressureBoost) / (nestPenalty * antPenalty) + noise;
 
       if (score > bestScore) {
         bestScore = score;
