@@ -385,6 +385,7 @@ let particles = [];
 let foodInStorage = 0;
 let wasteTotal = 0;
 let roleReassignTimer = 0;
+let brood = [];
 
 const worldState = {
   grid: null,
@@ -393,6 +394,7 @@ const worldState = {
   storedFood: 0,
   wasteGrid: null,
   wasteTotal: 0,
+  brood: null,
   constants: CONSTANTS,
   onTunnelDug: (gx, gy) => {
     updateEdgesAround(gx, gy, grid);
@@ -414,6 +416,20 @@ const worldState = {
 
 function clamp01(v){ return Math.max(0, Math.min(1, v)); }
 function hsl(h,s,l){ return `hsl(${h} ${s}% ${l}%)`; }
+
+function consumeStoredFood(amount) {
+  if (foodInStorage >= amount) {
+    foodInStorage -= amount;
+    return true;
+  }
+  return false;
+}
+
+function addWasteAtWorldPos(wx, wy, amount) {
+  const gx = Math.floor(wx / CONSTANTS.CELL_SIZE);
+  const gy = Math.floor(wy / CONSTANTS.CELL_SIZE);
+  addWaste(gx, gy, amount);
+}
 
 function addWaste(gx, gy, amount) {
   if (!wasteGrid[gy] || wasteGrid[gy][gx] === undefined) return;
@@ -556,6 +572,7 @@ function resetSimulation() {
   foodInStorage = 0;
   wasteTotal = 0;
   roleReassignTimer = 0;
+  brood = [];
 
   for (let y = 0; y < CONSTANTS.GRID_H; y++) {
     grid[y] = new Uint8Array(CONSTANTS.GRID_W);
@@ -612,6 +629,9 @@ function resetSimulation() {
   worldState.wasteTotal = wasteTotal;
   AirSystem.reset(worldState);
   DiggingSystem.reset(worldState);
+  BroodSystem.reset(worldState);
+  brood = BroodSystem.getBrood();
+  worldState.brood = brood;
 
   ants.push(new Ant("queen", qx, qy));
   ColonyState.updateColonyState(worldState, ants);
@@ -780,11 +800,6 @@ class Ant {
   update(dt) {
     this.stepDistance = 0;
     if (this.type === "queen") {
-      if (foodInStorage >= CONSTANTS.WORKER_COST) {
-        foodInStorage -= CONSTANTS.WORKER_COST;
-        ants.push(new Ant("worker", this.x, this.y + 10, pickRoleForNewWorker()));
-      }
-
       // Keep the nest as the strongest attractor by flooding the home scent map at the queen's position
       const qgx = Math.floor(this.x / CONSTANTS.CELL_SIZE);
       const qgy = Math.floor(this.y / CONSTANTS.CELL_SIZE);
@@ -1104,6 +1119,29 @@ function render() {
   // NEW: edge overlay (crisp outlines)
   ctx.drawImage(edgeCanvas, 0, 0);
 
+  // Brood clusters
+  if (worldState.brood?.length) {
+    for (const b of worldState.brood) {
+      ctx.save();
+      ctx.translate(b.x, b.y);
+
+      const pulse = 0.8 + Math.sin(performance.now() * 0.005 + b.x) * 0.08;
+      const size = 4.4 + Math.sin(b.age * 0.8) * 0.5;
+
+      ctx.fillStyle = `rgba(255,230,170,${0.22 * pulse})`;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, size * 1.3, size, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = `rgba(235,180,120,${0.65 * pulse})`;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, size, size * 0.75, 0.3, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+  }
+
   // Ants
   for (const a of ants) {
     ctx.save();
@@ -1293,6 +1331,24 @@ function loop(t) {
   worldState.storedFood = foodInStorage;
   worldState.wasteTotal = wasteTotal;
   worldState.wasteGrid = wasteGrid;
+  worldState.brood = BroodSystem.getBrood();
+  ColonyState.updateColonyState(worldState, ants);
+  const colonySnapshot = ColonyState.getState();
+
+  const hatched = BroodSystem.update(
+    worldState,
+    colonySnapshot,
+    dt,
+    queen,
+    consumeStoredFood,
+    addWasteAtWorldPos,
+  );
+
+  for (const b of hatched) {
+    ants.push(new Ant(b.type || "worker", b.x, b.y, pickRoleForNewWorker()));
+  }
+
+  worldState.storedFood = foodInStorage;
   ColonyState.updateColonyState(worldState, ants);
 
   DiggingSystem.updateFrontierTiles(worldState);
@@ -1339,7 +1395,7 @@ function loop(t) {
 
   const fps = Math.round(1 / Math.max(dt, 0.00001));
   statsDisplay.innerHTML =
-    `<span class="dim">Ants</span>: ${ants.length} &nbsp;|&nbsp; <span class="dim">Food</span>: ${foodInStorage.toFixed(1)} &nbsp;|&nbsp; <span class="dim">Waste</span>: ${wasteTotal.toFixed(1)} &nbsp;|&nbsp; <span class="dim">FPS</span>: ${fps}`;
+    `<span class="dim">Ants</span>: ${ants.length} &nbsp;|&nbsp; <span class="dim">Brood</span>: ${worldState.brood?.length ?? 0} &nbsp;|&nbsp; <span class="dim">Food</span>: ${foodInStorage.toFixed(1)} &nbsp;|&nbsp; <span class="dim">Waste</span>: ${wasteTotal.toFixed(1)} &nbsp;|&nbsp; <span class="dim">FPS</span>: ${fps}`;
 }
 
 // ==============================
