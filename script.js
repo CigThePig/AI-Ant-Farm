@@ -720,9 +720,13 @@ class Ant {
     this.animRig = ANT_ANIM.createRig(type);
     this.stepDistance = 0;
 
+    this.age = 0;
+    this.lifespan = 300 + Math.random() * 200;
+
     this.carryingWaste = false;
     this.carryingWasteAmount = 0;
     this.cleanTarget = null;
+    this.carryingCorpse = false;
 
     if (type === "queen") this.role = "queen";
     else this.role = role || (type === "worker" ? "forager" : "forager");
@@ -778,6 +782,19 @@ class Ant {
     const gx = Math.floor(this.x / CONSTANTS.CELL_SIZE);
     const gy = Math.floor(this.y / CONSTANTS.CELL_SIZE);
 
+    if (this.carryingCorpse) {
+      const dumpRow = Math.max(1, CONSTANTS.REGION_SPLIT - WASTE.cleanerDumpY);
+      if (gy < dumpRow) {
+        const dropY = Math.max(1, Math.min(dumpRow, gy));
+        addWaste(gx, dropY, WASTE.maxTile);
+        this.carryingCorpse = false;
+        this.cleanTarget = null;
+        return this.angle + (Math.random() - 0.5) * 0.6;
+      }
+      const targetY = (CONSTANTS.REGION_SPLIT - 2) * CONSTANTS.CELL_SIZE;
+      return Math.atan2(targetY - this.y, (gx + 0.5) * CONSTANTS.CELL_SIZE - this.x);
+    }
+
     if (this.carryingWaste) {
       const dumpRow = Math.max(1, CONSTANTS.REGION_SPLIT - WASTE.cleanerDumpY);
       if (gy < dumpRow) {
@@ -793,16 +810,41 @@ class Ant {
     }
 
     if (this.cleanTarget) {
-      const amt = getWaste(this.cleanTarget.x, this.cleanTarget.y);
-      if (amt > 0.1) {
-        return Math.atan2((this.cleanTarget.y + 0.5) * CONSTANTS.CELL_SIZE - this.y, (this.cleanTarget.x + 0.5) * CONSTANTS.CELL_SIZE - this.x);
+      if (this.cleanTarget.type === "corpse") {
+        if (ants.includes(this.cleanTarget.ant) && this.cleanTarget.ant.type === "corpse") {
+          return Math.atan2(this.cleanTarget.ant.y - this.y, this.cleanTarget.ant.x - this.x);
+        }
+        this.cleanTarget = null;
+      } else {
+        const amt = getWaste(this.cleanTarget.x, this.cleanTarget.y);
+        if (amt > 0.1) {
+          return Math.atan2((this.cleanTarget.y + 0.5) * CONSTANTS.CELL_SIZE - this.y, (this.cleanTarget.x + 0.5) * CONSTANTS.CELL_SIZE - this.x);
+        }
+        this.cleanTarget = null;
       }
-      this.cleanTarget = null;
+    }
+
+    let corpseTarget = null;
+    const maxCorpseDist2 = (WASTE.cleanerSightRadius * CONSTANTS.CELL_SIZE) ** 2;
+    for (const other of ants) {
+      if (other === this || other.type !== "corpse") continue;
+      const dx = other.x - this.x;
+      const dy = other.y - this.y;
+      const d2 = dx * dx + dy * dy;
+      if (d2 <= maxCorpseDist2) {
+        corpseTarget = other;
+        break;
+      }
+    }
+
+    if (corpseTarget) {
+      this.cleanTarget = { type: "corpse", ant: corpseTarget };
+      return Math.atan2(corpseTarget.y - this.y, corpseTarget.x - this.x);
     }
 
     const local = this.findLocalWasteTarget(WASTE.cleanerSightRadius);
     if (local) {
-      this.cleanTarget = local;
+      this.cleanTarget = { ...local, type: "waste" };
       return Math.atan2((local.y + 0.5) * CONSTANTS.CELL_SIZE - this.y, (local.x + 0.5) * CONSTANTS.CELL_SIZE - this.x);
     }
 
@@ -815,6 +857,19 @@ class Ant {
 
   update(dt) {
     this.stepDistance = 0;
+    this.age += dt;
+
+    const handleDeath = () => {
+      this.isDead = true;
+      this.type = "corpse";
+      this.hasFood = false;
+      this.cleanTarget = null;
+      ANT_ANIM.step(this.animRig, { dt, travel: 0, speedHint: 0 });
+    };
+
+    if (this.isDead) { handleDeath(); return; }
+
+    if (this.age > this.lifespan || this.energy <= 0) { handleDeath(); return; }
     if (this.type === "queen") {
       // Keep the nest as the strongest attractor by flooding the home scent map at the queen's position
       const qgx = Math.floor(this.x / CONSTANTS.CELL_SIZE);
@@ -833,6 +888,8 @@ class Ant {
 
     this.energy = Math.max(0, Math.min(this.maxEnergy, this.energy - 2.5 * dt));
 
+    if (this.age > this.lifespan || this.energy <= 0) { handleDeath(); return; }
+
     if (this.hasFood && this.energy < 30) {
       this.hasFood = false;
       this.energy = this.maxEnergy;
@@ -840,6 +897,8 @@ class Ant {
     }
 
     this.shareEnergy();
+
+    if (this.age > this.lifespan || this.energy <= 0) { handleDeath(); return; }
 
     this.stuckT += dt;
     if (this.stuckT > CONFIG.stuckThreshold) {
@@ -1048,14 +1107,35 @@ class Ant {
       this.pendingDigVector = null;
     }
 
-    if (this.role === "cleaner" && !this.carryingWaste) {
-      const pulled = takeWaste(gx, gy, WASTE.cleanerPickup);
-      if (pulled > 0) {
-        this.carryingWaste = true;
-        this.carryingWasteAmount = pulled;
-        this.cleanTarget = null;
-        this.resetStuckTimer();
-        return;
+    if (this.role === "cleaner") {
+      if (!this.carryingCorpse) {
+        let corpseIndex = -1;
+        const maxDist2 = (CONSTANTS.CELL_SIZE * 0.8) ** 2;
+        for (let i = 0; i < ants.length; i++) {
+          const other = ants[i];
+          if (other === this || other.type !== "corpse") continue;
+          const dx = other.x - this.x;
+          const dy = other.y - this.y;
+          if ((dx * dx + dy * dy) <= maxDist2) { corpseIndex = i; break; }
+        }
+        if (corpseIndex >= 0) {
+          ants.splice(corpseIndex, 1);
+          this.carryingCorpse = true;
+          this.cleanTarget = null;
+          this.resetStuckTimer();
+          return;
+        }
+      }
+
+      if (!this.carryingWaste && !this.carryingCorpse) {
+        const pulled = takeWaste(gx, gy, WASTE.cleanerPickup);
+        if (pulled > 0) {
+          this.carryingWaste = true;
+          this.carryingWasteAmount = pulled;
+          this.cleanTarget = null;
+          this.resetStuckTimer();
+          return;
+        }
       }
     }
 
