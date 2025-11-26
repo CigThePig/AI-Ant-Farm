@@ -6,6 +6,8 @@ const ColonyState = (() => {
     spacePressure: 0,
     foodPressure: 0,
     wastePressure: 0,
+    broodCount: 0,
+    broodPressure: 0,
   };
 
   const SETTINGS = {
@@ -90,9 +92,17 @@ const ColonyState = (() => {
     return clamp01(localPressure * 0.6 + globalPressure * 0.4);
   }
 
+  function computeBroodPressure() {
+    if (state.nestTiles <= 0) return clamp01(state.broodCount * 0.15);
+    const capacity = Math.max(4, state.nestTiles * SETTINGS.targetAntsPerTile * 0.55);
+    const ratio = state.broodCount / capacity;
+    return clamp01(ratio);
+  }
+
   function updateColonyState(world, ants) {
     state.antCount = ants?.length || 0;
     state.storedFood = world?.storedFood ?? 0;
+    state.broodCount = world?.brood?.length ?? 0;
 
     const queen = findQueen(ants || []);
     state.nestTiles = countNestTiles(world?.grid, queen, world?.constants);
@@ -100,6 +110,7 @@ const ColonyState = (() => {
     state.spacePressure = computeSpacePressure();
     state.foodPressure = computeFoodPressure();
     state.wastePressure = computeWastePressure(world, queen);
+    state.broodPressure = computeBroodPressure();
   }
 
   return {
@@ -107,6 +118,7 @@ const ColonyState = (() => {
     getSpacePressure: () => state.spacePressure,
     getFoodPressure: () => state.foodPressure,
     getWastePressure: () => state.wastePressure,
+    getBroodPressure: () => state.broodPressure,
     getState: () => ({ ...state }),
   };
 })();
