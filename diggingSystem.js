@@ -269,6 +269,29 @@ const DiggingSystem = (() => {
       return true;
     }
 
+    const spacePressure = (typeof ColonyState !== "undefined" && ColonyState.getSpacePressure)
+      ? ColonyState.getSpacePressure()
+      : 0.3;
+
+    if (spacePressure <= 0.9) {
+      const openTiles = new Set([TILES.TUNNEL, TILES.BEDROCK]);
+      if (typeof TILES.AIR !== "undefined") openTiles.add(TILES.AIR);
+      let openNeighbors = 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          const nx = gx + dx;
+          const ny = gy + dy;
+          if (!grid[ny] || typeof grid[ny][nx] === "undefined") continue;
+          if (openTiles.has(grid[ny][nx])) openNeighbors++;
+        }
+      }
+
+      if (openNeighbors > 3) {
+        return false;
+      }
+    }
+
     grid[gy][gx] = TILES.TUNNEL;
     digHP[gy][gx] = 0;
     digPheromone[gy][gx] = 0;
