@@ -63,6 +63,8 @@ const SCENT = {
   ALPHA: 0.70                // overlay strength
 };
 
+const DEBUG_SHOW_INTENT = false;
+
 const AIR = {
   UPDATE_EVERY_FRAMES: 4,
 };
@@ -728,6 +730,10 @@ class Ant {
     this.cleanTarget = null;
     this.carryingCorpse = false;
 
+    this.intent = "wander";
+    this.intentScores = null;
+    this.intentTopChoices = null;
+
     if (type === "queen") this.role = "queen";
     else this.role = role || (type === "worker" ? "forager" : "forager");
 
@@ -739,6 +745,67 @@ class Ant {
     this.digRetargetT = Math.random() * 0.4;
     this.lastDigVector = null;
     this.pendingDigVector = null;
+  }
+
+  computeIntentScores(worldState) {
+    const scores = {
+      panic: 0,
+      dig: 0,
+      clean: 0,
+      forage: 0,
+      returnHome: 0,
+      wander: 0.1,
+    };
+
+    scores.panic = this.panicT > 0 ? 1 : 0;
+
+    if (this.hasFood) {
+      scores.returnHome = 0.95;
+    } else {
+      const lowEnergy = this.energy / this.maxEnergy;
+      if (lowEnergy < 0.35) scores.returnHome = Math.max(scores.returnHome, 0.6);
+    }
+
+    if (!this.hasFood && this.role === "digger") {
+      let digScore = 0.5;
+      if (this.digTarget) digScore += 0.25;
+      scores.dig = digScore;
+    }
+
+    if (!this.hasFood && this.role === "cleaner") {
+      const wastePressure = clamp01((worldState?.wasteTotal || 0) / (CONSTANTS.GRID_W * 0.7));
+      let cleanScore = 0.35 + wastePressure * 0.4;
+      if (this.cleanTarget || this.carryingWaste || this.carryingCorpse) cleanScore = Math.max(cleanScore, 0.8);
+      scores.clean = cleanScore;
+    }
+
+    if (!this.hasFood) {
+      let forageScore = 0.4;
+      if (this.role === "forager") forageScore += 0.2;
+      if (worldState?.storedFood !== undefined) {
+        const scarcity = clamp01(1 - Math.min(1, worldState.storedFood / 25));
+        forageScore += scarcity * 0.25;
+      }
+      scores.forage = forageScore;
+    }
+
+    scores.wander = Math.max(scores.wander, 0.2 - scores.panic * 0.1);
+
+    return scores;
+  }
+
+  chooseIntent(scores) {
+    let bestIntent = "wander";
+    let bestScore = -Infinity;
+
+    for (const [intent, score] of Object.entries(scores)) {
+      if (score > bestScore) {
+        bestScore = score;
+        bestIntent = intent;
+      }
+    }
+
+    return bestIntent;
   }
 
   resetStuckTimer() {
@@ -882,6 +949,11 @@ class Ant {
         spreadQueenScent(qgx, qgy);
       }
 
+      const intentScores = this.computeIntentScores(worldState);
+      this.intentScores = intentScores;
+      this.intentTopChoices = Object.entries(intentScores).sort((a, b) => b[1] - a[1]).slice(0, 2);
+      this.intent = this.chooseIntent(intentScores);
+
       ANT_ANIM.step(this.animRig, { dt, travel: dt * 0.6, speedHint: 15 });
       return;
     }
@@ -909,6 +981,11 @@ class Ant {
     }
 
     this.maybeDropWaste(dt);
+
+    const intentScores = this.computeIntentScores(worldState);
+    this.intentScores = intentScores;
+    this.intentTopChoices = Object.entries(intentScores).sort((a, b) => b[1] - a[1]).slice(0, 2);
+    this.intent = this.chooseIntent(intentScores);
 
     if (this.panicT > 0) {
       this.panicT -= dt;
@@ -963,17 +1040,24 @@ class Ant {
   }
 
   sense(dt) {
-    if (this.role === "cleaner" && !this.hasFood) {
-      return this.cleanerSense();
-    }
-
-    if (!this.hasFood && this.digTarget) {
-      const { x, y } = this.digTarget;
-      if (!grid[y] || grid[y][x] !== TILES.SOIL) {
-        this.digTarget = null;
-      } else {
-        return Math.atan2((y + 0.5) * CONSTANTS.CELL_SIZE - this.y, (x + 0.5) * CONSTANTS.CELL_SIZE - this.x);
-      }
+    switch (this.intent) {
+      case "clean":
+        if (!this.hasFood) {
+          return this.cleanerSense();
+        }
+        break;
+      case "dig":
+        if (!this.hasFood && this.digTarget) {
+          const { x, y } = this.digTarget;
+          if (!grid[y] || grid[y][x] !== TILES.SOIL) {
+            this.digTarget = null;
+          } else {
+            return Math.atan2((y + 0.5) * CONSTANTS.CELL_SIZE - this.y, (x + 0.5) * CONSTANTS.CELL_SIZE - this.x);
+          }
+        }
+        break;
+      default:
+        break;
     }
 
     const g = this.hasFood ? scentToHome : scentToFood;
@@ -1403,6 +1487,33 @@ function render() {
     }
 
     ctx.restore();
+
+    if (DEBUG_SHOW_INTENT && a.intentTopChoices) {
+      ctx.save();
+      ctx.translate(a.x, a.y - 10);
+      ctx.font = "8px monospace";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "bottom";
+
+      const lines = [];
+      lines.push(`intent: ${a.intent ?? "?"}`);
+
+      const [first, second] = a.intentTopChoices;
+      if (first) lines.push(`${first[0]}: ${first[1].toFixed(2)}`);
+      if (second) lines.push(`${second[0]}: ${second[1].toFixed(2)}`);
+
+      let offsetY = -4 * (lines.length - 1);
+      ctx.strokeStyle = "rgba(0,0,0,0.55)";
+      ctx.lineWidth = 3 / ZOOM;
+      ctx.fillStyle = "#fff";
+      for (const line of lines) {
+        ctx.strokeText(line, 0, offsetY);
+        ctx.fillText(line, 0, offsetY);
+        offsetY += 10;
+      }
+
+      ctx.restore();
+    }
   }
 
   // Particles
