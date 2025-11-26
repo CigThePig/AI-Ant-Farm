@@ -602,7 +602,11 @@ function resetSimulation() {
       for (let fx = cx - r; fx <= cx + r; fx++) {
         if ((fx - cx) ** 2 + (fy - cy) ** 2 <= r * r) {
           if (fx > 0 && fx < CONSTANTS.GRID_W && fy > 0 && fy < CONSTANTS.GRID_H) {
-            foodGrid[Math.floor(fy)][Math.floor(fx)] += Math.floor(Math.random() * 15 + 5);
+            const gx = Math.floor(fx);
+            const gy = Math.floor(fy);
+            const added = Math.floor(Math.random() * 15 + 5);
+            const next = Math.min(255, foodGrid[gy][gx] + added);
+            foodGrid[gy][gx] = next;
           }
         }
       }
@@ -712,6 +716,7 @@ class Ant {
     this.stepDistance = 0;
 
     this.carryingWaste = false;
+    this.carryingWasteAmount = 0;
     this.cleanTarget = null;
 
     if (type === "queen") this.role = "queen";
@@ -767,8 +772,12 @@ class Ant {
     const gy = Math.floor(this.y / CONSTANTS.CELL_SIZE);
 
     if (this.carryingWaste) {
-      if (gy < Math.max(1, CONSTANTS.REGION_SPLIT - WASTE.cleanerDumpY)) {
+      const dumpRow = Math.max(1, CONSTANTS.REGION_SPLIT - WASTE.cleanerDumpY);
+      if (gy < dumpRow) {
+        const dropY = Math.max(1, Math.min(dumpRow, gy));
+        addWaste(gx, dropY, this.carryingWasteAmount || WASTE.cleanerPickup);
         this.carryingWaste = false;
+        this.carryingWasteAmount = 0;
         this.cleanTarget = null;
         return this.angle + (Math.random() - 0.5) * 0.6;
       }
@@ -1002,6 +1011,7 @@ class Ant {
       const pulled = takeWaste(gx, gy, WASTE.cleanerPickup);
       if (pulled > 0) {
         this.carryingWaste = true;
+        this.carryingWasteAmount = pulled;
         this.cleanTarget = null;
         this.resetStuckTimer();
         return;
