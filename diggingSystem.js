@@ -6,6 +6,8 @@ const DiggingSystem = (() => {
     minStrength: 0.01,
     sampleRadius: 8,
     forwardBias: 0.65,
+    frontierQueueBudget: 120,
+    decayRowsPerTick: 6,
   };
 
   let width = 0;
@@ -16,6 +18,9 @@ const DiggingSystem = (() => {
   let digPheromone = [];
   let frontierMask = [];
   let frontierList = [];
+  let frontierUpdateMask = [];
+  let frontierUpdateQueue = [];
+  let decayCursor = 0;
 
   function init(constants) {
     width = constants.GRID_W;
@@ -25,11 +30,15 @@ const DiggingSystem = (() => {
 
     digPheromone = new Array(height);
     frontierMask = new Array(height);
+    frontierUpdateMask = new Array(height);
     for (let y = 0; y < height; y++) {
       digPheromone[y] = new Float32Array(width);
       frontierMask[y] = new Uint8Array(width);
+      frontierUpdateMask[y] = new Uint8Array(width);
     }
     frontierList = [];
+    frontierUpdateQueue = [];
+    decayCursor = regionSplit;
   }
 
   function isFrontierCell(x, y, grid) {
@@ -53,9 +62,79 @@ const DiggingSystem = (() => {
     digPheromone[y][x] = Math.max(digPheromone[y][x], SETTINGS.pheromoneDeposit);
   }
 
+  function removeFrontierFromList(x, y) {
+    for (let i = frontierList.length - 1; i >= 0; i--) {
+      if (frontierList[i].x === x && frontierList[i].y === y) {
+        frontierList.splice(i, 1);
+        return;
+      }
+    }
+  }
+
+  function clearFrontier(x, y) {
+    if (!frontierMask[y][x]) return;
+    frontierMask[y][x] = 0;
+    digPheromone[y][x] = 0;
+    removeFrontierFromList(x, y);
+  }
+
+  function enqueueFrontierNeighborhood(cx, cy, radius = 1) {
+    const minX = Math.max(0, cx - radius);
+    const maxX = Math.min(width - 1, cx + radius);
+    const minY = Math.max(0, cy - radius);
+    const maxY = Math.min(height - 1, cy + radius);
+
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        if (frontierUpdateMask[y][x]) continue;
+        frontierUpdateMask[y][x] = 1;
+        frontierUpdateQueue.push({ x, y });
+      }
+    }
+  }
+
+  function refreshFrontierCell(x, y, grid) {
+    if (!grid[y]) return;
+    if (y < regionSplit || x <= 0 || x >= width - 1 || y >= height - 1) {
+      clearFrontier(x, y);
+      return;
+    }
+
+    if (isFrontierCell(x, y, grid)) {
+      addFrontier(x, y, grid);
+    } else {
+      clearFrontier(x, y);
+    }
+  }
+
+  function processFrontierQueue(grid) {
+    let remaining = SETTINGS.frontierQueueBudget;
+    while (remaining > 0 && frontierUpdateQueue.length > 0) {
+      const { x, y } = frontierUpdateQueue.pop();
+      frontierUpdateMask[y][x] = 0;
+      refreshFrontierCell(x, y, grid);
+      remaining--;
+    }
+  }
+
+  function decayPheromoneBudget() {
+    for (let i = 0; i < SETTINGS.decayRowsPerTick; i++) {
+      if (decayCursor < regionSplit || decayCursor >= height) decayCursor = regionSplit;
+      const row = digPheromone[decayCursor];
+      for (let x = 0; x < width; x++) {
+        const v = row[x];
+        row[x] = v > SETTINGS.minStrength ? v * SETTINGS.decay : 0;
+      }
+      decayCursor++;
+      if (decayCursor >= height) decayCursor = regionSplit;
+    }
+  }
+
   function rebuildFrontier(grid) {
     frontierList.length = 0;
     for (let y = 0; y < height; y++) frontierMask[y].fill(0);
+    for (let y = 0; y < height; y++) frontierUpdateMask[y].fill(0);
+    frontierUpdateQueue.length = 0;
     for (let y = regionSplit; y < height - 1; y++) {
       for (let x = 1; x < width - 1; x++) {
         addFrontier(x, y, grid);
@@ -64,23 +143,8 @@ const DiggingSystem = (() => {
   }
 
   function updateFrontierTiles(world) {
-    const grid = world.grid;
-    for (let y = regionSplit; y < height; y++) {
-      const row = digPheromone[y];
-      for (let x = 0; x < width; x++) {
-        const v = row[x];
-        row[x] = v > SETTINGS.minStrength ? v * SETTINGS.decay : 0;
-      }
-    }
-
-    // prune invalid frontier markers
-    for (let i = frontierList.length - 1; i >= 0; i--) {
-      const { x, y } = frontierList[i];
-      if (!isFrontierCell(x, y, grid)) {
-        frontierMask[y][x] = 0;
-        frontierList.splice(i, 1);
-      }
-    }
+    processFrontierQueue(world.grid);
+    decayPheromoneBudget();
   }
 
   function chooseDigTarget(ant, world) {
@@ -142,6 +206,7 @@ const DiggingSystem = (() => {
     }
 
     reinforceNeighbors(gx, gy, grid);
+    enqueueFrontierNeighborhood(gx, gy, 1);
     if (typeof world.onTunnelDug === 'function') world.onTunnelDug(gx, gy);
     if (typeof world.spawnDigParticles === 'function') world.spawnDigParticles(gx, gy);
 
@@ -152,6 +217,9 @@ const DiggingSystem = (() => {
   function reset(world) {
     const grid = world.grid;
     for (let y = 0; y < height; y++) digPheromone[y].fill(0);
+    for (let y = 0; y < height; y++) frontierUpdateMask[y].fill(0);
+    frontierUpdateQueue.length = 0;
+    decayCursor = regionSplit;
     rebuildFrontier(grid);
   }
 
@@ -161,6 +229,7 @@ const DiggingSystem = (() => {
     updateFrontierTiles,
     chooseDigTarget,
     applyDigAction,
+    notifyTileChanged: enqueueFrontierNeighborhood,
     getDigPheromone: () => digPheromone,
   };
 })();
