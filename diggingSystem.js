@@ -6,6 +6,7 @@ const DiggingSystem = (() => {
     minStrength: 0.01,
     sampleRadius: 8,
     forwardBias: 0.65,
+    frontierSampleCount: 32,
     frontierQueueBudget: 120,
     decayRowsPerTick: 6,
   };
@@ -151,35 +152,45 @@ const DiggingSystem = (() => {
   }
 
   function chooseDigTarget(ant, world) {
-    if (ant.hasFood) return null;
+    if (ant.hasFood || !ant.isDigger) return null;
     if (ant.y < regionSplit * cellSize) return null;
 
-    const cx = Math.floor(ant.x / cellSize);
-    const cy = Math.floor(ant.y / cellSize);
-    const radius = SETTINGS.sampleRadius;
+    const frontier = world.frontierTiles;
+    if (!frontier || !frontier.list.length) return null;
+
+    const queen = (typeof ants !== "undefined" && ants[0]) ? ants[0] : null;
+    const qx = queen ? queen.x : ant.x;
+    const qy = queen ? queen.y : ant.y;
+
     let best = null;
-    let bestScore = 0;
+    let bestScore = -Infinity;
+    const samples = Math.min(SETTINGS.frontierSampleCount, frontier.list.length);
 
-    for (let y = Math.max(regionSplit, cy - radius); y <= Math.min(height - 2, cy + radius); y++) {
-      for (let x = Math.max(1, cx - radius); x <= Math.min(width - 2, cx + radius); x++) {
-        if (!frontierMask[y][x]) continue;
-        const pher = digPheromone[y][x];
-        if (pher < SETTINGS.minStrength) continue;
+    for (let i = 0; i < samples; i++) {
+      const tile = frontier.list[Math.floor(Math.random() * frontier.list.length)];
+      const { x, y } = tile;
+      if (!frontierMask[y][x]) continue;
 
-        const tx = (x + 0.5) * cellSize;
-        const ty = (y + 0.5) * cellSize;
-        const dx = tx - ant.x;
-        const dy = ty - ant.y;
-        const dist = Math.hypot(dx, dy);
-        const alignment = Math.cos(Math.atan2(dy, dx) - ant.angle);
-        const facingBoost = 1 + SETTINGS.forwardBias * Math.max(0, alignment);
-        const distancePenalty = 1 + dist / (cellSize * 3);
+      const tx = (x + 0.5) * cellSize;
+      const ty = (y + 0.5) * cellSize;
+      const depthNorm = Math.max(0, (y - regionSplit) / Math.max(1, height - regionSplit));
+      const upwardBias = 1 + (1 - depthNorm) * 0.9;
 
-        const score = (pher * facingBoost) / distancePenalty;
-        if (score > bestScore) {
-          bestScore = score;
-          best = { x, y };
-        }
+      const pher = digPheromone[y][x];
+      const pherBonus = 1 + pher * 2.5;
+
+      const nestDist = Math.hypot(tx - qx, ty - qy);
+      const nestPenalty = 1 + nestDist / (cellSize * 10);
+
+      const antDist = Math.hypot(tx - ant.x, ty - ant.y);
+      const antPenalty = 1 + antDist / (cellSize * 4);
+
+      const noise = Math.random() * 0.05;
+      const score = (upwardBias * pherBonus) / (nestPenalty * antPenalty) + noise;
+
+      if (score > bestScore) {
+        bestScore = score;
+        best = { x, y };
       }
     }
 
