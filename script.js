@@ -25,7 +25,11 @@ const CONFIG = {
   forwardBias: 2.0,
   workerSpeed: 60,
 
+  postDeliveryDuration: 0.8,   // seconds ants will exit the queen's chamber after dropping food
+
   stuckThreshold: 0.5,
+
+  queenRadius: 8,             // tiles; pheromone-free buffer around the queen
 };
 
 const ROLE_SETTINGS = {
@@ -49,6 +53,9 @@ const CONSTANTS = {
 CONSTANTS.WORLD_W = CONSTANTS.GRID_W * CONSTANTS.CELL_SIZE;
 CONSTANTS.WORLD_H = CONSTANTS.GRID_H * CONSTANTS.CELL_SIZE;
 CONSTANTS.REGION_SPLIT = Math.floor(CONSTANTS.GRID_H * 0.35);
+
+const QUEEN_RADIUS_PX = CONFIG.queenRadius * CONSTANTS.CELL_SIZE;
+const QUEEN_RADIUS_PX2 = QUEEN_RADIUS_PX * QUEEN_RADIUS_PX;
 
 const TILES = { GRASS: 0, SOIL: 1, TUNNEL: 2, BEDROCK: 3 };
 
@@ -730,6 +737,8 @@ class Ant {
     this.cleanTarget = null;
     this.carryingCorpse = false;
 
+    this.postDeliveryTime = 0;
+
     this.intent = "wander";
     this.intentScores = null;
     this.intentTopChoices = null;
@@ -813,6 +822,15 @@ class Ant {
     this.lastY = this.y;
     this.stuckT = 0;
     this.panicT = 0;
+  }
+
+  isInsideQueenRadius() {
+    const queen = ants[0];
+    if (!queen) return false;
+
+    const dx = queen.x - this.x;
+    const dy = queen.y - this.y;
+    return (dx * dx + dy * dy) <= QUEEN_RADIUS_PX2;
   }
 
   maybeDropWaste(dt) {
@@ -970,6 +988,10 @@ class Ant {
 
     this.shareEnergy();
 
+    if (this.postDeliveryTime > 0) {
+      this.postDeliveryTime = Math.max(0, this.postDeliveryTime - dt);
+    }
+
     if (this.age > this.lifespan || this.energy <= 0) { handleDeath(); return; }
 
     this.stuckT += dt;
@@ -1040,6 +1062,15 @@ class Ant {
   }
 
   sense(dt) {
+    if (this.postDeliveryTime > 0) {
+      const queen = ants[0];
+      if (queen) {
+        const away = Math.atan2(this.y - queen.y, this.x - queen.x);
+        return away + (Math.random() - 0.5) * 0.35;
+      }
+      return this.angle + (Math.random() - 0.5) * 0.8;
+    }
+
     switch (this.intent) {
       case "clean":
         if (!this.hasFood) {
@@ -1061,12 +1092,13 @@ class Ant {
     }
 
     const g = this.hasFood ? scentToHome : scentToFood;
+    const ignoreFoodPheromone = !this.hasFood && this.isInsideQueenRadius();
     const sa = CONFIG.sensorAngle;
     const sd = CONFIG.sensorDist;
 
-    const valL = this.sample(g, -sa, sd);
-    const valC = this.sample(g, 0, sd);
-    const valR = this.sample(g, sa, sd);
+    const valL = ignoreFoodPheromone ? 0 : this.sample(g, -sa, sd);
+    const valC = ignoreFoodPheromone ? 0 : this.sample(g, 0, sd);
+    const valR = ignoreFoodPheromone ? 0 : this.sample(g, sa, sd);
 
     const wasteL = this.sampleWaste(-sa, sd);
     const wasteC = this.sampleWaste(0, sd);
@@ -1177,8 +1209,24 @@ class Ant {
     const gy = Math.floor(this.y / CONSTANTS.CELL_SIZE);
     if (gx < 0 || gy < 0 || gx >= CONSTANTS.GRID_W || gy >= CONSTANTS.GRID_H) return;
 
-    if (this.hasFood) scentToFood[gy][gx] = Math.min(1.0, scentToFood[gy][gx] + CONFIG.depositAmount);
-    else scentToHome[gy][gx] = Math.min(1.0, scentToHome[gy][gx] + (CONFIG.depositAmount * 0.5));
+    if (this.isInsideQueenRadius()) return;
+
+    const queen = ants[0];
+    const dotToQueen = queen ? (
+      Math.cos(this.angle) * (queen.x - this.x) + Math.sin(this.angle) * (queen.y - this.y)
+    ) : 0;
+    const movingTowardQueen = dotToQueen > 0;
+    const movingAwayFromQueen = dotToQueen < 0;
+
+    if (this.hasFood) {
+      if (movingTowardQueen || !queen) {
+        scentToFood[gy][gx] = Math.min(1.0, scentToFood[gy][gx] + CONFIG.depositAmount);
+      }
+    } else {
+      if (movingAwayFromQueen || !queen) {
+        scentToHome[gy][gx] = Math.min(1.0, scentToHome[gy][gx] + (CONFIG.depositAmount * 0.5));
+      }
+    }
   }
 
   interact() {
@@ -1237,6 +1285,7 @@ class Ant {
       if ((q.x - this.x) ** 2 + (q.y - this.y) ** 2 < 1600) {
         this.hasFood = false;
         this.returnDir = null;
+        this.postDeliveryTime = CONFIG.postDeliveryDuration;
         foodInStorage++;
         this.resetStuckTimer();
         this.angle += Math.PI;
