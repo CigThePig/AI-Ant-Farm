@@ -407,7 +407,6 @@ let particles = [];
 let trophallaxisEvents = [];
 let foodInStorage = 0;
 let wasteTotal = 0;
-let roleReassignTimer = 0;
 let brood = [];
 
 const worldState = {
@@ -515,75 +514,6 @@ function pickRoleForNewWorker() {
   return "forager";
 }
 
-function updateRoles(dt) {
-  roleReassignTimer -= dt;
-  if (roleReassignTimer > 0) return;
-  roleReassignTimer = ROLE_SETTINGS.reassessPeriod;
-
-  const workers = ants.filter(a => a.type === "worker");
-  if (!workers.length) return;
-
-  const desired = computeDesiredRoleFractions();
-  const desiredCounts = {
-    digger: Math.round(workers.length * desired.digger),
-    cleaner: Math.round(workers.length * desired.cleaner),
-  };
-  desiredCounts.forager = Math.max(0, workers.length - desiredCounts.digger - desiredCounts.cleaner);
-
-  const counts = {
-    digger: workers.filter(a => a.role === "digger").length,
-    cleaner: workers.filter(a => a.role === "cleaner").length,
-    forager: workers.filter(a => a.role === "forager").length,
-  };
-
-  function surplus(role) { return counts[role] - desiredCounts[role]; }
-
-  function pullFrom(role) {
-    const pool = workers.filter(a => a.role === role);
-    if (!pool.length) return null;
-    const idx = Math.floor(Math.random() * pool.length);
-    return pool[idx];
-  }
-
-  function assign(toRole, fromRole) {
-    const ant = pullFrom(fromRole);
-    if (!ant) return false;
-    ant.role = toRole;
-    if (toRole === "digger") ant.digRetargetT = 0;
-    if (toRole !== "digger") ant.digTarget = null;
-    counts[toRole]++;
-    counts[fromRole]--;
-    return true;
-  }
-
-  let iterations = ROLE_SETTINGS.batchSize;
-  while (iterations-- > 0) {
-    const needCleaner = desiredCounts.cleaner - counts.cleaner;
-    const needDigger = desiredCounts.digger - counts.digger;
-
-    if (needCleaner > 0) {
-      const donor = surplus("forager") > surplus("digger") ? "forager" : "digger";
-      if (!assign("cleaner", donor)) break;
-      continue;
-    }
-
-    if (needDigger > 0) {
-      const donor = surplus("forager") > surplus("cleaner") ? "forager" : "cleaner";
-      if (!assign("digger", donor)) break;
-      continue;
-    }
-
-    const needForager = desiredCounts.forager - counts.forager;
-    if (needForager > 0) {
-      const donor = surplus("digger") > surplus("cleaner") ? "digger" : "cleaner";
-      if (!assign("forager", donor)) break;
-      continue;
-    }
-
-    break;
-  }
-}
-
 function resetSimulation() {
   grid = [];
   gridTexture = [];
@@ -596,7 +526,6 @@ function resetSimulation() {
   particles = [];
   foodInStorage = 0;
   wasteTotal = 0;
-  roleReassignTimer = 0;
   brood = [];
 
   for (let y = 0; y < CONSTANTS.GRID_H; y++) {
@@ -801,6 +730,7 @@ class Ant {
 
     if (type === "queen") this.role = "queen";
     else this.role = role || (type === "worker" ? "forager" : "forager");
+    this.workerPreference = this.role;
 
     this.lastX = x; this.lastY = y;
     this.stuckT = 0;
@@ -814,6 +744,42 @@ class Ant {
     this.inNestCore = false;
   }
 
+  updateAgeBasedRole() {
+    if (this.type !== "worker") return;
+
+    const ageFrac = clamp01(this.age / this.lifespan);
+    let nextRole = this.role;
+
+    if (ageFrac <= 0.30) {
+      nextRole = "nurse";
+    } else if (ageFrac <= 0.75) {
+      nextRole = this.chooseMiddleAgeRole();
+    } else {
+      nextRole = "forager";
+    }
+
+    if (nextRole !== this.role) {
+      if (nextRole !== "digger") this.digTarget = null;
+      if (nextRole === "digger") this.digRetargetT = 0;
+      this.role = nextRole;
+    }
+  }
+
+  chooseMiddleAgeRole() {
+    if (this.cleanTarget || this.carryingWaste || this.carryingCorpse) return "cleaner";
+
+    const localWaste = this.findLocalWasteTarget(2);
+    if (localWaste) return "cleaner";
+
+    if (this.workerPreference !== "cleaner" && this.workerPreference !== "digger") {
+      this.workerPreference = pickRoleForNewWorker();
+    }
+
+    if (this.workerPreference === "forager") this.workerPreference = "digger";
+
+    return this.workerPreference || "digger";
+  }
+
   computeIntentScores(worldState) {
     const scores = {
       panic: 0,
@@ -825,6 +791,13 @@ class Ant {
     };
 
     scores.panic = this.panicT > 0 ? 1 : 0;
+
+    if (this.role === "nurse") {
+      scores.returnHome = 0.95;
+      scores.dig = 0;
+      scores.clean = Math.max(scores.clean, 0.1);
+      scores.forage = 0;
+    }
 
     if (this.hasFood) {
       scores.returnHome = 0.95;
@@ -846,7 +819,7 @@ class Ant {
       scores.clean = cleanScore;
     }
 
-    if (!this.hasFood) {
+    if (!this.hasFood && this.role !== "nurse") {
       let forageScore = 0.4;
       if (this.role === "forager") forageScore += 0.2;
       if (worldState?.storedFood !== undefined) {
@@ -1021,6 +994,7 @@ class Ant {
   update(dt) {
     this.stepDistance = 0;
     this.age += dt;
+    this.updateAgeBasedRole();
 
     const handleDeath = () => {
       this.isDead = true;
@@ -1149,6 +1123,33 @@ class Ant {
         return away + (Math.random() - 0.5) * 0.35;
       }
       return this.angle + (Math.random() - 0.5) * 0.8;
+    }
+
+    if (this.role === "nurse") {
+      const queen = ants[0];
+      const preferredRadius = Math.max(QUEEN_RADIUS_PX, 80);
+      if (queen) {
+        const dx = queen.x - this.x;
+        const dy = queen.y - this.y;
+        const d2 = dx * dx + dy * dy;
+        if (d2 > preferredRadius * preferredRadius) {
+          return Math.atan2(dy, dx) + (Math.random() - 0.5) * 0.25;
+        }
+      }
+
+      let nearestBrood = null;
+      let bestD2 = preferredRadius * preferredRadius;
+      for (const b of brood) {
+        const dx = b.x - this.x;
+        const dy = b.y - this.y;
+        const d2 = dx * dx + dy * dy;
+        if (d2 < bestD2) { bestD2 = d2; nearestBrood = b; }
+      }
+      if (nearestBrood) {
+        return Math.atan2(nearestBrood.y - this.y, nearestBrood.x - this.x) + (Math.random() - 0.5) * 0.3;
+      }
+
+      return this.angle + (Math.random() - 0.5) * 0.35;
     }
 
     if (this.inNestCore) {
@@ -1776,7 +1777,6 @@ function loop(t) {
 
   seedEntranceHomeScent();
 
-  updateRoles(dt);
   ants.forEach(a => a.update(dt));
 
   for (let i = trophallaxisEvents.length - 1; i >= 0; i--) {

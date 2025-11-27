@@ -26,20 +26,28 @@ const BroodSystem = (() => {
     return world.brood;
   }
 
-  function canLay(state, world) {
+  function nearbyAntCount(queen, radius) {
+    if (!queen || !Array.isArray(ants)) return 0;
+    const r2 = radius * radius;
+    let count = 0;
+
+    for (const ant of ants) {
+      if (ant === queen || ant.type === "corpse") continue;
+      const dx = ant.x - queen.x;
+      const dy = ant.y - queen.y;
+      if ((dx * dx + dy * dy) <= r2) count++;
+    }
+
+    return count;
+  }
+
+  function canLay(world, queen) {
     const storedFood = world?.storedFood ?? 0;
     if (storedFood < SETTINGS.layFoodReserve) return false;
+    if (!queen || queen.energy <= 80) return false;
 
-    const spacePressure = state?.spacePressure ?? 0;
-    const foodPressure = state?.foodPressure ?? 0;
-    const wastePressure = state?.wastePressure ?? 0;
-    const broodPressure = state?.broodPressure ?? 0;
-
-    if (spacePressure > 0.9) return false;
-    if (foodPressure > 0.85) return false;
-    if (wastePressure > 0.92) return false;
-    if (broodPressure > 0.95) return false;
-    return true;
+    const crowding = nearbyAntCount(queen, 20);
+    return crowding > 5;
   }
 
   function spawnBrood(queen) {
@@ -83,7 +91,7 @@ const BroodSystem = (() => {
     layTimer += dt;
     if (layTimer >= SETTINGS.layInterval) {
       layTimer = 0;
-      if (canLay(colonyStateSnapshot, world) && consumeFood(SETTINGS.feedCost)) {
+      if (canLay(world, queen) && consumeFood(SETTINGS.feedCost)) {
         spawnBrood(queen);
       }
     }
