@@ -714,6 +714,9 @@ class Ant {
     this.animRig = ANT_ANIM.createRig(type);
     this.stepDistance = 0;
 
+    this.homeVector = { x: NEST_ENTRANCE.x - x, y: NEST_ENTRANCE.y - y };
+    this.vectorUncertainty = 0;
+
     this.age = 0;
     this.lifespan = 300 + Math.random() * 200;
 
@@ -1168,6 +1171,16 @@ class Ant {
       return this.angle + (Math.random() - 0.5) * 0.6;
     }
 
+    const homeDx = NEST_ENTRANCE.x - this.x;
+    const homeDy = NEST_ENTRANCE.y - this.y;
+    const entranceRadius = NEST_ENTRANCE.radius * CONSTANTS.CELL_SIZE;
+    const nearEntrance = (homeDx * homeDx + homeDy * homeDy) <= entranceRadius * entranceRadius;
+    if (nearEntrance) {
+      this.homeVector.x = homeDx;
+      this.homeVector.y = homeDy;
+      this.vectorUncertainty = 0;
+    }
+
     switch (this.intent) {
       case "clean":
         if (!this.hasFood) {
@@ -1208,19 +1221,23 @@ class Ant {
 
     const weightedC = adjC * CONFIG.forwardBias;
 
-    if (Math.max(adjL, adjC, adjR) > 0.05) {
+    const hasPheromoneTrail = Math.max(adjL, adjC, adjR) > 0.05;
+    if (hasPheromoneTrail) {
       const best = (weightedC > adjL && weightedC > adjR)
         ? this.angle
         : (adjL > adjR ? this.angle - sa : this.angle + sa);
 
       if (this.hasFood) this.returnDir = best;
+      this.homeVector.x = NEST_ENTRANCE.x - this.x;
+      this.homeVector.y = NEST_ENTRANCE.y - this.y;
+      this.vectorUncertainty = 0;
       return best;
     }
 
     if (this.hasFood) {
       if (this.returnDir === null) this.returnDir = this.angle;
-      // Keep heading along the remembered return direction with light wander
-      return this.returnDir + (Math.random() - 0.5) * 0.4;
+      const homeAngle = Math.atan2(this.homeVector.y, this.homeVector.x);
+      return Number.isFinite(homeAngle) ? homeAngle : this.returnDir;
     } else {
       if (this.y > CONSTANTS.REGION_SPLIT * CONSTANTS.CELL_SIZE) {
         return -Math.PI / 2 + (Math.random() - 0.5) * 2.0;
@@ -1289,6 +1306,17 @@ class Ant {
       this.x += dx;
       this.y += dy;
       this.stepDistance = Math.hypot(dx, dy);
+
+      this.homeVector.x -= dx;
+      this.homeVector.y -= dy;
+
+      const noiseScale = 0.02 * this.stepDistance;
+      const noiseX = (Math.random() - 0.5) * 2 * noiseScale;
+      const noiseY = (Math.random() - 0.5) * 2 * noiseScale;
+      this.homeVector.x += noiseX;
+      this.homeVector.y += noiseY;
+      this.vectorUncertainty += Math.hypot(noiseX, noiseY);
+
       this.interact();
     }
   }
