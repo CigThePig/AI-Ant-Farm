@@ -20,6 +20,9 @@ const CONFIG = {
   sensorAngle: 0.8,
   sensorDist: 30,
 
+  // Threshold for detecting the queen's close-range scent within the nest core
+  nestCoreQueenThreshold: 0.45,
+
   turnSpeed: 0.4,
   wanderStrength: 0.1,
   forwardBias: 2.0,
@@ -53,6 +56,15 @@ const CONSTANTS = {
 CONSTANTS.WORLD_W = CONSTANTS.GRID_W * CONSTANTS.CELL_SIZE;
 CONSTANTS.WORLD_H = CONSTANTS.GRID_H * CONSTANTS.CELL_SIZE;
 CONSTANTS.REGION_SPLIT = Math.floor(CONSTANTS.GRID_H * 0.35);
+
+const NEST_ENTRANCE = {
+  gx: Math.floor(CONSTANTS.GRID_W / 2),
+  gy: Math.max(2, CONSTANTS.REGION_SPLIT),
+  radius: 2,
+  corridorDepth: 8,
+};
+NEST_ENTRANCE.x = (NEST_ENTRANCE.gx + 0.5) * CONSTANTS.CELL_SIZE;
+NEST_ENTRANCE.y = (NEST_ENTRANCE.gy + 0.5) * CONSTANTS.CELL_SIZE;
 
 const QUEEN_RADIUS_PX = CONFIG.queenRadius * CONSTANTS.CELL_SIZE;
 const QUEEN_RADIUS_PX2 = QUEEN_RADIUS_PX * QUEEN_RADIUS_PX;
@@ -389,6 +401,7 @@ let foodGrid = [];
 let wasteGrid = [];
 let scentToFood = [];
 let scentToHome = [];
+let queenScent = [];
 let ants = [];
 let particles = [];
 let trophallaxisEvents = [];
@@ -578,6 +591,7 @@ function resetSimulation() {
   wasteGrid = [];
   scentToFood = [];
   scentToHome = [];
+  queenScent = [];
   ants = [];
   particles = [];
   foodInStorage = 0;
@@ -592,6 +606,7 @@ function resetSimulation() {
     wasteGrid[y] = new Float32Array(CONSTANTS.GRID_W);
     scentToFood[y] = new Float32Array(CONSTANTS.GRID_W);
     scentToHome[y] = new Float32Array(CONSTANTS.GRID_W);
+    queenScent[y] = new Float32Array(CONSTANTS.GRID_W);
 
     for (let x = 0; x < CONSTANTS.GRID_W; x++) {
       const n = Math.sin(x*0.27)*Math.cos(y*0.29)*0.5+0.5;
@@ -638,6 +653,23 @@ function resetSimulation() {
     }
   }
 
+  // Carve a narrow corridor from the queen's chamber toward the entrance
+  for (let dy = 0; dy <= NEST_ENTRANCE.corridorDepth; dy++) {
+    const y = Math.max(1, qgy - dy);
+    for (let dx = -1; dx <= 1; dx++) {
+      const x = NEST_ENTRANCE.gx + dx;
+      if (x <= 0 || x >= CONSTANTS.GRID_W - 1) continue;
+      grid[y][x] = TILES.TUNNEL;
+    }
+  }
+
+  // Mark the entrance band near the surface
+  for (let y = Math.max(1, NEST_ENTRANCE.gy - 1); y <= Math.min(CONSTANTS.GRID_H - 2, NEST_ENTRANCE.gy + 1); y++) {
+    for (let x = Math.max(1, NEST_ENTRANCE.gx - NEST_ENTRANCE.radius); x <= Math.min(CONSTANTS.GRID_W - 2, NEST_ENTRANCE.gx + NEST_ENTRANCE.radius); x++) {
+      grid[y][x] = TILES.TUNNEL;
+    }
+  }
+
   worldState.grid = grid;
   worldState.gridTexture = gridTexture;
   worldState.particles = particles;
@@ -673,12 +705,16 @@ function resetSimulation() {
 // ANT CLASS
 // ==============================
 
+function isInEntranceRegion(gx, gy) {
+  return (
+    Math.abs(gx - NEST_ENTRANCE.gx) <= NEST_ENTRANCE.radius &&
+    Math.abs(gy - NEST_ENTRANCE.gy) <= 1
+  );
+}
+
 function spreadQueenScent(qgx, qgy) {
   const coreRadius = 3;
   const reachRadius = 6;
-
-  // Anchor the queen's own tile as a solid beacon
-  scentToHome[qgy][qgx] = 1.0;
 
   for (let dy = -reachRadius; dy <= reachRadius; dy++) {
     const ny = qgy + dy;
@@ -688,32 +724,52 @@ function spreadQueenScent(qgx, qgy) {
       const nx = qgx + dx;
       if (nx <= 0 || nx >= CONSTANTS.GRID_W - 1) continue;
 
-      // Only let the scent flow through open spaces
       if (grid[ny][nx] === TILES.SOIL || grid[ny][nx] === TILES.BEDROCK) continue;
 
       const dist = Math.hypot(dx, dy);
       if (dist > reachRadius) continue;
 
-      // Dense scent inside the chamber, softer haze creeping outward
       let strength = 0;
-      if (dist < 0.5) strength = 0.7;
-      else if (dist <= coreRadius) strength = 0.35 + (coreRadius - dist) * 0.08;
-      else strength = Math.max(0.12, 0.22 - (dist - coreRadius) * 0.025);
+      if (dist < 0.5) strength = 0.8;
+      else if (dist <= coreRadius) strength = 0.45 + (coreRadius - dist) * 0.1;
+      else strength = Math.max(0.12, 0.25 - (dist - coreRadius) * 0.03);
 
-      scentToHome[ny][nx] = Math.min(1.0, scentToHome[ny][nx] + strength);
+      queenScent[ny][nx] = Math.min(1.0, queenScent[ny][nx] + strength);
+    }
+  }
+}
+
+function seedEntranceHomeScent() {
+  const { gx, gy, radius, corridorDepth } = NEST_ENTRANCE;
+
+  for (let dy = -radius; dy <= radius; dy++) {
+    const ny = gy + dy;
+    if (!scentToHome[ny]) continue;
+    for (let dx = -radius; dx <= radius; dx++) {
+      const nx = gx + dx;
+      if (nx <= 0 || nx >= CONSTANTS.GRID_W - 1) continue;
+      if (grid[ny][nx] === TILES.SOIL || grid[ny][nx] === TILES.BEDROCK) continue;
+
+      const dist = Math.hypot(dx, dy);
+      if (dist <= radius + 0.01) {
+        const add = Math.max(0.4, 1 - dist * 0.3);
+        scentToHome[ny][nx] = Math.min(1.0, scentToHome[ny][nx] + add);
+      }
     }
   }
 
-  // A little push toward the entrance (upward toward the surface)
-  for (let step = 1; step <= 4; step++) {
-    const ny = qgy - step;
-    if (ny <= 0) break;
-    const nx = qgx;
+  // Extend the scent downward into the nest so returners can feel the entrance corridor
+  for (let step = 1; step <= corridorDepth; step++) {
+    const ny = gy + step;
+    if (ny >= CONSTANTS.GRID_H - 1) break;
+    if (!scentToHome[ny]) continue;
 
-    if (grid[ny][nx] === TILES.SOIL || grid[ny][nx] === TILES.BEDROCK) break;
+    const taper = Math.max(0.08, 0.35 - step * 0.04);
+    if (grid[ny][gx] === TILES.SOIL || grid[ny][gx] === TILES.BEDROCK) break;
+    scentToHome[ny][gx] = Math.min(1.0, scentToHome[ny][gx] + taper);
 
-    const taper = 0.35 - (step - 1) * 0.06;
-    scentToHome[ny][nx] = Math.min(1.0, scentToHome[ny][nx] + Math.max(0.12, taper));
+    if (grid[ny][gx - 1] !== TILES.SOIL) scentToHome[ny][gx - 1] = Math.min(1.0, scentToHome[ny][gx - 1] + taper * 0.8);
+    if (grid[ny][gx + 1] !== TILES.SOIL) scentToHome[ny][gx + 1] = Math.min(1.0, scentToHome[ny][gx + 1] + taper * 0.8);
   }
 }
 
@@ -754,6 +810,8 @@ class Ant {
     this.digRetargetT = Math.random() * 0.4;
     this.lastDigVector = null;
     this.pendingDigVector = null;
+
+    this.inNestCore = false;
   }
 
   computeIntentScores(worldState) {
@@ -831,6 +889,26 @@ class Ant {
     const dx = queen.x - this.x;
     const dy = queen.y - this.y;
     return (dx * dx + dy * dy) <= QUEEN_RADIUS_PX2;
+  }
+  updateNestCoreState() {
+    const gx = Math.floor(this.x / CONSTANTS.CELL_SIZE);
+    const gy = Math.floor(this.y / CONSTANTS.CELL_SIZE);
+
+    let scentStrength = 0;
+    if (queenScent[gy] && queenScent[gy][gx] !== undefined) {
+      scentStrength = queenScent[gy][gx];
+    }
+
+    const queen = ants[0];
+    if (queen) {
+      const dx = queen.x - this.x;
+      const dy = queen.y - this.y;
+      const dist = Math.hypot(dx, dy);
+      const distFactor = 1 - clamp01(dist / (CONFIG.queenRadius * CONSTANTS.CELL_SIZE));
+      scentStrength = Math.max(scentStrength, distFactor);
+    }
+
+    this.inNestCore = scentStrength >= CONFIG.nestCoreQueenThreshold;
   }
 
   maybeDropWaste(dt) {
@@ -956,7 +1034,7 @@ class Ant {
 
     if (this.age > this.lifespan || this.energy <= 0) { handleDeath(); return; }
     if (this.type === "queen") {
-      // Keep the nest as the strongest attractor by flooding the home scent map at the queen's position
+      // Emit a local queen scent used only for nest-core state detection
       const qgx = Math.floor(this.x / CONSTANTS.CELL_SIZE);
       const qgy = Math.floor(this.y / CONSTANTS.CELL_SIZE);
       if (
@@ -1025,6 +1103,8 @@ class Ant {
       }
     }
 
+    this.updateNestCoreState();
+
     const desired = this.sense(dt);
 
     let diff = desired - this.angle;
@@ -1071,6 +1151,22 @@ class Ant {
       return this.angle + (Math.random() - 0.5) * 0.8;
     }
 
+    if (this.inNestCore) {
+      const queen = ants[0];
+
+      if (this.hasFood && queen) {
+        const towardQueen = Math.atan2(queen.y - this.y, queen.x - this.x);
+        return towardQueen + (Math.random() - 0.5) * 0.25;
+      }
+
+      if (queen) {
+        const away = Math.atan2(this.y - queen.y, this.x - queen.x);
+        return away + (Math.random() - 0.5) * 0.45;
+      }
+
+      return this.angle + (Math.random() - 0.5) * 0.6;
+    }
+
     switch (this.intent) {
       case "clean":
         if (!this.hasFood) {
@@ -1092,7 +1188,7 @@ class Ant {
     }
 
     const g = this.hasFood ? scentToHome : scentToFood;
-    const ignoreFoodPheromone = !this.hasFood && this.isInsideQueenRadius();
+    const ignoreFoodPheromone = this.inNestCore || (!this.hasFood && this.isInsideQueenRadius());
     const sa = CONFIG.sensorAngle;
     const sd = CONFIG.sensorDist;
 
@@ -1209,21 +1305,20 @@ class Ant {
     const gy = Math.floor(this.y / CONSTANTS.CELL_SIZE);
     if (gx < 0 || gy < 0 || gx >= CONSTANTS.GRID_W || gy >= CONSTANTS.GRID_H) return;
 
-    if (this.isInsideQueenRadius()) return;
+    if (this.inNestCore || this.isInsideQueenRadius()) return;
 
-    const queen = ants[0];
-    const dotToQueen = queen ? (
-      Math.cos(this.angle) * (queen.x - this.x) + Math.sin(this.angle) * (queen.y - this.y)
-    ) : 0;
-    const movingTowardQueen = dotToQueen > 0;
-    const movingAwayFromQueen = dotToQueen < 0;
+    const vecToEntranceX = NEST_ENTRANCE.x - this.x;
+    const vecToEntranceY = NEST_ENTRANCE.y - this.y;
+    const dotToEntrance = Math.cos(this.angle) * vecToEntranceX + Math.sin(this.angle) * vecToEntranceY;
+    const movingTowardEntrance = dotToEntrance > 0;
+    const movingAwayFromEntrance = dotToEntrance < 0;
 
     if (this.hasFood) {
-      if (movingTowardQueen || !queen) {
+      if (movingTowardEntrance) {
         scentToFood[gy][gx] = Math.min(1.0, scentToFood[gy][gx] + CONFIG.depositAmount);
       }
     } else {
-      if (movingAwayFromQueen || !queen) {
+      if (movingAwayFromEntrance) {
         scentToHome[gy][gx] = Math.min(1.0, scentToHome[gy][gx] + (CONFIG.depositAmount * 0.5));
       }
     }
@@ -1668,6 +1763,7 @@ function loop(t) {
     for (let x = 0; x < CONSTANTS.GRID_W; x++) {
       if (scentToFood[y][x] > 0.01) scentToFood[y][x] *= decay; else scentToFood[y][x] = 0;
       if (scentToHome[y][x] > 0.01) scentToHome[y][x] *= decay; else scentToHome[y][x] = 0;
+      if (queenScent[y][x] > 0.01) queenScent[y][x] *= decay; else queenScent[y][x] = 0;
 
       // Food emits its own attractor so ants can find it even before a trail exists
       const foodAmount = foodGrid[y][x];
@@ -1677,6 +1773,8 @@ function loop(t) {
       }
     }
   }
+
+  seedEntranceHomeScent();
 
   updateRoles(dt);
   ants.forEach(a => a.update(dt));
