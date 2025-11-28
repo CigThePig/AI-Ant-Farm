@@ -44,8 +44,8 @@ const BroodSystem = (() => {
   function canLay(world, queen) {
     if (!queen || queen.energy <= 25) return false;
 
-    const crowding = nearbyAntCount(queen, 20);
-    return crowding > 30;
+    const crowding = nearbyAntCount(queen, 100);
+    return crowding > 2;
   }
 
   function spawnBrood(queen) {
