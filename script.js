@@ -1065,9 +1065,9 @@ class Ant {
 
     if (this.age > this.lifespan || this.energy <= 0) { handleDeath(); return; }
 
-    if (this.hasFood && this.energy < 30) {
+    if (this.hasFood && this.energy < 15) {
       this.hasFood = 0;
-      this.energy = this.maxEnergy;
+      this.energy = Math.min(this.maxEnergy, this.energy + 40);
       this.returnDir = null;
     }
 
@@ -1094,6 +1094,16 @@ class Ant {
     this.intentTopChoices = Object.entries(intentScores).sort((a, b) => b[1] - a[1]).slice(0, 2);
     this.intent = this.chooseIntent(intentScores);
 
+    let speedMult = 1.0;
+    let forcedAngle = null;
+    if (!this.hasFood && this.energy < 25) {
+      this.intent = "returnHome";
+      const queen = ants[0];
+      if (queen) forcedAngle = Math.atan2(queen.y - this.y, queen.x - this.x);
+      this.panicT = 0;
+      speedMult = 0.7;
+    }
+
     if (this.panicT > 0) {
       this.panicT -= dt;
       this.move(dt, 2.0);
@@ -1112,7 +1122,7 @@ class Ant {
 
     this.updateNestCoreState();
 
-    const desired = this.sense(dt);
+    const desired = forcedAngle ?? this.sense(dt);
 
     let diff = desired - this.angle;
     while (diff < -Math.PI) diff += Math.PI * 2;
@@ -1124,7 +1134,7 @@ class Ant {
     this.angle += diff;
     this.angle += (Math.random() - 0.5) * CONFIG.wanderStrength;
 
-    this.move(dt, 1.0);
+    this.move(dt, speedMult);
     this.dropScent();
     ANT_ANIM.step(this.animRig, { dt, travel: this.stepDistance, speedHint: CONFIG.workerSpeed });
   }
@@ -1138,12 +1148,24 @@ class Ant {
       const dy = other.y - this.y;
       if ((dx * dx + dy * dy) >= maxDist2) continue;
 
-      if ((this.energy > 80 || this.hasFood) && other.energy < 40) {
-        const transferAmount = 30;
-        this.energy = Math.max(0, this.energy - transferAmount);
-        other.energy = Math.min(other.maxEnergy, other.energy + transferAmount);
+      if (this.energy > other.energy + 20) {
+        const desiredTransfer = (this.energy - other.energy) / 2;
+        const receiverCapacity = other.maxEnergy - other.energy;
+        const actualTransfer = Math.min(desiredTransfer, receiverCapacity, this.energy);
 
-        trophallaxisEvents.push({ x1: this.x, y1: this.y, x2: other.x, y2: other.y, life: 0.2 });
+        if (actualTransfer > 0) {
+          this.energy = Math.max(0, this.energy - actualTransfer);
+          other.energy = Math.min(other.maxEnergy, other.energy + actualTransfer);
+
+          trophallaxisEvents.push({
+            x1: this.x,
+            y1: this.y,
+            x2: other.x,
+            y2: other.y,
+            amount: actualTransfer,
+            life: 0.2,
+          });
+        }
       }
     }
   }
@@ -1603,9 +1625,11 @@ function render() {
 
   if (trophallaxisEvents.length) {
     ctx.save();
-    ctx.strokeStyle = "rgba(255,230,90,0.85)";
-    ctx.lineWidth = 1.3;
     for (const e of trophallaxisEvents) {
+      const strength = clamp01((e.amount || 15) / 60);
+      const alpha = 0.4 + strength * 0.5;
+      ctx.strokeStyle = `rgba(255,230,90,${alpha})`;
+      ctx.lineWidth = 0.9 + strength * 1.8;
       ctx.beginPath();
       ctx.moveTo(e.x1, e.y1);
       ctx.lineTo(e.x2, e.y2);
