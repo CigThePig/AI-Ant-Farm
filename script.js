@@ -403,6 +403,7 @@ canvas.addEventListener("pointerleave", removeEv);
 let grid = [];
 let gridTexture = [];
 let foodGrid = [];
+let storedFoodGrid = [];
 let wasteGrid = [];
 let scentToFood = [];
 let scentToHome = [];
@@ -523,6 +524,7 @@ function resetSimulation() {
   grid = [];
   gridTexture = [];
   foodGrid = [];
+  storedFoodGrid = [];
   wasteGrid = [];
   scentToFood = [];
   scentToHome = [];
@@ -537,6 +539,7 @@ function resetSimulation() {
     grid[y] = new Uint8Array(CONSTANTS.GRID_W);
     gridTexture[y] = new Float32Array(CONSTANTS.GRID_W);
     foodGrid[y] = new Uint8Array(CONSTANTS.GRID_W);
+    storedFoodGrid[y] = new Uint8Array(CONSTANTS.GRID_W);
     wasteGrid[y] = new Float32Array(CONSTANTS.GRID_W);
     scentToFood[y] = new Float32Array(CONSTANTS.GRID_W);
     scentToHome[y] = new Float32Array(CONSTANTS.GRID_W);
@@ -725,7 +728,7 @@ class Ant {
     this.type = type;
     this.x = x; this.y = y;
     this.angle = Math.random() * Math.PI * 2;
-    this.hasFood = false;
+    this.hasFood = 0;
     this.returnDir = null;
     this.maxEnergy = 100;
     this.energy = this.maxEnergy;
@@ -1022,7 +1025,7 @@ class Ant {
       if (this.type !== "corpse") this.decompositionTimer = 0;
       this.isDead = true;
       this.type = "corpse";
-      this.hasFood = false;
+      this.hasFood = 0;
       this.cleanTarget = null;
       ANT_ANIM.step(this.animRig, { dt, travel: 0, speedHint: 0 });
     };
@@ -1062,7 +1065,7 @@ class Ant {
     if (this.age > this.lifespan || this.energy <= 0) { handleDeath(); return; }
 
     if (this.hasFood && this.energy < 30) {
-      this.hasFood = false;
+      this.hasFood = 0;
       this.energy = this.maxEnergy;
       this.returnDir = null;
     }
@@ -1423,20 +1426,21 @@ class Ant {
 
     if (!this.hasFood && foodGrid[gy][gx] > 0) {
       foodGrid[gy][gx]--;
-      this.hasFood = true;
+      this.hasFood = 1;
       this.returnDir = this.angle + Math.PI;
       this.resetStuckTimer();
       this.angle += Math.PI;
       return;
     }
 
-    if (this.hasFood) {
-      const q = ants[0];
-      if ((q.x - this.x) ** 2 + (q.y - this.y) ** 2 < 1600) {
-        this.hasFood = false;
+    if (this.hasFood && (this.inNestCore || this.isInsideQueenRadius())) {
+      const tile = grid[gy]?.[gx];
+      if (tile === TILES.TUNNEL && storedFoodGrid[gy][gx] < 5) {
+        this.hasFood = Math.max(0, this.hasFood - 1);
+        storedFoodGrid[gy][gx]++;
+        foodInStorage++;
         this.returnDir = null;
         this.postDeliveryTime = CONFIG.postDeliveryDuration;
-        foodInStorage++;
         this.resetStuckTimer();
         this.angle += Math.PI;
       }
@@ -1517,6 +1521,16 @@ function render() {
 
         ctx.fillStyle = `rgba(120,255,150,0.70)`;
         ctx.fillRect(px + (cs/2 - sz/2), py + (cs/2 - sz/2), sz, sz);
+      }
+
+      const stored = storedFoodGrid[y][x];
+      if (stored > 0) {
+        const radius = Math.min(cs * 0.45, 2.2 + stored * 0.7);
+        const alpha = 0.35 + Math.min(0.35, stored * 0.08);
+        ctx.fillStyle = `rgba(255, 200, 100, ${alpha})`;
+        ctx.beginPath();
+        ctx.arc(px + cs / 2, py + cs / 2, radius, 0, Math.PI * 2);
+        ctx.fill();
       }
     }
   }
