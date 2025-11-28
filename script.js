@@ -1517,6 +1517,28 @@ class Ant {
       }
     }
 
+    // CONSUME STORED FOOD (Metabolism)
+    // If hungry, empty-handed, and standing on stored food in the nest, eat it.
+    if (!this.hasFood && this.energy < this.maxEnergy * 0.6) {
+      if (storedFoodGrid[gy][gx] > 0) {
+        const needed = this.maxEnergy - this.energy;
+        // Eat up to 20 energy units or whatever is available
+        const amountToEat = Math.min(20, needed, storedFoodGrid[gy][gx]);
+
+        if (amountToEat > 0) {
+          storedFoodGrid[gy][gx] -= amountToEat;
+          this.energy += amountToEat;
+          foodInStorage -= amountToEat;
+
+          // 20% chance to generate waste (metabolic byproduct)
+          if (Math.random() < 0.2) {
+            addWaste(gx, gy, 0.1);
+          }
+          return; // Action consumed this tick
+        }
+      }
+    }
+
     if (!this.hasFood && foodGrid[gy][gx] > 0) {
       foodGrid[gy][gx]--;
       this.hasFood = 1;
