@@ -36,7 +36,7 @@ const CONFIG = {
 };
 
 // Energy drains more slowly so ants take longer to seek food.
-const ENERGY_DECAY_RATE = 2.5 / 3;
+const ENERGY_DECAY_RATE = 0.15;
 
 const ROLE_SETTINGS = {
   reassessPeriod: 2.5,
