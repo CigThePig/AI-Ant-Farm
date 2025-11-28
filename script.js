@@ -88,6 +88,8 @@ const AIR = {
   UPDATE_EVERY_FRAMES: 4,
 };
 
+const OLEIC_ACID_THRESHOLD = 30; // seconds before corpses emit detectable oleic acid
+
 const WASTE = {
   dropChancePerSecond: 0.18,
   dropAmount: 0.25,
@@ -967,6 +969,7 @@ class Ant {
     const maxCorpseDist2 = (WASTE.cleanerSightRadius * CONSTANTS.CELL_SIZE) ** 2;
     for (const other of ants) {
       if (other === this || other.type !== "corpse") continue;
+      if ((other.decompositionTimer ?? 0) <= OLEIC_ACID_THRESHOLD) continue;
       const dx = other.x - this.x;
       const dy = other.y - this.y;
       const d2 = dx * dx + dy * dy;
@@ -1000,12 +1003,19 @@ class Ant {
     this.updateAgeBasedRole();
 
     const handleDeath = () => {
+      if (this.type !== "corpse") this.decompositionTimer = 0;
       this.isDead = true;
       this.type = "corpse";
       this.hasFood = false;
       this.cleanTarget = null;
       ANT_ANIM.step(this.animRig, { dt, travel: 0, speedHint: 0 });
     };
+
+    if (this.type === "corpse") {
+      this.decompositionTimer = (this.decompositionTimer ?? 0) + dt;
+      ANT_ANIM.step(this.animRig, { dt, travel: 0, speedHint: 0 });
+      return;
+    }
 
     if (this.isDead) { handleDeath(); return; }
 
@@ -1556,9 +1566,22 @@ function render() {
     ctx.translate(0, pose.bodyBob);
     ctx.rotate(pose.bodyTwist);
 
-    const body = (a.type === "queen") ? "#d07" : "#2a241f";
-    const body2 = (a.type === "queen") ? "#a05" : "#1b1714";
-    const hi = (a.type === "queen") ? "rgba(255,170,210,0.20)" : "rgba(255,255,255,0.10)";
+    let body = (a.type === "queen") ? "#d07" : "#2a241f";
+    let body2 = (a.type === "queen") ? "#a05" : "#1b1714";
+    let hi = (a.type === "queen") ? "rgba(255,170,210,0.20)" : "rgba(255,255,255,0.10)";
+
+    if (a.type === "corpse") {
+      const isRotting = (a.decompositionTimer ?? 0) > OLEIC_ACID_THRESHOLD;
+      if (isRotting) {
+        body = "#d6d6d6";
+        body2 = "#b5b5b5";
+        hi = "rgba(255,255,255,0.25)";
+      } else {
+        body = "#161616";
+        body2 = "#0d0d0d";
+        hi = "rgba(255,255,255,0.05)";
+      }
+    }
 
     ctx.fillStyle = "rgba(0,0,0,0.35)";
     ctx.beginPath();
