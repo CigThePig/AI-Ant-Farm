@@ -1517,7 +1517,10 @@ class Ant {
       return;
     }
 
-    if (this.hasFood && (this.inNestCore || this.isInsideQueenRadius())) {
+    const queen = ants[0];
+    const distanceToQueen = queen ? Math.hypot(queen.x - this.x, queen.y - this.y) : Infinity;
+    const deepInNest = gy > (CONSTANTS.REGION_SPLIT + 2);
+    if (this.hasFood && (this.inNestCore || this.isInsideQueenRadius()) && deepInNest && distanceToQueen > 15) {
       const tile = grid[gy]?.[gx];
       if (tile === TILES.TUNNEL && storedFoodGrid[gy][gx] < 5) {
         this.hasFood = Math.max(0, this.hasFood - 1);
