@@ -739,7 +739,7 @@ class Ant {
     this.vectorUncertainty = 0;
 
     this.age = 0;
-    this.lifespan = 300 + Math.random() * 200;
+    this.lifespan = 2000 + Math.random() * 1000;
 
     this.carryingWaste = false;
     this.carryingWasteAmount = 0;
@@ -1141,8 +1141,39 @@ class Ant {
 
   shareEnergy() {
     const maxDist2 = CONSTANTS.CELL_SIZE * CONSTANTS.CELL_SIZE;
+
+    // Prioritize feeding the queen
     for (const other of ants) {
-      if (other === this) continue;
+      if (other === this || other.type !== "queen") continue;
+
+      const dx = other.x - this.x;
+      const dy = other.y - this.y;
+      if ((dx * dx + dy * dy) >= maxDist2) continue;
+
+      if (this.energy > 10 && other.energy < other.maxEnergy) {
+        const receiverCapacity = other.maxEnergy - other.energy;
+        const availableToGive = this.energy - 10;
+        const actualTransfer = Math.min(40, receiverCapacity, availableToGive);
+
+        if (actualTransfer > 0) {
+          this.energy = Math.max(0, this.energy - actualTransfer);
+          other.energy = Math.min(other.maxEnergy, other.energy + actualTransfer);
+
+          trophallaxisEvents.push({
+            x1: this.x,
+            y1: this.y,
+            x2: other.x,
+            y2: other.y,
+            amount: actualTransfer,
+            life: 0.2,
+          });
+        }
+      }
+    }
+
+    // Share with nearby workers using existing safety margin logic
+    for (const other of ants) {
+      if (other === this || other.type === "queen") continue;
 
       const dx = other.x - this.x;
       const dy = other.y - this.y;
