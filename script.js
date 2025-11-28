@@ -1457,20 +1457,29 @@ class Ant {
           const broodHere = worldState.brood?.find((b) => {
             const bx = Math.floor(b.x / CONSTANTS.CELL_SIZE);
             const by = Math.floor(b.y / CONSTANTS.CELL_SIZE);
-            return bx === gx && by === gy;
+            return bx === gx && by === gy && (!b.lockedBy || b.lockedBy === this);
           });
 
           if (broodHere) {
             this.carryingBrood = broodHere;
+            broodHere.lockedBy = this;
           }
         }
 
         if (this.carryingBrood) {
           BroodSystem.updateBroodPos(this.carryingBrood, this.x, this.y);
 
-          if (distTiles > 8 && grid[gy]?.[gx] === TILES.TUNNEL) {
+          const inDropRing = distTiles >= 2 && distTiles <= 6;
+          const dropChance = inDropRing && Math.random() < 0.05;
+          const wanderedTooFar = distTiles > 10;
+
+          if (dropChance || wanderedTooFar) {
+            delete this.carryingBrood.lockedBy;
             this.carryingBrood = null;
-            this.angle += Math.PI;
+
+            if (wanderedTooFar) {
+              this.angle += Math.PI;
+            }
           }
         }
       }
