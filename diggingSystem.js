@@ -10,8 +10,8 @@ const DiggingSystem = (() => {
     frontierSampleCount: 32,
     frontierQueueBudget: 120,
     decayRowsPerTick: 6,
-    baseTileHP: 3.2,
-    hardnessJitter: 1.4,
+    baseTileHP: 3.5,
+    hardnessJitter: 0.2,
     depthHardness: 1.0,
     digDamage: 1.0,
   };
@@ -182,7 +182,7 @@ const DiggingSystem = (() => {
     const qx = queen ? queen.x : ant.x;
     const qy = queen ? queen.y : ant.y;
 
-    let diggingMode = broodPressure > 0.7 ? "expander" : "miner";
+    let diggingMode = broodPressure > 0.15 ? "expander" : "miner";
     let favorSoftSoil = diggingMode === "miner" && spacePressure < 0.5;
 
     let roomSeeds = [];
@@ -255,15 +255,12 @@ const DiggingSystem = (() => {
 
       let modeBonus = 1;
       if (diggingMode === "expander" && roomSeeds.length) {
-        const targetRadius = 3.5;
         const maxRadius = 4.5;
         let bestSeedBias = 0;
         for (const seed of roomSeeds) {
           const dist = Math.hypot(x - seed.x, y - seed.y);
           if (dist > maxRadius) continue;
-          const ringAlignment = Math.max(0, 1 - Math.abs(dist - targetRadius) / targetRadius);
-          const proximity = Math.max(0, 1 - dist / maxRadius);
-          const bias = ringAlignment * 4 + proximity * 2;
+          const bias = (1 - (dist / maxRadius)) * 6.0;
           if (bias > bestSeedBias) bestSeedBias = bias;
         }
         modeBonus += bestSeedBias;
