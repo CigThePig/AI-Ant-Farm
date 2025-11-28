@@ -746,6 +746,7 @@ class Ant {
     this.cleanTarget = null;
     this.carryingCorpse = false;
     this.carryingBrood = null;
+    this.broodTimer = 0;
 
     this.postDeliveryTime = 0;
 
@@ -1233,6 +1234,8 @@ class Ant {
 
       let nearestBrood = null;
       let bestD2 = preferredRadius * preferredRadius;
+      // BIOLOGICAL FIX: minimum interaction distance to avoid walking through brood
+      const ARRESTMENT_DIST_SQ = 100;
       for (const b of brood) {
         const dx = b.x - this.x;
         const dy = b.y - this.y;
@@ -1240,6 +1243,9 @@ class Ant {
         if (d2 < bestD2) { bestD2 = d2; nearestBrood = b; }
       }
       if (nearestBrood) {
+        if (bestD2 < ARRESTMENT_DIST_SQ) {
+          return this.angle + (Math.random() - 0.5) * 1.5;
+        }
         return Math.atan2(nearestBrood.y - this.y, nearestBrood.x - this.x) + (Math.random() - 0.5) * 0.3;
       }
 
@@ -1471,19 +1477,23 @@ class Ant {
           if (broodHere) {
             this.carryingBrood = broodHere;
             broodHere.lockedBy = this;
+            this.broodTimer = 2.0;
           }
         }
 
         if (this.carryingBrood) {
           BroodSystem.updateBroodPos(this.carryingBrood, this.x, this.y);
 
+          if (this.broodTimer > 0) this.broodTimer -= 0.016;
+
           const inDropRing = distTiles >= 2 && distTiles <= 6;
-          const dropChance = inDropRing && Math.random() < 0.05;
+          const dropChance = inDropRing && Math.random() < 0.05 && this.broodTimer <= 0;
           const wanderedTooFar = distTiles > 10;
 
           if (dropChance || wanderedTooFar) {
             delete this.carryingBrood.lockedBy;
             this.carryingBrood = null;
+            this.broodTimer = 0;
 
             if (wanderedTooFar) {
               this.angle += Math.PI;
