@@ -35,6 +35,9 @@ const CONFIG = {
   queenRadius: 8,             // tiles; pheromone-free buffer around the queen
 };
 
+// Energy drains more slowly so ants take longer to seek food.
+const ENERGY_DECAY_RATE = 2.5 / 3;
+
 const ROLE_SETTINGS = {
   reassessPeriod: 2.5,
   batchSize: 3,
@@ -613,8 +616,21 @@ function resetSimulation() {
   worldState.brood = brood;
 
   ants.push(new Ant("queen", qx, qy));
-  ColonyState.updateColonyState(worldState, ants);
-  for (let i = 0; i < 6; i++) ants.push(new Ant("worker", qx, qy, pickRoleForNewWorker()));
+
+  const createWorkerWithAgeFraction = (ageFraction, role) => {
+    const worker = new Ant("worker", qx, qy, role);
+    worker.age = worker.lifespan * ageFraction;
+    worker.updateAgeBasedRole();
+    return worker;
+  };
+
+  for (let i = 0; i < 10; i++) {
+    ants.push(createWorkerWithAgeFraction(0.1, "nurse"));
+  }
+
+  for (let i = 0; i < 10; i++) {
+    ants.push(createWorkerWithAgeFraction(0.8, "forager"));
+  }
 
   // Build edges once per reset
   rebuildEdgeOverlay(grid);
@@ -1041,7 +1057,7 @@ class Ant {
       return;
     }
 
-    this.energy = Math.max(0, Math.min(this.maxEnergy, this.energy - 2.5 * dt));
+    this.energy = Math.max(0, Math.min(this.maxEnergy, this.energy - ENERGY_DECAY_RATE * dt));
 
     if (this.age > this.lifespan || this.energy <= 0) { handleDeath(); return; }
 
