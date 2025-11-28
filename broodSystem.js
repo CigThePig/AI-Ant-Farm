@@ -65,6 +65,11 @@ const BroodSystem = (() => {
     });
   }
 
+  function updateBroodPos(broodItem, x, y) {
+    broodItem.x = x;
+    broodItem.y = y;
+  }
+
   function feedOrStarve(b, consumeFood, addWaste, dt) {
     b.feedTimer -= dt;
     let fed = false;
@@ -125,6 +130,7 @@ const BroodSystem = (() => {
   return {
     reset,
     update,
+    updateBroodPos,
     getBrood: () => brood,
   };
 })();

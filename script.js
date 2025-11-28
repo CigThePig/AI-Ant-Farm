@@ -745,6 +745,7 @@ class Ant {
     this.carryingWasteAmount = 0;
     this.cleanTarget = null;
     this.carryingCorpse = false;
+    this.carryingBrood = null;
 
     this.postDeliveryTime = 0;
 
@@ -1390,6 +1391,36 @@ class Ant {
     if (this.pendingDigVector) {
       this.lastDigVector = this.pendingDigVector;
       this.pendingDigVector = null;
+    }
+
+    if (this.role === "nurse") {
+      const queen = ants[0];
+      if (queen) {
+        const dx = queen.x - this.x;
+        const dy = queen.y - this.y;
+        const distTiles = Math.hypot(dx, dy) / CONSTANTS.CELL_SIZE;
+
+        if (!this.carryingBrood && distTiles < 4) {
+          const broodHere = worldState.brood?.find((b) => {
+            const bx = Math.floor(b.x / CONSTANTS.CELL_SIZE);
+            const by = Math.floor(b.y / CONSTANTS.CELL_SIZE);
+            return bx === gx && by === gy;
+          });
+
+          if (broodHere) {
+            this.carryingBrood = broodHere;
+          }
+        }
+
+        if (this.carryingBrood) {
+          BroodSystem.updateBroodPos(this.carryingBrood, this.x, this.y);
+
+          if (distTiles > 8 && grid[gy]?.[gx] === TILES.TUNNEL) {
+            this.carryingBrood = null;
+            this.angle += Math.PI;
+          }
+        }
+      }
     }
 
     if (this.role === "cleaner") {
