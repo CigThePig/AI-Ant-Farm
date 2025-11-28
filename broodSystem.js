@@ -42,12 +42,10 @@ const BroodSystem = (() => {
   }
 
   function canLay(world, queen) {
-    const storedFood = world?.storedFood ?? 0;
-    if (storedFood < SETTINGS.layFoodReserve) return false;
-    if (!queen || queen.energy <= 80) return false;
+    if (!queen || queen.energy <= 25) return false;
 
     const crowding = nearbyAntCount(queen, 20);
-    return crowding > 5;
+    return crowding > 30;
   }
 
   function spawnBrood(queen) {
@@ -98,6 +96,7 @@ const BroodSystem = (() => {
       layTimer = 0;
       if (canLay(world, queen) && consumeFood(SETTINGS.feedCost)) {
         spawnBrood(queen);
+        queen.energy -= 15;
       }
     }
 
