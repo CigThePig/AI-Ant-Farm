@@ -791,18 +791,26 @@ class Ant {
   }
 
   chooseMiddleAgeRole() {
+    // 1. Immediate environmental trigger: Is the ant holding trash or standing on it?
     if (this.cleanTarget || this.carryingWaste || this.carryingCorpse) return "cleaner";
 
     const localWaste = this.findLocalWasteTarget(2);
     if (localWaste) return "cleaner";
 
-    if (this.workerPreference !== "cleaner" && this.workerPreference !== "digger") {
-      this.workerPreference = pickRoleForNewWorker();
-    }
+    // 2. Colony-wide pressure (Task Allocation)
+    // Check global colony state rather than static birth preference
+    const wastePressure = ColonyState.getWastePressure(); // 0.0 to 1.0
+    const spacePressure = ColonyState.getSpacePressure(); // 0.0 to 1.0
 
-    if (this.workerPreference === "forager") this.workerPreference = "digger";
+    // Priority A: Hygiene is critical (prevent disease)
+    if (wastePressure > 0.45) return "cleaner";
 
-    return this.workerPreference || "digger";
+    // Priority B: Space is critical (crowding)
+    if (spacePressure > 0.6) return "digger";
+
+    // Priority C: Default maintenance behavior
+    // If no crisis, middle-aged ants default to digging/maintenance
+    return "digger";
   }
 
   computeIntentScores(worldState) {
