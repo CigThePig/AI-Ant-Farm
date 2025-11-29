@@ -408,6 +408,8 @@ let wasteGrid = [];
 let scentToFood = [];
 let scentToHome = [];
 let queenScent = [];
+let broodScent = [];
+let nurseScent = [];
 let ants = [];
 let particles = [];
 let trophallaxisEvents = [];
@@ -424,6 +426,8 @@ const worldState = {
   wasteGrid: null,
   wasteTotal: 0,
   brood: null,
+  broodScent: null,
+  nurseScent: null,
   constants: CONSTANTS,
   onTunnelDug: (gx, gy) => {
     updateEdgesAround(gx, gy, grid);
@@ -529,6 +533,8 @@ function resetSimulation() {
   scentToFood = [];
   scentToHome = [];
   queenScent = [];
+  broodScent = [];
+  nurseScent = [];
   ants = [];
   particles = [];
   foodInStorage = 0;
@@ -544,6 +550,8 @@ function resetSimulation() {
     scentToFood[y] = new Float32Array(CONSTANTS.GRID_W);
     scentToHome[y] = new Float32Array(CONSTANTS.GRID_W);
     queenScent[y] = new Float32Array(CONSTANTS.GRID_W);
+    broodScent[y] = new Float32Array(CONSTANTS.GRID_W);
+    nurseScent[y] = new Float32Array(CONSTANTS.GRID_W);
 
     for (let x = 0; x < CONSTANTS.GRID_W; x++) {
       const n = Math.sin(x*0.27)*Math.cos(y*0.29)*0.5+0.5;
@@ -612,6 +620,8 @@ function resetSimulation() {
   worldState.particles = particles;
   worldState.wasteGrid = wasteGrid;
   worldState.wasteTotal = wasteTotal;
+  worldState.broodScent = broodScent;
+  worldState.nurseScent = nurseScent;
   AirSystem.reset(worldState);
   DiggingSystem.reset(worldState);
   BroodSystem.reset(worldState);
@@ -1950,6 +1960,8 @@ function loop(t) {
   worldState.storedFood = foodInStorage;
   worldState.wasteTotal = wasteTotal;
   worldState.wasteGrid = wasteGrid;
+  worldState.broodScent = broodScent;
+  worldState.nurseScent = nurseScent;
   worldState.brood = BroodSystem.getBrood();
   ColonyState.updateColonyState(worldState, ants);
   const colonySnapshot = ColonyState.getState();
@@ -1979,11 +1991,14 @@ function loop(t) {
 
   // Decay pheromones (full grid)
   const decay = CONFIG.scentDecay;
+  const broodDecay = 0.95;
   for (let y = 0; y < CONSTANTS.GRID_H; y++) {
     for (let x = 0; x < CONSTANTS.GRID_W; x++) {
       if (scentToFood[y][x] > 0.01) scentToFood[y][x] *= decay; else scentToFood[y][x] = 0;
       if (scentToHome[y][x] > 0.01) scentToHome[y][x] *= decay; else scentToHome[y][x] = 0;
       if (queenScent[y][x] > 0.01) queenScent[y][x] *= decay; else queenScent[y][x] = 0;
+      if (broodScent[y][x] > 0.01) broodScent[y][x] *= broodDecay; else broodScent[y][x] = 0;
+      if (nurseScent[y][x] > 0.01) nurseScent[y][x] *= broodDecay; else nurseScent[y][x] = 0;
 
       // Food emits its own attractor so ants can find it even before a trail exists
       const foodAmount = foodGrid[y][x];
