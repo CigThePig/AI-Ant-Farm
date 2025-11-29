@@ -120,7 +120,7 @@ function initScentBuffers() {
   scentImageData = scentRawCtx.createImageData(CONSTANTS.GRID_W, CONSTANTS.GRID_H);
 }
 
-function updateScentTexture(scentToFood, scentToHome) {
+function updateScentTexture(scentToFood, scentToHome, broodScent) {
   const w = CONSTANTS.GRID_W;
   const h = CONSTANTS.GRID_H;
   const data = scentImageData.data;
@@ -129,21 +129,25 @@ function updateScentTexture(scentToFood, scentToHome) {
   for (let y = 0; y < h; y++) {
     const rowF = scentToFood[y];
     const rowH = scentToHome[y];
+    const rowB = broodScent[y];
     for (let x = 0; x < w; x++) {
       const f = rowF[x];
       const hh = rowH[x];
+      const b = rowB[x];
 
       // Thresholding keeps the overlay clean and faster visually
       const rf = (f >= SCENT.MIN_SHOW) ? f : 0;
       const bh = (hh >= SCENT.MIN_SHOW) ? hh : 0;
+      const gb = (b >= SCENT.MIN_SHOW) ? b : 0;
 
       // Encode into RGB, with alpha tied to max channel
       const r8 = Math.min(255, Math.floor(rf * 255));
+      const g8 = Math.min(255, Math.floor(gb * 255));
       const b8 = Math.min(255, Math.floor(bh * 255));
-      const a8 = Math.min(220, Math.floor(Math.max(rf, bh) * 220)); // cap alpha so it never nukes the scene
+      const a8 = Math.min(220, Math.floor(Math.max(rf, gb, bh) * 220)); // cap alpha so it never nukes the scene
 
       data[i + 0] = r8;   // toFood (red)
-      data[i + 1] = 0;
+      data[i + 1] = g8;   // brood needs (green)
       data[i + 2] = b8;   // toHome (blue)
       data[i + 3] = a8;
       i += 4;
@@ -656,7 +660,7 @@ function resetSimulation() {
   camY = qy - VIEW_H / 2;
 
   // Fresh scent texture
-  updateScentTexture(scentToFood, scentToHome);
+  updateScentTexture(scentToFood, scentToHome, broodScent);
   scentFrameCounter = 0;
   airFrameCounter = 0;
 }
@@ -2075,7 +2079,7 @@ function loop(t) {
   // PERF: Update scent texture every N frames
   scentFrameCounter++;
   if ((scentFrameCounter % SCENT.UPDATE_EVERY_FRAMES) === 0) {
-    updateScentTexture(scentToFood, scentToHome);
+    updateScentTexture(scentToFood, scentToHome, broodScent);
   }
 
   render();
