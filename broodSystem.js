@@ -91,6 +91,8 @@ const BroodSystem = (() => {
     const list = attach(world);
     if (!queen) return [];
 
+    const broodScentGrid = world?.broodScent;
+
     layTimer += dt;
     if (layTimer >= SETTINGS.layInterval) {
       layTimer = 0;
@@ -120,6 +122,28 @@ const BroodSystem = (() => {
       if (b.age >= b.timeToMature) {
         hatched.push(b);
         list.splice(i, 1);
+        continue;
+      }
+
+      if (
+        broodScentGrid &&
+        !b.lockedBy &&
+        b.hungryTime > 0
+      ) {
+        const beingFed = b.feedTimer > SETTINGS.feedInterval * 0.95;
+        if (!beingFed) {
+          const gx = Math.floor(b.x / CONSTANTS.CELL_SIZE);
+          const gy = Math.floor(b.y / CONSTANTS.CELL_SIZE);
+
+          if (
+            gx >= 0 && gx < CONSTANTS.GRID_W &&
+            gy >= 0 && gy < CONSTANTS.GRID_H &&
+            broodScentGrid[gy] && broodScentGrid[gy][gx] !== undefined
+          ) {
+            const strength = Math.min(1.0, b.hungryTime / 20);
+            broodScentGrid[gy][gx] = Math.min(1.0, broodScentGrid[gy][gx] + strength);
+          }
+        }
       }
     }
 
