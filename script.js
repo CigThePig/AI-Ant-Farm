@@ -758,6 +758,9 @@ class Ant {
     this.carryingBrood = null;
     this.broodTimer = 0;
 
+    this.baseThreshold = 0.1 + Math.random() * 0.5;
+    this.broodThreshold = this.baseThreshold;
+
     this.postDeliveryTime = 0;
 
     this.intent = "wander";
@@ -780,13 +783,44 @@ class Ant {
     this.inNestCore = false;
   }
 
+  getEffectiveThreshold() {
+    const ageFactor = clamp01(this.age / this.lifespan);
+    let threshold = this.baseThreshold + ageFactor * 0.5;
+
+    const gx = Math.floor(this.x / CONSTANTS.CELL_SIZE);
+    const gy = Math.floor(this.y / CONSTANTS.CELL_SIZE);
+    if (
+      gx >= 0 && gx < CONSTANTS.GRID_W &&
+      gy >= 0 && gy < CONSTANTS.GRID_H &&
+      nurseScent[gy] && nurseScent[gy][gx] !== undefined
+    ) {
+      threshold += nurseScent[gy][gx] * 0.8;
+    }
+
+    this.broodThreshold = threshold;
+    return threshold;
+  }
+
   updateAgeBasedRole() {
     if (this.type !== "worker") return;
 
     const ageFrac = clamp01(this.age / this.lifespan);
+    const effectiveThreshold = this.getEffectiveThreshold();
+    const gx = Math.floor(this.x / CONSTANTS.CELL_SIZE);
+    const gy = Math.floor(this.y / CONSTANTS.CELL_SIZE);
+
+    let broodStimulus = 0;
+    if (
+      gx >= 0 && gx < CONSTANTS.GRID_W &&
+      gy >= 0 && gy < CONSTANTS.GRID_H &&
+      broodScent[gy] && broodScent[gy][gx] !== undefined
+    ) {
+      broodStimulus = broodScent[gy][gx];
+    }
+
     let nextRole = this.role;
 
-    if (ageFrac <= 0.30) {
+    if (broodStimulus > effectiveThreshold) {
       nextRole = "nurse";
     } else if (ageFrac <= 0.75) {
       nextRole = this.chooseMiddleAgeRole();
