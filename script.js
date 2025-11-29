@@ -1154,6 +1154,18 @@ class Ant {
     this.angle += (Math.random() - 0.5) * CONFIG.wanderStrength;
 
     this.move(dt, speedMult);
+
+    if (this.role === "nurse") {
+      const gx = Math.floor(this.x / CONSTANTS.CELL_SIZE);
+      const gy = Math.floor(this.y / CONSTANTS.CELL_SIZE);
+      if (
+        gx >= 0 && gx < CONSTANTS.GRID_W &&
+        gy >= 0 && gy < CONSTANTS.GRID_H &&
+        nurseScent[gy] && nurseScent[gy][gx] !== undefined
+      ) {
+        nurseScent[gy][gx] = Math.min(1.0, nurseScent[gy][gx] + 0.1);
+      }
+    }
     this.dropScent();
     ANT_ANIM.step(this.animRig, { dt, travel: this.stepDistance, speedHint: CONFIG.workerSpeed });
   }
