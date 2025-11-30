@@ -11,6 +11,7 @@ const BroodSystem = (() => {
     hungryGrowthMultiplier: 0.35,
     starvationTime: 20,
     wastePerMeal: 0.12,
+    satiationDuration: 5,
   };
 
   let layTimer = 0;
@@ -66,6 +67,7 @@ const BroodSystem = (() => {
       timeToMature: base * jitterScale,
       feedTimer: SETTINGS.feedInterval * (0.8 + Math.random() * 0.5),
       hungryTime: 0,
+      satiationTimer: 0,
     });
   }
 
@@ -75,6 +77,7 @@ const BroodSystem = (() => {
   }
 
   function feedOrStarve(b, consumeFood, addWaste, dt) {
+    b.satiationTimer = Math.max(0, (b.satiationTimer ?? 0) - dt);
     b.feedTimer -= dt;
     const remainingToMeal = Math.max(0, b.feedTimer);
     const feedUrgency = 1 - remainingToMeal / SETTINGS.feedInterval;
@@ -87,6 +90,7 @@ const BroodSystem = (() => {
       if (consumeFood(SETTINGS.feedCost)) {
         b.feedTimer = SETTINGS.feedInterval;
         b.hungryTime = Math.max(0, b.hungryTime - 2.5);
+        b.satiationTimer = SETTINGS.satiationDuration;
         fed = true;
         if (addWaste) {
           addWaste(b.x, b.y, SETTINGS.wastePerMeal);
@@ -121,7 +125,8 @@ const BroodSystem = (() => {
       const b = list[i];
       const fed = feedOrStarve(b, consumeFood, addWaste, dt);
 
-      const growthRate = fed ? 1 : SETTINGS.hungryGrowthMultiplier;
+      const satiated = b.satiationTimer > 0;
+      const growthRate = satiated ? 1 : SETTINGS.hungryGrowthMultiplier;
       b.age += dt * growthRate;
 
       if (!fed) {
