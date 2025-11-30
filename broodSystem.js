@@ -46,6 +46,9 @@ const BroodSystem = (() => {
   function canLay(world, queen, antsList) {
     if (!queen || queen.energy <= 25) return false;
 
+    const storedFood = world?.storedFood ?? 0;
+    if (storedFood < SETTINGS.layFoodReserve) return false;
+
     // Pass the list so we can actually count them
     const crowding = nearbyAntCount(queen, 100, antsList);
     return crowding > 2;

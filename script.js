@@ -791,7 +791,8 @@ class Ant {
     this.vectorUncertainty = 0;
 
     this.age = 0;
-    this.lifespan = 2000 + Math.random() * 1000;
+    const baseLifespan = 2000 + Math.random() * 1000;
+    this.lifespan = (type === "queen") ? baseLifespan * 40 : baseLifespan;
 
     this.carryingWaste = false;
     this.carryingWasteAmount = 0;
@@ -1667,7 +1668,8 @@ class Ant {
     const queen = ants[0];
     const distanceToQueen = queen ? Math.hypot(queen.x - this.x, queen.y - this.y) : Infinity;
     const deepInNest = gy > (CONSTANTS.REGION_SPLIT + 2);
-    if (this.hasFood && (this.inNestCore || this.isInsideQueenRadius()) && deepInNest && distanceToQueen > 15) {
+    const canStoreFoodHere = this.inNestCore || this.isInsideQueenRadius() || !queen;
+    if (this.hasFood && canStoreFoodHere && deepInNest && distanceToQueen > 15) {
       const tile = grid[gy]?.[gx];
       if (tile === TILES.TUNNEL && storedFoodGrid[gy][gx] < 5) {
         this.hasFood = Math.max(0, this.hasFood - 1);
