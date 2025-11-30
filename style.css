@@ -31,8 +31,7 @@ body {
   overflow: hidden;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   color: var(--text);
-  background:
-    radial-gradient(1200px 900px at 50% 20%, var(--bg2), var(--bg1) 55%, var(--bg0) 80%, #000 100%);
+  background: #110d0a;
   touch-action: none;
 }
 
@@ -105,7 +104,7 @@ canvas {
   display: none;
   z-index: 50;
 
-  background: linear-gradient(180deg, var(--panel), var(--panel2));
+  background: linear-gradient(180deg, rgba(20, 26, 30, 0.86), rgba(17, 22, 26, 0.8));
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow:
