@@ -26,12 +26,13 @@ const BroodSystem = (() => {
     return world.brood;
   }
 
-  function nearbyAntCount(queen, radius) {
-    if (!queen || !Array.isArray(ants)) return 0;
+  // FIX: Added antsList parameter to access the colony census
+  function nearbyAntCount(queen, radius, antsList) {
+    if (!queen || !Array.isArray(antsList)) return 0;
     const r2 = radius * radius;
     let count = 0;
 
-    for (const ant of ants) {
+    for (const ant of antsList) {
       if (ant === queen || ant.type === "corpse") continue;
       const dx = ant.x - queen.x;
       const dy = ant.y - queen.y;
@@ -41,10 +42,12 @@ const BroodSystem = (() => {
     return count;
   }
 
-  function canLay(world, queen) {
+  // FIX: Added antsList parameter
+  function canLay(world, queen, antsList) {
     if (!queen || queen.energy <= 25) return false;
 
-    const crowding = nearbyAntCount(queen, 100);
+    // Pass the list so we can actually count them
+    const crowding = nearbyAntCount(queen, 100, antsList);
     return crowding > 2;
   }
 
@@ -87,7 +90,8 @@ const BroodSystem = (() => {
     return fed;
   }
 
-  function update(world, colonyStateSnapshot, dt, queen, consumeFood, addWaste) {
+  // FIX: Added antsList to signature
+  function update(world, colonyStateSnapshot, dt, queen, consumeFood, addWaste, antsList) {
     const list = attach(world);
     if (!queen) return [];
 
@@ -96,7 +100,8 @@ const BroodSystem = (() => {
     layTimer += dt;
     if (layTimer >= SETTINGS.layInterval) {
       layTimer = 0;
-      if (canLay(world, queen) && consumeFood(SETTINGS.feedCost)) {
+      // FIX: Pass antsList to canLay so the queen knows if the nest is crowded enough
+      if (canLay(world, queen, antsList) && consumeFood(SETTINGS.feedCost)) {
         spawnBrood(queen);
         queen.energy -= 15;
       }
@@ -125,23 +130,23 @@ const BroodSystem = (() => {
         continue;
       }
 
-      if (
-        broodScentGrid &&
-        !b.lockedBy &&
-        b.hungryTime > 0
-      ) {
-        const beingFed = b.feedTimer > SETTINGS.feedInterval * 0.95;
-        if (!beingFed) {
-          const gx = Math.floor(b.x / CONSTANTS.CELL_SIZE);
-          const gy = Math.floor(b.y / CONSTANTS.CELL_SIZE);
+      // MYRMECOLOGIST FIX: Demand-Driven Pheromones
+      // 1. If lockedBy (being carried), no scent (nurse is already handling it).
+      // 2. If b.hungryTime is low (recently fed), emit NO scent. Nurses will ignore it.
+      // 3. Scent strength scales with hunger level.
+      if (broodScentGrid && !b.lockedBy) {
+        if (b.hungryTime > 0.5) {
+          const gx = Math.floor(b.x / world.constants.CELL_SIZE);
+          const gy = Math.floor(b.y / world.constants.CELL_SIZE);
 
           if (
-            gx >= 0 && gx < CONSTANTS.GRID_W &&
-            gy >= 0 && gy < CONSTANTS.GRID_H &&
+            gx >= 0 && gx < world.constants.GRID_W &&
+            gy >= 0 && gy < world.constants.GRID_H &&
             broodScentGrid[gy] && broodScentGrid[gy][gx] !== undefined
           ) {
-            const strength = Math.min(1.0, b.hungryTime / 20);
-            broodScentGrid[gy][gx] = Math.min(1.0, broodScentGrid[gy][gx] + strength);
+            // Signal starts low and increases as starvation approaches
+            const hungerSignal = Math.min(1.0, b.hungryTime / 20);
+            broodScentGrid[gy][gx] = Math.min(1.0, broodScentGrid[gy][gx] + hungerSignal);
           }
         }
       }

@@ -2016,6 +2016,7 @@ function loop(t) {
   ColonyState.updateColonyState(worldState, ants);
   const colonySnapshot = ColonyState.getState();
 
+  // FIX: Passed 'ants' array as the last argument so BroodSystem can count colony population
   const hatched = BroodSystem.update(
     worldState,
     colonySnapshot,
@@ -2023,6 +2024,7 @@ function loop(t) {
     queen,
     consumeStoredFood,
     addWasteAtWorldPos,
+    ants 
   );
 
   for (const b of hatched) {
