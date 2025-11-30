@@ -1561,6 +1561,37 @@ class Ant {
 
     if (this.role === "nurse") {
       const queen = ants[0];
+      
+      // 1. CHECK FOR HUNGRY BROOD TO FEED (Priority)
+      // Only feed if nurse has energy in social stomach (> 30)
+      if (this.energy > 30) {
+        // Simple collision check with brood
+        const feedDist = CONSTANTS.CELL_SIZE;
+        const hungryBrood = worldState.brood?.find(b => {
+           return b.isHungry &&
+                  Math.abs(b.x - this.x) < feedDist &&
+                  Math.abs(b.y - this.y) < feedDist;
+        });
+
+        if (hungryBrood) {
+          // Perform Trophallaxis (Nurse -> Larva)
+          const cost = BroodSystem.getNurseEnergyCost();
+          this.energy -= cost;
+          BroodSystem.feedBrood(hungryBrood, addWasteAtWorldPos);
+          
+          // Visual feedback
+          trophallaxisEvents.push({
+            x1: this.x, y1: this.y,
+            x2: hungryBrood.x, y2: hungryBrood.y,
+            amount: 20, life: 0.3
+          });
+          
+          // Stop moving for a moment to feed
+          this.stuckT = -0.5; 
+        }
+      }
+
+      // 2. EXISTING CARRYING LOGIC (Secondary)
       if (queen) {
         const dx = queen.x - this.x;
         const dy = queen.y - this.y;
@@ -1585,9 +1616,13 @@ class Ant {
 
           if (this.broodTimer > 0) this.broodTimer -= 0.016;
 
-          const inDropRing = distTiles >= 2 && distTiles <= 6;
+          // BIOLOGY TWEAK: Nurses move brood to optimal temperature/humidity zones.
+          // In this sim, that's a ring around the queen.
+          const inDropRing = distTiles >= 3 && distTiles <= 7;
+          
+          // Don't drop if there's no pheromone marker (keep it tidy)
           const dropChance = inDropRing && Math.random() < 0.05 && this.broodTimer <= 0;
-          const wanderedTooFar = distTiles > 10;
+          const wanderedTooFar = distTiles > 12;
 
           if (dropChance || wanderedTooFar) {
             delete this.carryingBrood.lockedBy;
@@ -1595,7 +1630,7 @@ class Ant {
             this.broodTimer = 0;
 
             if (wanderedTooFar) {
-              this.angle += Math.PI;
+              this.angle += Math.PI; // Turn back
             }
           }
         }
