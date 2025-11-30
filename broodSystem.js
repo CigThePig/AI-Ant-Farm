@@ -73,6 +73,12 @@ const BroodSystem = (() => {
 
   function feedOrStarve(b, consumeFood, addWaste, dt) {
     b.feedTimer -= dt;
+    const remainingToMeal = Math.max(0, b.feedTimer);
+    const feedUrgency = 1 - remainingToMeal / SETTINGS.feedInterval;
+
+    // Begin accumulating care needs as the next feeding approaches.
+    b.hungryTime += dt * feedUrgency * 0.25;
+
     let fed = false;
     if (b.feedTimer <= 0) {
       if (consumeFood(SETTINGS.feedCost)) {
@@ -135,17 +141,20 @@ const BroodSystem = (() => {
       // 2. If b.hungryTime is low (recently fed), emit NO scent. Nurses will ignore it.
       // 3. Scent strength scales with hunger level.
       if (broodScentGrid && !b.lockedBy) {
-        if (b.hungryTime > 0.5) {
-          const gx = Math.floor(b.x / world.constants.CELL_SIZE);
-          const gy = Math.floor(b.y / world.constants.CELL_SIZE);
+        const gx = Math.floor(b.x / world.constants.CELL_SIZE);
+        const gy = Math.floor(b.y / world.constants.CELL_SIZE);
 
-          if (
-            gx >= 0 && gx < world.constants.GRID_W &&
-            gy >= 0 && gy < world.constants.GRID_H &&
-            broodScentGrid[gy] && broodScentGrid[gy][gx] !== undefined
-          ) {
-            // Signal starts low and increases as starvation approaches
-            const hungerSignal = Math.min(1.0, b.hungryTime / 20);
+        if (
+          gx >= 0 && gx < world.constants.GRID_W &&
+          gy >= 0 && gy < world.constants.GRID_H &&
+          broodScentGrid[gy] && broodScentGrid[gy][gx] !== undefined
+        ) {
+          const feedingUrgency = Math.max(0, 1 - Math.max(0, b.feedTimer) / SETTINGS.feedInterval);
+          const hungerUrgency = Math.min(1.0, b.hungryTime / SETTINGS.starvationTime);
+          const careUrgency = Math.max(feedingUrgency, hungerUrgency);
+
+          if (careUrgency > 0.05) {
+            const hungerSignal = Math.min(1.0, careUrgency);
             broodScentGrid[gy][gx] = Math.min(1.0, broodScentGrid[gy][gx] + hungerSignal);
           }
         }
