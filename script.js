@@ -453,6 +453,44 @@ const worldState = {
 
 function clamp01(v){ return Math.max(0, Math.min(1, v)); }
 function hsl(h,s,l){ return `hsl(${h} ${s}% ${l}%)`; }
+function shadeHex(hex, factor) {
+  const num = parseInt(hex.slice(1), 16);
+  let r = (num >> 16) & 255;
+  let g = (num >> 8) & 255;
+  let b = num & 255;
+
+  const adjust = (c) => {
+    const delta = factor >= 0 ? (255 - c) * factor : c * factor;
+    return Math.min(255, Math.max(0, Math.round(c + delta)));
+  };
+
+  r = adjust(r);
+  g = adjust(g);
+  b = adjust(b);
+
+  return `rgb(${r},${g},${b})`;
+}
+
+function pseudoRandom(x, y, seed = 0) {
+  const v = Math.sin((x * 12.9898 + y * 78.233 + seed * 37.719) * 43758.5453);
+  return v - Math.floor(v);
+}
+
+function getTile(x, y) {
+  if (y < 0 || y >= CONSTANTS.GRID_H || x < 0 || x >= CONSTANTS.GRID_W) return TILES.BEDROCK;
+  const row = grid[y];
+  if (!row) return TILES.BEDROCK;
+  const val = row[x];
+  return (val === undefined || val === null) ? TILES.BEDROCK : val;
+}
+
+function getTexture(x, y) {
+  if (y < 0 || y >= CONSTANTS.GRID_H || x < 0 || x >= CONSTANTS.GRID_W) return 0;
+  const row = gridTexture[y];
+  if (!row) return 0;
+  const val = row[x];
+  return (val === undefined || val === null) ? 0 : val;
+}
 
 function consumeStoredFood(amount) {
   if (foodInStorage >= amount) {
@@ -1664,62 +1702,85 @@ function render() {
 
   const sx = Math.floor(camX / cs);
   const sy = Math.floor(camY / cs);
-  const ex = sx + (VIEW_W / ZOOM / cs) + 2;
-  const ey = sy + (VIEW_H / ZOOM / cs) + 2;
+  const ex = sx + Math.ceil(VIEW_W / ZOOM / cs) + 2;
+  const ey = sy + Math.ceil(VIEW_H / ZOOM / cs) + 2;
 
   // Terrain
   ctx.imageSmoothingEnabled = false;
-  for (let y = Math.max(0, sy); y < Math.min(CONSTANTS.GRID_H, ey); y++) {
-    for (let x = Math.max(0, sx); x < Math.min(CONSTANTS.GRID_W, ex); x++) {
-      const t = grid[y][x];
-      const n = gridTexture[y][x];
+  for (let y = sy; y < ey; y++) {
+    for (let x = sx; x < ex; x++) {
+      const t = getTile(x, y);
+      const n = getTexture(x, y);
       const px = x * cs, py = y * cs;
 
+      const foodRow = foodGrid[y];
+      const storedRow = storedFoodGrid[y];
+
       if (t === TILES.GRASS) {
-        const hue = 132 + (n * 10);
-        const sat = 46 + (n * 10);
-        const lit = 14 + (n * 10);
-        ctx.fillStyle = hsl(hue, sat, lit);
+        const variation = (n - 0.5) * 0.3;
+        const base = shadeHex("#567d46", variation);
+        ctx.fillStyle = base;
         ctx.fillRect(px, py, cs, cs);
-        if (n > 0.82) {
-          ctx.fillStyle = "rgba(180,255,214,0.04)";
-          ctx.fillRect(px + 2, py + 2, 2, 2);
+
+        // Patchy grass noise
+        for (let i = 0; i < 2; i++) {
+          const tone = variation + (pseudoRandom(x, y, i + 1) > 0.5 ? 0.12 : -0.12);
+          const size = Math.max(3, Math.floor(cs * (0.35 + pseudoRandom(x, y, i + 3) * 0.35)));
+          const ox = Math.floor(pseudoRandom(x, y, i + 5) * (cs - size));
+          const oy = Math.floor(pseudoRandom(x, y, i + 7) * (cs - size));
+          ctx.fillStyle = shadeHex("#567d46", tone);
+          ctx.fillRect(px + ox, py + oy, size, size);
         }
       } else if (t === TILES.SOIL) {
-        const hue = 28 + (n * 6);
-        const sat = 30 + (n * 8);
-        const lit = 10 + (n * 10);
-        ctx.fillStyle = hsl(hue, sat, lit);
+        const variation = (n - 0.5) * 0.18;
+        ctx.fillStyle = shadeHex("#3e2f26", variation);
         ctx.fillRect(px, py, cs, cs);
-        ctx.fillStyle = "rgba(0,0,0,0.20)";
-        ctx.fillRect(px, py + (cs - 2), cs, 2);
+
+        const topHeight = Math.min(4, cs);
+        ctx.fillStyle = shadeHex("#3e2f26", variation + 0.18);
+        ctx.fillRect(px, py, cs, topHeight);
       } else if (t === TILES.TUNNEL) {
-        const hue = 24 + (n * 4);
-        const sat = 24 + (n * 10);
-        const lit = 10 + (n * 8);
-        ctx.fillStyle = hsl(hue, sat, lit);
+        const variation = (n - 0.5) * 0.25;
+        ctx.fillStyle = shadeHex("#786452", variation);
         ctx.fillRect(px, py, cs, cs);
+
+        const pebbles = 2 + Math.floor(pseudoRandom(x, y, 11) * 3);
+        ctx.fillStyle = "#3e2f26";
+        for (let i = 0; i < pebbles; i++) {
+          const sz = 1 + Math.floor(pseudoRandom(x, y, 20 + i) * 2);
+          const ox = Math.floor(pseudoRandom(x, y, 30 + i) * (cs - sz));
+          const oy = Math.floor(pseudoRandom(x, y, 40 + i) * (cs - sz));
+          ctx.fillRect(px + ox, py + oy, sz, sz);
+        }
+
+        if (isSolid(getTile(x, y - 1))) {
+          const shadowH = Math.max(2, Math.ceil(cs * 0.2));
+          ctx.fillStyle = "rgba(0,0,0,0.35)";
+          ctx.fillRect(px, py, cs, shadowH);
+        }
       } else {
-        ctx.fillStyle = "rgba(0,0,0,0.95)";
+        const variation = (n - 0.5) * 0.12;
+        ctx.fillStyle = shadeHex("#1f1a17", variation);
         ctx.fillRect(px, py, cs, cs);
       }
 
       // Food
-      if (foodGrid[y][x] > 0) {
-        const k = Math.min(1, foodGrid[y][x] / 16);
-        const sz = Math.min(cs, 4 + foodGrid[y][x]);
+      const foodAmount = foodRow?.[x] ?? 0;
+      if (foodAmount > 0) {
+        const centerX = px + cs / 2;
+        const centerY = py + cs / 2;
+        const pileCount = 3 + Math.floor(pseudoRandom(x, y, 50) * 2);
 
-        ctx.save();
-        ctx.globalCompositeOperation = "lighter";
-        ctx.fillStyle = `rgba(135,255,120,${0.14 + k*0.14})`;
-        ctx.fillRect(px + (cs/2 - (sz/2) - 2), py + (cs/2 - (sz/2) - 2), sz + 4, sz + 4);
-        ctx.restore();
-
-        ctx.fillStyle = `rgba(120,255,150,0.70)`;
-        ctx.fillRect(px + (cs/2 - sz/2), py + (cs/2 - sz/2), sz, sz);
+        for (let i = 0; i < pileCount; i++) {
+          const jitterX = (pseudoRandom(x, y, 60 + i) - 0.5) * 3;
+          const jitterY = (pseudoRandom(x, y, 70 + i) - 0.5) * 3;
+          const sz = 1 + Math.floor(pseudoRandom(x, y, 80 + i) * 2);
+          ctx.fillStyle = pseudoRandom(x, y, 90 + i) > 0.5 ? "#f3c943" : "#d9942c";
+          ctx.fillRect(Math.floor(centerX + jitterX), Math.floor(centerY + jitterY), sz, sz);
+        }
       }
 
-      const stored = storedFoodGrid[y][x];
+      const stored = storedRow?.[x] ?? 0;
       if (stored > 0) {
         const radius = Math.min(cs * 0.45, 2.2 + stored * 0.7);
         const alpha = 0.35 + Math.min(0.35, stored * 0.08);
