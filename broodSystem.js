@@ -4,14 +4,19 @@ const BroodSystem = (() => {
   const SETTINGS = {
     layInterval: 7.5,
     layFoodReserve: 3.5,
-    baseMaturationTime: 16,
+    baseMaturationTime: 24, // Increased slightly for realism
     maturationJitter: 0.25,
-    feedInterval: 20.0,
-    feedCost: 0.25,
-    hungryGrowthMultiplier: 0.35,
-    starvationTime: 20,
+    
+    // BIOLOGY TWEAK: Larvae can survive longer without food, 
+    // but they stop growing when hungry.
+    starvationTime: 60, 
+    
+    // How much energy a nurse loses to feed a larva
+    nurseEnergyCost: 15,
+    
+    // Satiation settings
+    satiationDuration: 10,
     wastePerMeal: 0.12,
-    satiationDuration: 5,
   };
 
   let layTimer = 0;
@@ -27,30 +32,24 @@ const BroodSystem = (() => {
     return world.brood;
   }
 
-  // FIX: Added antsList parameter to access the colony census
   function nearbyAntCount(queen, radius, antsList) {
     if (!queen || !Array.isArray(antsList)) return 0;
     const r2 = radius * radius;
     let count = 0;
-
     for (const ant of antsList) {
       if (ant === queen || ant.type === "corpse") continue;
       const dx = ant.x - queen.x;
       const dy = ant.y - queen.y;
       if ((dx * dx + dy * dy) <= r2) count++;
     }
-
     return count;
   }
 
-  // FIX: Added antsList parameter
   function canLay(world, queen, antsList) {
     if (!queen || queen.energy <= 25) return false;
-
     const storedFood = world?.storedFood ?? 0;
+    // Queen needs perceived safety (food reserves) to lay
     if (storedFood < SETTINGS.layFoodReserve) return false;
-
-    // Pass the list so we can actually count them
     const crowding = nearbyAntCount(queen, 100, antsList);
     return crowding > 2;
   }
@@ -65,9 +64,11 @@ const BroodSystem = (() => {
       type: "worker",
       age: 0,
       timeToMature: base * jitterScale,
-      feedTimer: SETTINGS.feedInterval * (0.8 + Math.random() * 0.5),
-      hungryTime: 0,
-      satiationTimer: 0,
+      
+      // State
+      isHungry: false,
+      hungerTimer: 0, // Time spent starving
+      satiationTimer: SETTINGS.satiationDuration, // Born full
     });
   }
 
@@ -76,95 +77,78 @@ const BroodSystem = (() => {
     broodItem.y = y;
   }
 
-  function feedOrStarve(b, consumeFood, addWaste, dt) {
-    b.satiationTimer = Math.max(0, (b.satiationTimer ?? 0) - dt);
-    b.feedTimer -= dt;
-    const remainingToMeal = Math.max(0, b.feedTimer);
-    const feedUrgency = 1 - remainingToMeal / SETTINGS.feedInterval;
+  // EXTERNAL METHOD: Called by Nurse Ants
+  function feedBrood(b, addWaste) {
+    if (!b.isHungry) return false;
 
-    // Begin accumulating care needs as the next feeding approaches.
-    b.hungryTime += dt * feedUrgency * 0.25;
-
-    let fed = false;
-    if (b.feedTimer <= 0) {
-      if (consumeFood(SETTINGS.feedCost)) {
-        b.feedTimer = SETTINGS.feedInterval;
-        b.hungryTime = Math.max(0, b.hungryTime - 2.5);
-        b.satiationTimer = SETTINGS.satiationDuration;
-        fed = true;
-        if (addWaste) {
-          addWaste(b.x, b.y, SETTINGS.wastePerMeal);
-        }
-      } else {
-        b.feedTimer = 1.0;
-        b.hungryTime += dt;
-      }
-    }
-    return fed;
+    // Reset hunger
+    b.isHungry = false;
+    b.hungerTimer = 0;
+    b.satiationTimer = SETTINGS.satiationDuration;
+    
+    // Metabolic waste production
+    if (addWaste) addWaste(b.x, b.y, SETTINGS.wastePerMeal);
+    
+    return true;
   }
 
-  // FIX: Added antsList to signature
   function update(world, colonyStateSnapshot, dt, queen, consumeFood, addWaste, antsList) {
     const list = attach(world);
-    if (!queen) return [];
-
     const broodScentGrid = world?.broodScent;
 
-    layTimer += dt;
-    if (layTimer >= SETTINGS.layInterval) {
-      layTimer = 0;
-      // FIX: Pass antsList to canLay so the queen knows if the nest is crowded enough
-      if (canLay(world, queen, antsList) && consumeFood(SETTINGS.feedCost)) {
-        spawnBrood(queen);
-        queen.energy -= 15;
+    // 1. Queen Laying Logic
+    if (queen) {
+      layTimer += dt;
+      if (layTimer >= SETTINGS.layInterval) {
+        layTimer = 0;
+        // Queen eats from global storage to produce eggs (energy conversion)
+        if (canLay(world, queen, antsList) && consumeFood(0.5)) {
+          spawnBrood(queen);
+          queen.energy = Math.max(0, queen.energy - 10);
+        }
       }
     }
 
     const hatched = [];
+    
+    // 2. Larval Development Loop
     for (let i = list.length - 1; i >= 0; i--) {
       const b = list[i];
-      const fed = feedOrStarve(b, consumeFood, addWaste, dt);
-
-      const satiated = b.satiationTimer > 0;
-      const growthRate = satiated ? 1 : SETTINGS.hungryGrowthMultiplier;
-      b.age += dt * growthRate;
-
-      if (!fed) {
-        b.hungryTime += dt;
-        if (b.hungryTime > SETTINGS.starvationTime) {
-          if (addWaste) addWaste(b.x, b.y, SETTINGS.wastePerMeal * 1.5);
-          list.splice(i, 1);
-          continue;
-        }
+      
+      // Digestion / Hunger Logic
+      if (b.satiationTimer > 0) {
+        b.satiationTimer -= dt;
+        // Only grow when fed
+        b.age += dt; 
+      } else {
+        b.isHungry = true;
+        b.hungerTimer += dt;
       }
 
+      // Starvation Death
+      if (b.hungerTimer > SETTINGS.starvationTime) {
+        // Larva dies and turns into waste
+        if (addWaste) addWaste(b.x, b.y, 0.5);
+        list.splice(i, 1);
+        continue;
+      }
+
+      // Maturation
       if (b.age >= b.timeToMature) {
         hatched.push(b);
         list.splice(i, 1);
         continue;
       }
 
-      // MYRMECOLOGIST FIX: Demand-Driven Pheromones
-      // 1. If lockedBy (being carried), no scent (nurse is already handling it).
-      // 2. If b.hungryTime is low (recently fed), emit NO scent. Nurses will ignore it.
-      // 3. Scent strength scales with hunger level.
-      if (broodScentGrid && !b.lockedBy) {
+      // Pheromone Signalling (Begging for food)
+      if (broodScentGrid && !b.lockedBy && b.isHungry) {
         const gx = Math.floor(b.x / world.constants.CELL_SIZE);
         const gy = Math.floor(b.y / world.constants.CELL_SIZE);
 
-        if (
-          gx >= 0 && gx < world.constants.GRID_W &&
-          gy >= 0 && gy < world.constants.GRID_H &&
-          broodScentGrid[gy] && broodScentGrid[gy][gx] !== undefined
-        ) {
-          const feedingUrgency = Math.max(0, 1 - Math.max(0, b.feedTimer) / SETTINGS.feedInterval);
-          const hungerUrgency = Math.min(1.0, b.hungryTime / SETTINGS.starvationTime);
-          const careUrgency = Math.max(feedingUrgency, hungerUrgency);
-
-          if (careUrgency > 0.05) {
-            const hungerSignal = Math.min(1.0, careUrgency);
-            broodScentGrid[gy][gx] = Math.min(1.0, broodScentGrid[gy][gx] + hungerSignal);
-          }
+        if (gx >= 0 && gx < world.constants.GRID_W && gy >= 0 && gy < world.constants.GRID_H) {
+           // The hungrier they are, the louder they scream (chemically)
+           const urgency = Math.min(1.0, b.hungerTimer / (SETTINGS.starvationTime * 0.5));
+           broodScentGrid[gy][gx] = Math.min(1.0, broodScentGrid[gy][gx] + 0.05 + urgency * 0.1);
         }
       }
     }
@@ -176,6 +160,8 @@ const BroodSystem = (() => {
     reset,
     update,
     updateBroodPos,
+    feedBrood,
     getBrood: () => brood,
+    getNurseEnergyCost: () => SETTINGS.nurseEnergyCost,
   };
 })();
