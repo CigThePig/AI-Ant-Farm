@@ -37,6 +37,8 @@ const CONFIG = {
   stuckThreshold: 0.5,
 
   queenRadius: 8,             // tiles; pheromone-free buffer around the queen
+
+  renderWastePiles: false,
 };
 
 // Energy drains more slowly so ants take longer to seek food.
@@ -323,6 +325,7 @@ const DebugOverlay = (() => {
     showHomeScent: false,
     showBroodScent: false,
     showWaste: false,
+    showRefuse: false,
     showStoredFood: false,
     showDigFrontier: false,
     showRoomIds: false,
@@ -335,6 +338,7 @@ const DebugOverlay = (() => {
     { key: 'showHomeScent', label: 'Home scent field' },
     { key: 'showBroodScent', label: 'Brood scent field' },
     { key: 'showWaste', label: 'Waste heatmap' },
+    { key: 'showRefuse', label: 'Refuse / dump markers' },
     { key: 'showStoredFood', label: 'Stored food heatmap' },
     { key: 'showDigFrontier', label: 'Dig frontier tiles' },
     { key: 'showRoomIds', label: 'Room IDs / regions' },
@@ -583,6 +587,7 @@ let gridTexture = [];
 let foodGrid = [];
 let storedFoodGrid = [];
 let wasteGrid = [];
+let wasteTags = [];
 let scentToFood = [];
 let scentToHome = [];
 let queenScent = [];
@@ -604,6 +609,7 @@ const worldState = {
   airLevels: null,
   storedFood: 0,
   wasteGrid: null,
+  wasteTags: null,
   wasteTotal: 0,
   brood: null,
   broodScent: null,
@@ -692,15 +698,42 @@ function addWaste(gx, gy, amount) {
 function takeWaste(gx, gy, amount) {
   if (!wasteGrid[gy] || wasteGrid[gy][gx] === undefined) return 0;
   const available = Math.min(amount, wasteGrid[gy][gx]);
+  const before = wasteGrid[gy][gx];
   wasteGrid[gy][gx] -= available;
   wasteTotal -= available;
   if (wasteGrid[gy][gx] < 0.001) wasteGrid[gy][gx] = 0;
+  const ratio = before > 0 ? (wasteGrid[gy][gx] / before) : 0;
+  rescaleWasteTags(gx, gy, ratio);
   return available;
 }
 
 function getWaste(gx, gy) {
   if (!wasteGrid[gy]) return 0;
   return wasteGrid[gy][gx] || 0;
+}
+
+function tagWaste(gx, gy, tag, amount = 1) {
+  if (!wasteTags[gy] || wasteTags[gy][gx] === undefined) return;
+  if (amount <= 0) return;
+  const cell = wasteTags[gy][gx];
+  cell[tag] = (cell[tag] || 0) + amount;
+}
+
+function getWasteTag(gx, gy, tag) {
+  return wasteTags[gy]?.[gx]?.[tag] || 0;
+}
+
+function rescaleWasteTags(gx, gy, ratio) {
+  const cell = wasteTags[gy]?.[gx];
+  if (!cell) return;
+  if (ratio <= 0) {
+    wasteTags[gy][gx] = {};
+    return;
+  }
+  for (const key of Object.keys(cell)) {
+    cell[key] *= ratio;
+    if (cell[key] < 0.0001) delete cell[key];
+  }
 }
 
 function makeFoodStore() {
@@ -814,6 +847,7 @@ function resetSimulation() {
   foodGrid = [];
   storedFoodGrid = [];
   wasteGrid = [];
+  wasteTags = [];
   scentToFood = [];
   scentToHome = [];
   queenScent = [];
@@ -831,6 +865,7 @@ function resetSimulation() {
     foodGrid[y] = new Uint8Array(CONSTANTS.GRID_W);
     storedFoodGrid[y] = new Array(CONSTANTS.GRID_W);
     wasteGrid[y] = new Float32Array(CONSTANTS.GRID_W);
+    wasteTags[y] = new Array(CONSTANTS.GRID_W);
     scentToFood[y] = new Float32Array(CONSTANTS.GRID_W);
     scentToHome[y] = new Float32Array(CONSTANTS.GRID_W);
     queenScent[y] = new Float32Array(CONSTANTS.GRID_W);
@@ -842,6 +877,7 @@ function resetSimulation() {
       gridTexture[y][x] = n;
 
       storedFoodGrid[y][x] = makeFoodStore();
+      wasteTags[y][x] = {};
 
       if (x===0 || x===CONSTANTS.GRID_W-1 || y===CONSTANTS.GRID_H-1 || y===0) grid[y][x] = TILES.BEDROCK;
       else if (y < CONSTANTS.REGION_SPLIT) grid[y][x] = TILES.GRASS;
@@ -905,6 +941,7 @@ function resetSimulation() {
   worldState.gridTexture = gridTexture;
   worldState.particles = particles;
   worldState.wasteGrid = wasteGrid;
+  worldState.wasteTags = wasteTags;
   worldState.wasteTotal = wasteTotal;
   worldState.broodScent = broodScent;
   worldState.nurseScent = nurseScent;
@@ -1288,6 +1325,8 @@ class Ant {
       if (gy < dumpRow) {
         const dropY = Math.max(1, Math.min(dumpRow, gy));
         addWaste(gx, dropY, WASTE.maxTile);
+        tagWaste(gx, dropY, "refuse", WASTE.maxTile);
+        tagWaste(gx, dropY, "corpse", WASTE.maxTile);
         this.carryingCorpse = false;
         this.cleanTarget = null;
         return this.angle + (Math.random() - 0.5) * 0.6;
@@ -1300,7 +1339,9 @@ class Ant {
       const dumpRow = Math.max(1, CONSTANTS.REGION_SPLIT - WASTE.cleanerDumpY);
       if (gy < dumpRow) {
         const dropY = Math.max(1, Math.min(dumpRow, gy));
-        addWaste(gx, dropY, this.carryingWasteAmount || WASTE.cleanerPickup);
+        const amt = this.carryingWasteAmount || WASTE.cleanerPickup;
+        addWaste(gx, dropY, amt);
+        tagWaste(gx, dropY, "refuse", amt);
         this.carryingWaste = false;
         this.carryingWasteAmount = 0;
         this.cleanTarget = null;
@@ -2060,6 +2101,22 @@ function render() {
         }
       }
 
+      const drawRefuse = CONFIG.renderWastePiles || DebugOverlay.flags.showRefuse;
+      if (drawRefuse) {
+        const refuse = getWasteTag(x, y, "refuse");
+        if (refuse > 0.01) {
+          const intensity = Math.min(1, refuse / Math.max(0.001, WASTE.maxTile));
+          const specks = 1 + Math.floor(pseudoRandom(x, y, 140) * 2);
+          ctx.fillStyle = `rgba(220, 190, 130, ${0.12 + intensity * 0.28})`;
+          for (let i = 0; i < specks; i++) {
+            const ox = Math.floor(pseudoRandom(x, y, 150 + i) * (cs - 2));
+            const oy = Math.floor(pseudoRandom(x, y, 160 + i) * (cs - 2));
+            const size = 1 + Math.floor(pseudoRandom(x, y, 170 + i) * 2);
+            ctx.fillRect(px + ox, py + oy, size, size);
+          }
+        }
+      }
+
       const stored = getStoredFoodTotalAt(x, y);
       if (stored > 0) {
         const radius = Math.min(cs * 0.45, 2.2 + stored * 0.7);
@@ -2471,13 +2528,17 @@ function loop(t) {
       const spoiled = takeStoredFoodAnywhere(spoil, "seed");
       const qgx = Math.floor(queen.x / CONSTANTS.CELL_SIZE);
       const qgy = Math.floor(queen.y / CONSTANTS.CELL_SIZE);
-      addWaste(qgx, qgy, spoiled * 0.8);
+      const wasted = spoiled * 0.8;
+      addWaste(qgx, qgy, wasted);
+      tagWaste(qgx, qgy, "refuse", wasted);
+      tagWaste(qgx, qgy, "spoiledFood", wasted);
     }
   }
 
   worldState.storedFood = foodInStorage;
   worldState.wasteTotal = wasteTotal;
   worldState.wasteGrid = wasteGrid;
+  worldState.wasteTags = wasteTags;
   worldState.broodScent = broodScent;
   worldState.nurseScent = nurseScent;
   worldState.brood = BroodSystem.getBrood();
