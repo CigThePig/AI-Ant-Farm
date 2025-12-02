@@ -327,6 +327,8 @@ const DebugOverlay = (() => {
     showDigFrontier: false,
     showRoomIds: false,
     showAntState: false,
+    highlightTransfers: false,
+    showCleanTargets: false,
   };
 
   const toggleDefs = [
@@ -337,6 +339,8 @@ const DebugOverlay = (() => {
     { key: 'showDigFrontier', label: 'Dig frontier tiles' },
     { key: 'showRoomIds', label: 'Room IDs / regions' },
     { key: 'showAntState', label: 'Ant state labels' },
+    { key: 'highlightTransfers', label: 'Highlight trophallaxis transfers' },
+    { key: 'showCleanTargets', label: 'Cleaner target lines' },
   ];
 
   const palettes = {
@@ -623,6 +627,7 @@ const worldState = {
 };
 
 function clamp01(v){ return Math.max(0, Math.min(1, v)); }
+function trophallaxisLife(baseLife) { return DebugOverlay.flags.highlightTransfers ? Math.max(baseLife, 0.8) : baseLife; }
 function hsl(h,s,l){ return `hsl(${h} ${s}% ${l}%)`; }
 function shadeHex(hex, factor) {
   const num = parseInt(hex.slice(1), 16);
@@ -1444,7 +1449,7 @@ class Ant {
             x2: other.x,
             y2: other.y,
             amount: actualTransfer,
-            life: 0.2,
+            life: trophallaxisLife(0.2),
           });
         }
       }
@@ -1473,7 +1478,7 @@ class Ant {
             x2: other.x,
             y2: other.y,
             amount: actualTransfer,
-            life: 0.2,
+            life: trophallaxisLife(0.2),
           });
         }
       }
@@ -1754,7 +1759,7 @@ class Ant {
           trophallaxisEvents.push({
             x1: this.x, y1: this.y,
             x2: hungryBrood.x, y2: hungryBrood.y,
-            amount: 20, life: 0.3
+            amount: 20, life: trophallaxisLife(0.3)
           });
           
           // Stop moving for a moment to feed
@@ -2090,7 +2095,52 @@ function render() {
       ctx.moveTo(e.x1, e.y1);
       ctx.lineTo(e.x2, e.y2);
       ctx.stroke();
+
+      if (DebugOverlay.flags.highlightTransfers) {
+        ctx.fillStyle = `rgba(255,230,90,${alpha})`;
+        ctx.beginPath();
+        ctx.arc(e.x2, e.y2, 2.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
+    ctx.restore();
+  }
+
+  if (DebugOverlay.flags.showCleanTargets) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(180,240,255,0.45)';
+    ctx.lineWidth = 0.9;
+
+    const padding = 24;
+    const minX = camX - padding;
+    const maxX = camX + VIEW_W / ZOOM + padding;
+    const minY = camY - padding;
+    const maxY = camY + VIEW_H / ZOOM + padding;
+
+    for (const a of ants) {
+      if (a.x < minX || a.x > maxX || a.y < minY || a.y > maxY) continue;
+      if (!a.cleanTarget) continue;
+
+      let tx = null, ty = null;
+      if (a.cleanTarget.type === 'corpse') {
+        const targetAnt = a.cleanTarget.ant;
+        if (targetAnt && ants.includes(targetAnt)) {
+          tx = targetAnt.x;
+          ty = targetAnt.y;
+        }
+      } else if (a.cleanTarget.type === 'waste') {
+        tx = (a.cleanTarget.x + 0.5) * CONSTANTS.CELL_SIZE;
+        ty = (a.cleanTarget.y + 0.5) * CONSTANTS.CELL_SIZE;
+      }
+
+      if (tx === null || ty === null) continue;
+
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(tx, ty);
+      ctx.stroke();
+    }
+
     ctx.restore();
   }
 
@@ -2259,6 +2309,7 @@ function render() {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
     ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.strokeStyle = 'rgba(0,0,0,0.6)';
 
     const padding = 30;
     const minX = camX - padding;
@@ -2266,15 +2317,25 @@ function render() {
     const minY = camY - padding;
     const maxY = camY + VIEW_H / ZOOM + padding;
 
+    const roleInitials = { nurse: 'N', forager: 'F', digger: 'D', cleaner: 'C', queen: 'Q' };
+
     for (const a of ants) {
       if (a.x < minX || a.x > maxX || a.y < minY || a.y > maxY) continue;
 
-      const tags = [a.role];
-      if (a.hasFood) tags.push('food');
-      if (a.carryingWaste) tags.push('waste');
-      if (a.carryingCorpse) tags.push('corpse');
-      const label = tags.filter(Boolean).join(' | ');
-      ctx.fillText(label || 'ant', a.x, a.y - 6);
+      const markers = [];
+      const roleMark = roleInitials[a.role] ?? (a.role ? a.role[0]?.toUpperCase() : '');
+      if (roleMark) markers.push(roleMark);
+      if (a.carryingBrood) markers.push('B');
+      if (a.carryingWaste) markers.push('W');
+      if (a.carryingCorpse) markers.push('C');
+      if (a.hasFood) markers.push('F');
+
+      const label = markers.join(' ');
+      if (label) {
+        ctx.lineWidth = 3 / ZOOM;
+        ctx.strokeText(label, a.x, a.y - 7);
+        ctx.fillText(label, a.x, a.y - 7);
+      }
     }
 
     ctx.restore();
