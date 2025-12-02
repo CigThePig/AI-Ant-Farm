@@ -20,6 +20,9 @@ const maskCtx = maskCanvas.getContext('2d');
 const CONFIG = {
   scentDecay: 0.999,
   depositAmount: 0.5,
+  entranceCueStrength: 0.8,
+  entranceCueRadius: 2.4,
+  entranceCueFadeDepth: 1,
 
   sensorAngle: 0.8,
   sensorDist: 30,
@@ -96,6 +99,8 @@ const DEBUG_SHOW_INTENT = false;
 const AIR = {
   UPDATE_EVERY_FRAMES: 4,
 };
+
+let sunAngle = Math.random() * Math.PI * 2;
 
 const OLEIC_ACID_THRESHOLD = 30; // seconds before corpses emit detectable oleic acid
 
@@ -323,6 +328,7 @@ function initUI() {
 const DebugOverlay = (() => {
   const flags = {
     showHomeScent: false,
+    showEntranceCue: false,
     showBroodScent: false,
     showWaste: false,
     showRefuse: false,
@@ -336,6 +342,7 @@ const DebugOverlay = (() => {
 
   const toggleDefs = [
     { key: 'showHomeScent', label: 'Home scent field' },
+    { key: 'showEntranceCue', label: 'Entrance cue' },
     { key: 'showBroodScent', label: 'Brood scent field' },
     { key: 'showWaste', label: 'Waste heatmap' },
     { key: 'showRefuse', label: 'Refuse / dump markers' },
@@ -635,6 +642,81 @@ const worldState = {
 };
 
 function clamp01(v){ return Math.max(0, Math.min(1, v)); }
+
+function angleLerp(current, target, factor) {
+  const twoPi = Math.PI * 2;
+  const diff = ((target - current + Math.PI) % twoPi + twoPi) % twoPi - Math.PI;
+  return current + diff * factor;
+}
+
+function computeDirectionalSignal(ant, field, opts = {}) {
+  const sa = CONFIG.sensorAngle;
+  const sd = CONFIG.sensorDist;
+
+  const wasteAdjustedSample = (angOff) => {
+    const base = ant.sample(field, angOff, sd);
+    const waste = ant.sampleWaste(angOff, sd);
+    return base * (1 - Math.min(0.5, waste * 0.12));
+  };
+
+  const valL = wasteAdjustedSample(-sa);
+  const valC = wasteAdjustedSample(0);
+  const valR = wasteAdjustedSample(sa);
+
+  const weightedC = valC * CONFIG.forwardBias;
+  const bestVal = Math.max(weightedC, valL, valR);
+  const minThreshold = opts.min ?? 0.01;
+
+  if (bestVal <= minThreshold) return { angle: null, confidence: 0, magnitude: bestVal };
+
+  const angle = (weightedC >= valL && weightedC >= valR)
+    ? ant.angle
+    : (valL > valR ? ant.angle - sa : ant.angle + sa);
+
+  const secondBest = (weightedC >= valL && weightedC >= valR)
+    ? Math.max(valL, valR)
+    : Math.max(weightedC, (valL > valR ? valR : valL));
+
+  const spread = Math.max(0, bestVal - secondBest);
+  const baseConfidence = clamp01((bestVal * 0.7) + spread);
+  const confidence = baseConfidence * (opts.weight ?? 1);
+
+  return { angle, confidence, magnitude: bestVal };
+}
+
+function getHomeSteeringField(ant, gx, gy, worldState) {
+  const signals = [];
+  const underground = ant.y > CONSTANTS.REGION_SPLIT * CONSTANTS.CELL_SIZE;
+  const queen = worldState?.queen ?? ants[0];
+
+  if (queen) {
+    const queenSignal = computeDirectionalSignal(ant, queenScent, {
+      weight: underground ? 1.4 : 0.8,
+      min: 0,
+    });
+    signals.push(queenSignal);
+  }
+
+  const entranceDistance = Math.hypot((NEST_ENTRANCE.x - ant.x), (NEST_ENTRANCE.y - ant.y));
+  const entranceRadiusPx = (CONFIG.entranceCueRadius ?? NEST_ENTRANCE.radius) * CONSTANTS.CELL_SIZE;
+  const entranceWeight = 0.6 + 0.6 * clamp01(1 - (entranceDistance / Math.max(1, entranceRadiusPx * 2.5)));
+  const entranceSignal = computeDirectionalSignal(ant, scentToHome, {
+    weight: entranceWeight,
+  });
+  signals.push(entranceSignal);
+
+  const bestSignal = signals.reduce((best, next) => next.confidence > best.confidence ? next : best, { angle: null, confidence: 0 });
+
+  const hvx = ant.homeVector?.x ?? 0;
+  const hvy = ant.homeVector?.y ?? 0;
+  const hvMag = Math.hypot(hvx, hvy);
+  const vectorConfidence = hvMag > 0 ? clamp01((hvMag - (ant.vectorUncertainty || 0)) / (hvMag + 1)) * 0.9 : 0;
+  if (vectorConfidence > bestSignal.confidence) {
+    return { angle: Math.atan2(hvy, hvx), confidence: vectorConfidence };
+  }
+
+  return bestSignal;
+}
 function trophallaxisLife(baseLife) { return DebugOverlay.flags.highlightTransfers ? Math.max(baseLife, 0.8) : baseLife; }
 function hsl(h,s,l){ return `hsl(${h} ${s}% ${l}%)`; }
 function shadeHex(hex, factor) {
@@ -1023,36 +1105,43 @@ function spreadQueenScent(qgx, qgy) {
 }
 
 function seedEntranceHomeScent() {
-  const { gx, gy, radius, corridorDepth } = NEST_ENTRANCE;
+  const { gx, gy } = NEST_ENTRANCE;
+  const cueStrength = CONFIG.entranceCueStrength ?? 0;
+  const cueRadius = CONFIG.entranceCueRadius ?? NEST_ENTRANCE.radius;
+  const fadeDepth = Math.max(0, Math.min(CONFIG.entranceCueFadeDepth ?? 0, 2));
 
-  for (let dy = -radius; dy <= radius; dy++) {
+  if (cueStrength <= 0 || cueRadius <= 0) return;
+
+  const sampleRadius = Math.max(1, Math.ceil(cueRadius));
+  for (let dy = -sampleRadius; dy <= sampleRadius; dy++) {
     const ny = gy + dy;
     if (!scentToHome[ny]) continue;
-    for (let dx = -radius; dx <= radius; dx++) {
+    for (let dx = -sampleRadius; dx <= sampleRadius; dx++) {
       const nx = gx + dx;
       if (nx <= 0 || nx >= CONSTANTS.GRID_W - 1) continue;
       if (grid[ny][nx] === TILES.SOIL || grid[ny][nx] === TILES.BEDROCK) continue;
 
       const dist = Math.hypot(dx, dy);
-      if (dist <= radius + 0.01) {
-        const add = Math.max(0.4, 1 - dist * 0.3);
-        scentToHome[ny][nx] = Math.min(1.0, scentToHome[ny][nx] + add);
-      }
+      if (dist > cueRadius + 0.001) continue;
+
+      const falloff = 1 - Math.min(1, dist / Math.max(0.0001, cueRadius));
+      const add = cueStrength * (0.55 + 0.45 * falloff);
+      scentToHome[ny][nx] = Math.min(1.0, scentToHome[ny][nx] + add);
     }
   }
 
-  // Extend the scent downward into the nest so returners can feel the entrance corridor
-  for (let step = 1; step <= corridorDepth; step++) {
+  // Small fade just inside the entrance (optional and shallow)
+  for (let step = 1; step <= fadeDepth; step++) {
     const ny = gy + step;
     if (ny >= CONSTANTS.GRID_H - 1) break;
     if (!scentToHome[ny]) continue;
-
-    const taper = Math.max(0.08, 0.35 - step * 0.04);
     if (grid[ny][gx] === TILES.SOIL || grid[ny][gx] === TILES.BEDROCK) break;
-    scentToHome[ny][gx] = Math.min(1.0, scentToHome[ny][gx] + taper);
 
-    if (grid[ny][gx - 1] !== TILES.SOIL) scentToHome[ny][gx - 1] = Math.min(1.0, scentToHome[ny][gx - 1] + taper * 0.8);
-    if (grid[ny][gx + 1] !== TILES.SOIL) scentToHome[ny][gx + 1] = Math.min(1.0, scentToHome[ny][gx + 1] + taper * 0.8);
+    const fade = cueStrength * Math.max(0.15, 0.45 - (step - 1) * 0.2);
+    scentToHome[ny][gx] = Math.min(1.0, scentToHome[ny][gx] + fade);
+
+    if (grid[ny][gx - 1] !== TILES.SOIL) scentToHome[ny][gx - 1] = Math.min(1.0, scentToHome[ny][gx - 1] + fade * 0.6);
+    if (grid[ny][gx + 1] !== TILES.SOIL) scentToHome[ny][gx + 1] = Math.min(1.0, scentToHome[ny][gx + 1] + fade * 0.6);
   }
 }
 
@@ -1086,6 +1175,13 @@ class Ant {
     this.broodThreshold = this.baseThreshold;
 
     this.postDeliveryTime = 0;
+
+    this.lostMode = null;
+    this.lostT = 0;
+    this.searchPhase = Math.random() * Math.PI * 2;
+    this.searchGain = 0;
+    this.lastHomeConfidence = 0;
+    this.homeSignalLowT = 0;
 
     this.intent = "wander";
     this.intentScores = null;
@@ -1192,7 +1288,7 @@ class Ant {
       wander: 0.1,
     };
 
-    scores.panic = this.panicT > 0 ? 1 : 0;
+    scores.panic = this.lostMode ? 1 : (this.panicT > 0 ? 1 : 0);
 
     if (this.role === "nurse") {
       scores.returnHome = 0.95;
@@ -1236,6 +1332,90 @@ class Ant {
     return scores;
   }
 
+  lostModeDirection(dt, worldState) {
+    this.lostT += dt;
+
+    const cgx = Math.floor(this.x / CONSTANTS.CELL_SIZE);
+    const cgy = Math.floor(this.y / CONSTANTS.CELL_SIZE);
+    const homeSignal = getHomeSteeringField(this, cgx, cgy, worldState);
+    this.lastHomeConfidence = homeSignal.confidence;
+
+    if (homeSignal.confidence > 0.35 && homeSignal.angle !== null) {
+      this.clearLostMode();
+      this.returnDir = homeSignal.angle;
+      return angleLerp(this.angle, homeSignal.angle, 0.25);
+    }
+
+    const maxLostDuration = 6;
+    if (this.lostT > maxLostDuration) {
+      this.clearLostMode();
+      return this.angle + (Math.random() - 0.5) * 0.6;
+    }
+
+    if (this.lostMode === "surface") {
+      const homeAngle = Math.atan2(this.homeVector.y, this.homeVector.x);
+      const baseBias = Number.isFinite(homeAngle)
+        ? angleLerp(sunAngle, homeAngle, 0.6)
+        : sunAngle;
+
+      this.searchGain = Math.min(this.searchGain + dt * 0.45, 1.6);
+      this.searchPhase += dt * (1.1 + this.searchGain * 0.5);
+      const sweep = Math.sin(this.searchPhase) * (0.4 + this.searchGain * 0.35);
+      const jitter = (Math.random() - 0.5) * 0.25;
+
+      return baseBias + sweep + jitter;
+    }
+
+    const queen = ants[0];
+    let biasAngle = null;
+    if (queen) {
+      const queenSignal = computeDirectionalSignal(this, queenScent, { weight: 1.2, min: 0 });
+      if (queenSignal.angle !== null && queenSignal.confidence > 0) {
+        biasAngle = queenSignal.angle;
+        this.lastHomeConfidence = Math.max(this.lastHomeConfidence, queenSignal.confidence);
+      }
+    }
+
+    this.searchGain = Math.min(this.searchGain + dt * 0.3, 1.2);
+    this.searchPhase += dt * (1 + this.searchGain * 0.7);
+    const arc = Math.sin(this.searchPhase) * (0.25 + this.searchGain * 0.25);
+    const base = biasAngle ?? this.angle;
+    let candidate = base + arc;
+
+    const cs = CONSTANTS.CELL_SIZE;
+    const aheadX = Math.floor((this.x + Math.cos(candidate) * cs) / cs);
+    const aheadY = Math.floor((this.y + Math.sin(candidate) * cs) / cs);
+    const aheadTile = getTile(aheadX, aheadY);
+
+    if (aheadTile === TILES.SOIL || aheadTile === TILES.BEDROCK) {
+      const left = base - 0.7;
+      const right = base + 0.7;
+      const leftTile = getTile(Math.floor((this.x + Math.cos(left) * cs) / cs), Math.floor((this.y + Math.sin(left) * cs) / cs));
+      const rightTile = getTile(Math.floor((this.x + Math.cos(right) * cs) / cs), Math.floor((this.y + Math.sin(right) * cs) / cs));
+      if (leftTile === TILES.TUNNEL || leftTile === TILES.GRASS) candidate = left;
+      else if (rightTile === TILES.TUNNEL || rightTile === TILES.GRASS) candidate = right;
+    }
+
+    const jitter = (Math.random() - 0.5) * 0.15;
+    return candidate + jitter;
+  }
+
+  registerHomeSignal(confidence, dt) {
+    this.lastHomeConfidence = confidence;
+    if (this.lostMode) return;
+
+    if (this.carrying || this.intent === "returnHome") {
+      if (confidence < 0.15) {
+        this.homeSignalLowT += dt;
+        if (this.homeSignalLowT > 1.1) this.startLostMode("low-signal");
+      } else {
+        this.homeSignalLowT = 0;
+      }
+    } else {
+      this.homeSignalLowT = 0;
+    }
+  }
+
   chooseIntent(scores) {
     let bestIntent = "wander";
     let bestScore = -Infinity;
@@ -1255,6 +1435,24 @@ class Ant {
     this.lastY = this.y;
     this.stuckT = 0;
     this.panicT = 0;
+  }
+
+  startLostMode(reason = "") {
+    if (this.lostMode) return;
+    const isSurface = this.y < CONSTANTS.REGION_SPLIT * CONSTANTS.CELL_SIZE;
+    this.lostMode = isSurface ? "surface" : "underground";
+    this.lostT = 0;
+    this.searchGain = 0;
+    this.searchPhase = Math.random() * Math.PI * 2;
+    this.homeSignalLowT = 0;
+    this.lostReason = reason;
+  }
+
+  clearLostMode() {
+    this.lostMode = null;
+    this.lostT = 0;
+    this.searchGain = 0;
+    this.homeSignalLowT = 0;
   }
 
   isInsideQueenRadius() {
@@ -1463,7 +1661,10 @@ class Ant {
     this.stuckT += dt;
     if (this.stuckT > CONFIG.stuckThreshold) {
       const d2 = (this.x - this.lastX) ** 2 + (this.y - this.lastY) ** 2;
-      if (d2 < 100) { this.panicT = 0.8; this.angle = Math.random() * Math.PI * 2; }
+      if (d2 < 100) {
+        this.startLostMode("stuck");
+        this.angle = Math.random() * Math.PI * 2;
+      }
       this.lastX = this.x; this.lastY = this.y;
       this.stuckT = 0;
     }
@@ -1481,14 +1682,12 @@ class Ant {
       this.intent = "returnHome";
       const queen = ants[0];
       if (queen) forcedAngle = Math.atan2(queen.y - this.y, queen.x - this.x);
-      this.panicT = 0;
       speedMult = 0.7;
     }
 
-    if (this.panicT > 0) {
-      this.panicT -= dt;
-      this.move(dt, 2.0);
-      return;
+    const lostDesired = this.lostMode ? this.lostModeDirection(dt, worldState) : null;
+    if (this.lostMode) {
+      speedMult = Math.min(1.2, speedMult + 0.1);
     }
 
     if (this.carrying || this.role !== "digger") {
@@ -1503,7 +1702,7 @@ class Ant {
 
     this.updateNestCoreState();
 
-    const desired = forcedAngle ?? this.sense(dt);
+    const desired = forcedAngle ?? lostDesired ?? this.sense(dt);
 
     let diff = desired - this.angle;
     while (diff < -Math.PI) diff += Math.PI * 2;
@@ -1682,10 +1881,27 @@ class Ant {
         break;
     }
 
-    const g = this.carrying ? scentToHome : scentToFood;
+    const g = this.carrying || this.intent === "returnHome" ? scentToHome : scentToFood;
     const ignoreFoodPheromone = this.inNestCore || (!this.carrying && this.isInsideQueenRadius());
     const sa = CONFIG.sensorAngle;
     const sd = CONFIG.sensorDist;
+
+    if (this.carrying || this.intent === "returnHome") {
+      const cgx = Math.floor(this.x / CONSTANTS.CELL_SIZE);
+      const cgy = Math.floor(this.y / CONSTANTS.CELL_SIZE);
+      const steering = getHomeSteeringField(this, cgx, cgy, worldState);
+      this.registerHomeSignal(steering.confidence, dt);
+
+      if (steering.angle !== null) {
+        this.returnDir = steering.angle;
+        const smoothed = angleLerp(this.angle, steering.angle, 0.2);
+        return smoothed;
+      }
+
+      if (this.returnDir === null) this.returnDir = this.angle;
+      const homeAngle = Math.atan2(this.homeVector.y, this.homeVector.x);
+      return Number.isFinite(homeAngle) ? homeAngle : this.returnDir;
+    }
 
     const valL = ignoreFoodPheromone ? 0 : this.sample(g, -sa, sd);
     const valC = ignoreFoodPheromone ? 0 : this.sample(g, 0, sd);
@@ -1715,16 +1931,10 @@ class Ant {
       return best;
     }
 
-    if (this.carrying) {
-      if (this.returnDir === null) this.returnDir = this.angle;
-      const homeAngle = Math.atan2(this.homeVector.y, this.homeVector.x);
-      return Number.isFinite(homeAngle) ? homeAngle : this.returnDir;
-    } else {
-      if (this.y > CONSTANTS.REGION_SPLIT * CONSTANTS.CELL_SIZE) {
-        return -Math.PI / 2 + (Math.random() - 0.5) * 2.0;
-      }
-      return this.angle + (Math.random() - 0.5) * 2.0;
+    if (this.y > CONSTANTS.REGION_SPLIT * CONSTANTS.CELL_SIZE) {
+      return -Math.PI / 2 + (Math.random() - 0.5) * 2.0;
     }
+    return this.angle + (Math.random() - 0.5) * 2.0;
   }
 
   sample(g, angOff, dist) {
@@ -2148,6 +2358,32 @@ function render() {
       alpha: 0.35,
     });
   }
+  if (DebugOverlay.flags.showEntranceCue && CONFIG.entranceCueStrength > 0) {
+    const cs = CONSTANTS.CELL_SIZE;
+    const px = (NEST_ENTRANCE.gx + 0.5) * cs;
+    const py = (NEST_ENTRANCE.gy + 0.5) * cs;
+    const r = CONFIG.entranceCueRadius * cs;
+
+    ctx.save();
+    ctx.strokeStyle = '#7cc8ff';
+    ctx.fillStyle = 'rgba(120, 190, 255, 0.18)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(px, py, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    if (CONFIG.entranceCueFadeDepth > 0) {
+      for (let step = 1; step <= Math.min(2, CONFIG.entranceCueFadeDepth); step++) {
+        const y = py + step * cs;
+        ctx.globalAlpha = Math.max(0.25, 0.6 - step * 0.2);
+        ctx.beginPath();
+        ctx.ellipse(px, y, cs * 0.65, cs * 0.35, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
   if (DebugOverlay.flags.showBroodScent) {
     DebugOverlay.drawHeatmapGrid(ctx, broodScent, {
       palette: DebugOverlay.palettes.violet,
@@ -2520,6 +2756,8 @@ function loop(t) {
 
   const dt = Math.min((t - lastT) / 1000, 0.1);
   lastT = t;
+
+  sunAngle = (sunAngle + dt * 0.05) % (Math.PI * 2);
 
   const queen = ants[0];
   if (queen) {
