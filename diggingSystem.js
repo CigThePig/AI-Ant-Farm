@@ -1,12 +1,26 @@
 const DiggingSystem = (() => {
   const SETTINGS = {
     pheromoneDeposit: 0.9,
-    pheromoneBurst: 1.25,
+    directionalPheromoneStrength: 1.25,
+    directionalPheromoneLength: 4,
+    directionalSideFalloff: 0.35,
+    directionalBackStrength: 0.1,
     neighborDeposit: 0.35,
     decay: 0.995,
     minStrength: 0.01,
     sampleRadius: 8,
+    maxSampleRadius: 22,
+    sampleRadiusStep: 4,
     forwardBias: 0.65,
+    headingAheadBias: 0.9,
+    headingGain: 0.5,
+    corridorEndpointBonus: 2.4,
+    corridorBranchPenalty: 0.45,
+    corridorBranchChance: 0.12,
+    corridorBalloonPenalty: 0.08,
+    roomNeighborPenalty: 0.6,
+    roomNeighborBonus: 1.35,
+    roomCenterBias: 3.5,
     frontierSampleCount: 32,
     frontierQueueBudget: 120,
     decayRowsPerTick: 6,
@@ -63,6 +77,15 @@ const DiggingSystem = (() => {
       grid[y][x - 1] === TILES.TUNNEL ||
       grid[y][x + 1] === TILES.TUNNEL
     );
+  }
+
+  function countTunnelNeighbors4(gx, gy, grid) {
+    let neighbors = 0;
+    if (grid[gy - 1]?.[gx] === TILES.TUNNEL) neighbors++;
+    if (grid[gy + 1]?.[gx] === TILES.TUNNEL) neighbors++;
+    if (grid[gy]?.[gx - 1] === TILES.TUNNEL) neighbors++;
+    if (grid[gy]?.[gx + 1] === TILES.TUNNEL) neighbors++;
+    return neighbors;
   }
 
   function addFrontier(x, y, grid) {
@@ -159,6 +182,26 @@ const DiggingSystem = (() => {
     decayPheromoneBudget();
   }
 
+  function collectFrontierCandidates(cx, cy, radius, grid) {
+    const candidates = [];
+    const minX = Math.max(1, cx - radius);
+    const maxX = Math.min(width - 2, cx + radius);
+    const minY = Math.max(regionSplit, cy - radius);
+    const maxY = Math.min(height - 2, cy + radius);
+
+    for (let y = minY; y <= maxY; y++) {
+      const frontierRow = frontierMask[y];
+      const gridRow = grid[y];
+      if (!frontierRow || !gridRow) continue;
+      for (let x = minX; x <= maxX; x++) {
+        if (frontierRow[x] && gridRow[x] === TILES.SOIL) {
+          candidates.push({ x, y });
+        }
+      }
+    }
+    return candidates;
+  }
+
   function chooseDigTarget(ant, world) {
     if (ant.carrying || ant.role !== "digger") return null;
     if (ant.y < regionSplit * cellSize) return null;
@@ -182,42 +225,70 @@ const DiggingSystem = (() => {
     const qx = queen ? queen.x : ant.x;
     const qy = queen ? queen.y : ant.y;
 
-    let diggingMode = broodPressure > 0.15 ? "expander" : "miner";
-    let favorSoftSoil = diggingMode === "miner" && spacePressure < 0.5;
+    let digMode = ant.digMode || "corridor";
+    if (digMode === "room" && (!ant.roomCenter || ant.roomDigBudget <= 0)) {
+      digMode = "corridor";
+      ant.digMode = "corridor";
+      ant.roomCenter = null;
+      ant.roomRadius = 0;
+      ant.roomDigBudget = 0;
+      ant.roomDug = 0;
+    }
 
-    let roomSeeds = [];
-    if (diggingMode === "expander") {
-      const grid = world.grid;
-      const openTiles = new Set([TILES.TUNNEL]);
-      if (typeof TILES.AIR !== "undefined") openTiles.add(TILES.AIR);
-      for (let y = regionSplit; y < height - 1; y++) {
-        const row = grid[y];
-        if (!row) continue;
-        for (let x = 1; x < width - 1; x++) {
-          if (row[x] !== TILES.TUNNEL) continue;
-          let openNeighbors = 0;
-          for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-            const nx = x + dx;
-            const ny = y + dy;
-            if (openTiles.has(grid[ny]?.[nx])) openNeighbors++;
-          }
-          if (openNeighbors <= 1) roomSeeds.push({ x, y });
-        }
-      }
+    const favorSoftSoil = spacePressure < 0.5 && broodPressure < 0.2;
+    const headingStrength = ant.digHeadingStrength || 0;
+    const hasHeading = headingStrength > 0.01 && Number.isFinite(ant.digHeadingAngle);
+    const headingVec = hasHeading ? { x: Math.cos(ant.digHeadingAngle), y: Math.sin(ant.digHeadingAngle) } : null;
+    const lastDug = ant.lastDugCell || null;
 
-      if (!roomSeeds.length) {
-        diggingMode = "miner";
-        favorSoftSoil = spacePressure < 0.5;
-      }
+    const cgx = Math.floor(ant.x / cellSize);
+    const cgy = Math.floor(ant.y / cellSize);
+
+    const shouldStartRoom =
+      digMode !== "room" &&
+      ant.roomCooldown <= 0 &&
+      ant.digIdleTime >= (CONFIG?.roomModeStuckTime ?? 6) &&
+      spacePressure >= (CONFIG?.roomModeSpacePressure ?? 0.6);
+
+    if (shouldStartRoom) {
+      const anchorX = lastDug ? lastDug.x : cgx;
+      const anchorY = lastDug ? lastDug.y : cgy;
+      const radius = (CONFIG?.roomRadiusMin ?? 2) + Math.random() * ((CONFIG?.roomRadiusMax ?? 3.5) - (CONFIG?.roomRadiusMin ?? 2));
+      const projX = headingVec ? Math.max(-1, Math.min(1, Math.round(headingVec.x * 2))) : Math.round((Math.random() - 0.5) * 2);
+      const projY = headingVec ? Math.max(-1, Math.min(1, Math.round(headingVec.y * 2))) : Math.round((Math.random() - 0.5) * 2);
+      const centerX = Math.max(1, Math.min(width - 2, anchorX + projX));
+      const centerY = Math.max(regionSplit + 1, Math.min(height - 2, anchorY + projY));
+
+      ant.digMode = "room";
+      ant.roomCenter = { x: centerX, y: centerY };
+      ant.roomRadius = radius;
+      ant.roomDigBudget = Math.max(4, Math.round(Math.PI * radius * radius * 0.75));
+      ant.roomDug = 0;
+      ant.digIdleTime = 0;
+      digMode = "room";
     }
 
     const pressureBoost = 0.6 + spacePressure * 1.4;
     let best = null;
     let bestScore = -Infinity;
-    const samples = Math.min(SETTINGS.frontierSampleCount, frontier.list.length);
+    let bestBranching = false;
 
-    for (let i = 0; i < samples; i++) {
-      const tile = frontier.list[Math.floor(Math.random() * frontier.list.length)];
+    let searchRadius = SETTINGS.sampleRadius;
+    let candidates = collectFrontierCandidates(cgx, cgy, searchRadius, world.grid);
+    while (!candidates.length && searchRadius < SETTINGS.maxSampleRadius) {
+      searchRadius += SETTINGS.sampleRadiusStep;
+      candidates = collectFrontierCandidates(cgx, cgy, searchRadius, world.grid);
+    }
+
+    if (!candidates.length) {
+      const fallbackSamples = Math.min(SETTINGS.frontierSampleCount, frontier.list.length);
+      for (let i = 0; i < fallbackSamples; i++) {
+        const tile = frontier.list[Math.floor(Math.random() * frontier.list.length)];
+        candidates.push(tile);
+      }
+    }
+
+    for (const tile of candidates) {
       const { x, y } = tile;
       if (!frontierMask[y][x]) continue;
 
@@ -232,19 +303,6 @@ const DiggingSystem = (() => {
       const pher = digPheromone[y][x];
       const pherBonus = 1 + pher * 2.5;
 
-      let momentumBonus = 1;
-      if (ant.lastDigVector) {
-        const vx = tx - ant.x;
-        const vy = ty - ant.y;
-        const mag = Math.hypot(vx, vy);
-        if (mag > 0) {
-          const nx = vx / mag;
-          const ny = vy / mag;
-          const alignment = nx * ant.lastDigVector.x + ny * ant.lastDigVector.y;
-          if (alignment > 0) momentumBonus = 1 + alignment * 1.5;
-        }
-      }
-
       const nestDist = Math.hypot(tx - qx, ty - qy);
       const nestPenalty = 1 + nestDist / (cellSize * 10);
 
@@ -254,28 +312,71 @@ const DiggingSystem = (() => {
       const noise = Math.random() * 0.05;
 
       let modeBonus = 1;
-      if (diggingMode === "expander" && roomSeeds.length) {
-        const maxRadius = 4.5;
-        let bestSeedBias = 0;
-        for (const seed of roomSeeds) {
-          const dist = Math.hypot(x - seed.x, y - seed.y);
-          if (dist > maxRadius) continue;
-          const bias = (1 - (dist / maxRadius)) * 6.0;
-          if (bias > bestSeedBias) bestSeedBias = bias;
-        }
-        modeBonus += bestSeedBias;
-      } else if (favorSoftSoil && world.gridTexture && world.gridTexture[y]) {
+      if (favorSoftSoil && world.gridTexture && world.gridTexture[y]) {
         const hardness = world.gridTexture[y][x] ?? 0.5;
         const softnessBonus = Math.max(0.4, 1.6 - hardness * 1.2);
         modeBonus *= softnessBonus;
       }
 
-      const score = ((upwardBias * airBonus * pherBonus * momentumBonus * pressureBoost * modeBonus) / (nestPenalty * antPenalty)) + noise;
+      let headingBonus = 1;
+      if (headingVec) {
+        const anchorX = lastDug ? lastDug.x + 0.5 : cgx + 0.5;
+        const anchorY = lastDug ? lastDug.y + 0.5 : cgy + 0.5;
+        const dx = x + 0.5 - anchorX;
+        const dy = y + 0.5 - anchorY;
+        const dist = Math.hypot(dx, dy);
+        if (dist > 0) {
+          const alignment = (dx * headingVec.x + dy * headingVec.y) / dist;
+          const forwardMatch = (alignment + 1) * 0.5;
+          const aheadPreference = 1 / (1 + Math.abs(dist - 1));
+          headingBonus += headingStrength * ((forwardMatch * SETTINGS.forwardBias) + (aheadPreference * SETTINGS.headingAheadBias));
+        }
+      }
+
+      const tunnelNeighbors = countTunnelNeighbors4(x, y, world.grid);
+      let shapeBonus = 1;
+      let allowBranch = false;
+      if (digMode === "corridor") {
+        if (tunnelNeighbors === 1) {
+          shapeBonus *= SETTINGS.corridorEndpointBonus;
+        } else if (tunnelNeighbors === 2) {
+          const branchChance = SETTINGS.corridorBranchChance + spacePressure * 0.15 + headingStrength * 0.1;
+          allowBranch = Math.random() < branchChance;
+          const forkFavor = allowBranch ? SETTINGS.corridorBranchPenalty * 1.8 : SETTINGS.corridorBranchPenalty;
+          shapeBonus *= forkFavor;
+        } else {
+          shapeBonus *= SETTINGS.corridorBalloonPenalty;
+        }
+      } else {
+        if (tunnelNeighbors <= 1) shapeBonus *= SETTINGS.roomNeighborBonus;
+        else if (tunnelNeighbors === 2) shapeBonus *= 1;
+        else shapeBonus *= SETTINGS.roomNeighborPenalty;
+      }
+
+      let roomBias = 1;
+      if (digMode === "room" && ant.roomCenter) {
+        const distCenter = Math.hypot(x - ant.roomCenter.x, y - ant.roomCenter.y);
+        const targetRadius = ant.roomRadius || 2.5;
+        if (distCenter <= targetRadius + 0.5) {
+          roomBias += SETTINGS.roomCenterBias * Math.max(0, 1 - distCenter / Math.max(0.001, targetRadius + 0.5));
+        } else {
+          roomBias *= Math.max(0.1, 1 - (distCenter - targetRadius) * 0.35);
+        }
+      }
+
+      const score = ((upwardBias * airBonus * pherBonus * headingBonus * pressureBoost * modeBonus * shapeBonus * roomBias) /
+        (nestPenalty * antPenalty)) + noise;
 
       if (score > bestScore) {
         bestScore = score;
         best = { x, y };
+        bestBranching = allowBranch && digMode === "corridor" && tunnelNeighbors >= 2;
       }
+    }
+
+    if (best) {
+      best.allowBranching = bestBranching;
+      best.mode = digMode;
     }
 
     return best;
@@ -304,22 +405,98 @@ const DiggingSystem = (() => {
     return Math.max(SETTINGS.digDamage, hp);
   }
 
-  function depositBurst(cx, cy, radius, strength, grid) {
-    const minX = Math.max(0, cx - radius);
-    const maxX = Math.min(width - 1, cx + radius);
-    const minY = Math.max(0, cy - radius);
-    const maxY = Math.min(height - 1, cy + radius);
+  function depositDirectionalPheromone(ant, gx, gy, grid) {
+    const digTarget = ant.digTarget;
+    const headingStrength = ant.digHeadingStrength || 0;
+    let dirX = 0;
+    let dirY = 1;
 
-    for (let y = minY; y <= maxY; y++) {
-      for (let x = minX; x <= maxX; x++) {
-        if (grid[y][x] !== TILES.SOIL) continue;
-        const dist = Math.hypot(x - cx, y - cy);
-        if (dist > radius + 0.01) continue;
-        const falloff = Math.max(0, 1 - dist / (radius || 1));
-        const deposit = strength * falloff;
-        if (deposit > digPheromone[y][x]) digPheromone[y][x] = deposit;
+    if (headingStrength > 0 && Number.isFinite(ant.digHeadingAngle)) {
+      dirX = Math.cos(ant.digHeadingAngle);
+      dirY = Math.sin(ant.digHeadingAngle);
+    } else if (ant.pendingDigVector) {
+      dirX = ant.pendingDigVector.x;
+      dirY = ant.pendingDigVector.y;
+    } else if (digTarget) {
+      const dx = digTarget.x + 0.5 - (ant.lastDugCell?.x ?? gx) - 0.5;
+      const dy = digTarget.y + 0.5 - (ant.lastDugCell?.y ?? gy) - 0.5;
+      const mag = Math.hypot(dx, dy) || 1;
+      dirX = dx / mag;
+      dirY = dy / mag;
+    }
+
+    const strength = SETTINGS.directionalPheromoneStrength;
+    const aheadSteps = SETTINGS.directionalPheromoneLength;
+    const sideFalloff = SETTINGS.directionalSideFalloff;
+    const behindStrength = SETTINGS.directionalBackStrength;
+
+    digPheromone[gy][gx] = Math.max(digPheromone[gy][gx], SETTINGS.neighborDeposit * 0.75);
+
+    const visited = new Set();
+    const addDeposit = (tx, ty, weight) => {
+      if (!grid[ty] || grid[ty][tx] !== TILES.SOIL) return;
+      const key = (ty << 16) | tx;
+      if (visited.has(key)) return;
+      visited.add(key);
+      const deposit = strength * weight;
+      if (deposit > digPheromone[ty][tx]) digPheromone[ty][tx] = deposit;
+    };
+
+    const norm = Math.hypot(dirX, dirY) || 1;
+    const nx = dirX / norm;
+    const ny = dirY / norm;
+    const px = -ny;
+    const py = nx;
+
+    for (let i = 1; i <= aheadSteps; i++) {
+      const fx = Math.round(gx + nx * i);
+      const fy = Math.round(gy + ny * i);
+      const forwardWeight = Math.max(0.2, 1 - (i - 1) / aheadSteps);
+      addDeposit(fx, fy, forwardWeight);
+
+      if (i <= 2) {
+        addDeposit(Math.round(fx + px), Math.round(fy + py), forwardWeight * sideFalloff);
+        addDeposit(Math.round(fx - px), Math.round(fy - py), forwardWeight * sideFalloff);
       }
     }
+
+    addDeposit(Math.round(gx - nx), Math.round(gy - ny), behindStrength);
+  }
+
+  function isTunnelLike(x, y, grid, newX, newY) {
+    if (x === newX && y === newY) return true;
+    const tile = grid[y]?.[x];
+    return tile === TILES.TUNNEL || tile === TILES.AIR;
+  }
+
+  function formsCheckerboardArtifact(gx, gy, grid) {
+    for (let oy = -1; oy <= 0; oy++) {
+      for (let ox = -1; ox <= 0; ox++) {
+        const x0 = gx + ox;
+        const y0 = gy + oy;
+        if (x0 < 0 || y0 < 0 || x0 >= width - 1 || y0 >= height - 1) continue;
+        const a = isTunnelLike(x0, y0, grid, gx, gy);
+        const b = isTunnelLike(x0 + 1, y0, grid, gx, gy);
+        const c = isTunnelLike(x0, y0 + 1, grid, gx, gy);
+        const d = isTunnelLike(x0 + 1, y0 + 1, grid, gx, gy);
+        if ((a && d && !b && !c) || (b && c && !a && !d)) return true;
+      }
+    }
+    return false;
+  }
+
+  function canCarveHere(gx, gy, ant, world) {
+    const grid = world.grid;
+    const mode = ant.digMode || "corridor";
+    const target = ant.digTarget;
+    const allowBranching = !!(target && target.x === gx && target.y === gy && target.allowBranching);
+    const tunnelNeighbors = countTunnelNeighbors4(gx, gy, grid);
+
+    if (tunnelNeighbors <= 0) return false;
+    if (mode === "corridor" && tunnelNeighbors >= 2 && !allowBranching) return false;
+    if (formsCheckerboardArtifact(gx, gy, grid)) return false;
+
+    return true;
   }
 
   function applyDigAction(ant, world, gx, gy) {
@@ -355,16 +532,50 @@ const DiggingSystem = (() => {
       }
     }
 
+    if (!canCarveHere(gx, gy, ant, world)) {
+      digHP[gy][gx] = computeTileHP(gx, gy, grid);
+      return false;
+    }
+
     grid[gy][gx] = TILES.TUNNEL;
     digHP[gy][gx] = 0;
     digPheromone[gy][gx] = 0;
     frontierMask[gy][gx] = 0;
+
+    ant.digIdleTime = 0;
+    if (ant.digMode === "room") {
+      ant.roomDug = (ant.roomDug || 0) + 1;
+      if (ant.roomDigBudget > 0) ant.roomDigBudget--;
+      if (ant.roomDigBudget <= 0 || ant.roomDug >= Math.max(4, Math.round(Math.PI * (ant.roomRadius || 2.5) ** 2))) {
+        ant.digMode = "corridor";
+        ant.roomCooldown = CONFIG?.roomCooldown ?? 6;
+        ant.roomCenter = null;
+        ant.roomRadius = 0;
+        ant.roomDigBudget = 0;
+        ant.roomDug = 0;
+      }
+    }
 
     const digVecX = (gx + 0.5) * cellSize - ant.x;
     const digVecY = (gy + 0.5) * cellSize - ant.y;
     const digMag = Math.hypot(digVecX, digVecY);
     if (digMag > 0) {
       ant.pendingDigVector = { x: digVecX / digMag, y: digVecY / digMag };
+    }
+
+    const prevDug = ant.lastDugCell;
+    ant.lastDugCell = { x: gx, y: gy };
+    if (prevDug) {
+      const hx = gx - prevDug.x;
+      const hy = gy - prevDug.y;
+      const hMag = Math.hypot(hx, hy);
+      if (hMag > 0) {
+        ant.digHeadingAngle = Math.atan2(hy, hx);
+        ant.digHeadingStrength = Math.min(1, (ant.digHeadingStrength || 0) * 0.6 + SETTINGS.headingGain);
+      }
+    } else if (ant.pendingDigVector) {
+      ant.digHeadingAngle = Math.atan2(ant.pendingDigVector.y, ant.pendingDigVector.x);
+      ant.digHeadingStrength = Math.min(1, (ant.digHeadingStrength || 0) + SETTINGS.headingGain * 0.6);
     }
 
     // reinforce nearby frontier directions so others follow the same face
@@ -374,7 +585,7 @@ const DiggingSystem = (() => {
       }
     }
 
-    depositBurst(gx, gy, 2, SETTINGS.pheromoneBurst, grid);
+    depositDirectionalPheromone(ant, gx, gy, grid);
 
     reinforceNeighbors(gx, gy, grid);
     enqueueFrontierNeighborhood(gx, gy, 2);

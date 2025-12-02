@@ -17,9 +17,9 @@ const maskCtx = maskCanvas.getContext('2d');
 // CONFIG STATE
 // ==============================
 
-const CONFIG = {
-  scentDecay: 0.999,
-  depositAmount: 0.5,
+  const CONFIG = {
+    scentDecay: 0.999,
+    depositAmount: 0.5,
   entranceCueStrength: 0.8,
   entranceCueRadius: 2.4,
   entranceCueFadeDepth: 1,
@@ -43,6 +43,13 @@ const CONFIG = {
   queenRadius: 8,             // tiles; pheromone-free buffer around the queen
 
   renderWastePiles: false,
+
+  digHeadingDecayRate: 0.45,
+  roomModeSpacePressure: 0.6,
+  roomModeStuckTime: 5.5,
+  roomRadiusMin: 2,
+  roomRadiusMax: 3.5,
+  roomCooldown: 7,
 };
 
 // Energy drains more slowly so ants take longer to seek food.
@@ -1201,6 +1208,16 @@ class Ant {
     this.digRetargetT = Math.random() * 0.4;
     this.lastDigVector = null;
     this.pendingDigVector = null;
+    this.lastDugCell = null;
+    this.digHeadingAngle = null;
+    this.digHeadingStrength = 0;
+    this.digIdleTime = 0;
+    this.digMode = "corridor";
+    this.roomCenter = null;
+    this.roomRadius = 0;
+    this.roomDigBudget = 0;
+    this.roomDug = 0;
+    this.roomCooldown = 0;
 
     this.inNestCore = false;
   }
@@ -1701,6 +1718,14 @@ class Ant {
         this.digRetargetT = 0.6 + Math.random() * 0.6;
       }
     }
+
+    if (this.digHeadingStrength > 0) {
+      this.digHeadingStrength = Math.max(0, this.digHeadingStrength - CONFIG.digHeadingDecayRate * dt);
+      if (this.digHeadingStrength === 0) this.digHeadingAngle = null;
+    }
+
+    this.digIdleTime += dt;
+    if (this.roomCooldown > 0) this.roomCooldown = Math.max(0, this.roomCooldown - dt);
 
     this.updateNestCoreState();
 
