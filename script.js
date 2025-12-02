@@ -4,6 +4,10 @@ const statsDisplay = document.getElementById("stats-display");
 const controlsPanel = document.getElementById("controls-container");
 const settingsBtn = document.getElementById("settings-btn");
 const slidersArea = document.getElementById("sliders-area");
+const debugPanel = document.getElementById("debug-panel");
+const debugFlagsContainer = document.getElementById("debug-flags");
+const debugCloseBtn = document.getElementById("debug-close");
+const debugToggleBtn = document.getElementById("debug-btn");
 
 // Lighting mask
 const maskCanvas = document.createElement('canvas');
@@ -311,6 +315,172 @@ function initUI() {
 }
 
 // ==============================
+// DEBUG OVERLAY UI + DRAW HELPERS
+// ==============================
+
+const DebugOverlay = (() => {
+  const flags = {
+    showHomeScent: false,
+    showBroodScent: false,
+    showWaste: false,
+    showStoredFood: false,
+    showDigFrontier: false,
+    showRoomIds: false,
+    showAntState: false,
+  };
+
+  const toggleDefs = [
+    { key: 'showHomeScent', label: 'Home scent field' },
+    { key: 'showBroodScent', label: 'Brood scent field' },
+    { key: 'showWaste', label: 'Waste heatmap' },
+    { key: 'showStoredFood', label: 'Stored food heatmap' },
+    { key: 'showDigFrontier', label: 'Dig frontier tiles' },
+    { key: 'showRoomIds', label: 'Room IDs / regions' },
+    { key: 'showAntState', label: 'Ant state labels' },
+  ];
+
+  const palettes = {
+    blue: (t) => `rgba(80,180,255,${t})`,
+    green: (t) => `rgba(120,255,180,${t})`,
+    amber: (t) => `rgba(255,210,120,${t})`,
+    violet: (t) => `rgba(185,150,255,${t})`,
+    red: (t) => `rgba(255,120,140,${t})`,
+  };
+
+  let panelVisible = false;
+
+  function setPanelVisible(next) {
+    panelVisible = next;
+    debugPanel?.classList.toggle('visible', panelVisible);
+  }
+
+  function togglePanel() {
+    setPanelVisible(!panelVisible);
+  }
+
+  function buildToggle(def) {
+    const row = document.createElement('label');
+    row.className = 'debug-flag';
+
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.checked = flags[def.key];
+    input.addEventListener('change', () => {
+      flags[def.key] = input.checked;
+    });
+
+    const text = document.createElement('span');
+    text.textContent = def.label;
+
+    row.appendChild(input);
+    row.appendChild(text);
+    debugFlagsContainer?.appendChild(row);
+  }
+
+  function init() {
+    if (!debugFlagsContainer) return;
+    debugFlagsContainer.innerHTML = '';
+    toggleDefs.forEach(buildToggle);
+
+    debugToggleBtn?.addEventListener('click', togglePanel);
+    debugCloseBtn?.addEventListener('click', () => setPanelVisible(false));
+
+    setPanelVisible(false);
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'd' || e.key === 'D') {
+        togglePanel();
+      }
+    });
+  }
+
+  function drawHeatmapGrid(ctx, grid, options = {}) {
+    if (!grid || !grid.length) return;
+
+    const cs = options.cellSize ?? CONSTANTS.CELL_SIZE;
+    const composite = options.composite ?? 'lighter';
+    const palette = options.palette ?? palettes.violet;
+    const threshold = options.threshold ?? 0.0001;
+
+    const minX = Math.max(0, Math.floor(camX / cs) - 2);
+    const maxX = Math.min(CONSTANTS.GRID_W, Math.ceil((camX + VIEW_W / ZOOM) / cs) + 2);
+    const minY = Math.max(0, Math.floor(camY / cs) - 2);
+    const maxY = Math.min(CONSTANTS.GRID_H, Math.ceil((camY + VIEW_H / ZOOM) / cs) + 2);
+
+    let maxVal = options.max ?? null;
+    if (maxVal === null) {
+      maxVal = 0;
+      for (let y = minY; y < maxY; y++) {
+        const row = grid[y];
+        if (!row) continue;
+        for (let x = minX; x < maxX; x++) {
+          const v = row[x];
+          if (v > maxVal) maxVal = v;
+        }
+      }
+    }
+
+    if (!maxVal || maxVal <= threshold) return;
+
+    ctx.save();
+    ctx.globalCompositeOperation = composite;
+    ctx.globalAlpha = options.alpha ?? 0.35;
+    ctx.imageSmoothingEnabled = false;
+
+    for (let y = minY; y < maxY; y++) {
+      const row = grid[y];
+      if (!row) continue;
+      const py = y * cs;
+      for (let x = minX; x < maxX; x++) {
+        const v = row[x];
+        if (v <= threshold) continue;
+        const t = Math.min(1, Math.max(0, v / maxVal));
+        ctx.fillStyle = palette(t);
+        ctx.fillRect(x * cs, py, cs, cs);
+      }
+    }
+
+    ctx.restore();
+  }
+
+  function drawTileMark(ctx, gx, gy, options = {}) {
+    const cs = options.cellSize ?? CONSTANTS.CELL_SIZE;
+    const size = options.size ?? cs * 0.55;
+    const half = size / 2;
+    const px = (gx + 0.5) * cs;
+    const py = (gy + 0.5) * cs;
+
+    ctx.save();
+    ctx.strokeStyle = options.color ?? '#38ff8b';
+    ctx.lineWidth = options.lineWidth ?? 1.3;
+    ctx.globalAlpha = options.alpha ?? 0.9;
+
+    if (options.shape === 'cross') {
+      ctx.beginPath();
+      ctx.moveTo(px - half, py - half);
+      ctx.lineTo(px + half, py + half);
+      ctx.moveTo(px - half, py + half);
+      ctx.lineTo(px + half, py - half);
+      ctx.stroke();
+    } else {
+      ctx.strokeRect(px - half, py - half, size, size);
+    }
+
+    ctx.restore();
+  }
+
+  return {
+    init,
+    flags,
+    palettes,
+    togglePanel,
+    setPanelVisible,
+    drawHeatmapGrid,
+    drawTileMark,
+  };
+})();
+
+// ==============================
 // VIEWPORT & INPUT
 // ==============================
 
@@ -432,6 +602,7 @@ const worldState = {
   brood: null,
   broodScent: null,
   nurseScent: null,
+  frontierTiles: null,
   constants: CONSTANTS,
   onTunnelDug: (gx, gy) => {
     updateEdgesAround(gx, gy, grid);
@@ -1841,6 +2012,50 @@ function render() {
   // NEW: edge overlay (crisp outlines)
   ctx.drawImage(edgeCanvas, 0, 0);
 
+  // Debug overlays (opt-in; add new flags + branches here)
+  if (DebugOverlay.flags.showHomeScent) {
+    DebugOverlay.drawHeatmapGrid(ctx, scentToHome, {
+      palette: DebugOverlay.palettes.blue,
+      alpha: 0.35,
+    });
+  }
+  if (DebugOverlay.flags.showBroodScent) {
+    DebugOverlay.drawHeatmapGrid(ctx, broodScent, {
+      palette: DebugOverlay.palettes.violet,
+      alpha: 0.32,
+    });
+  }
+  if (DebugOverlay.flags.showWaste) {
+    DebugOverlay.drawHeatmapGrid(ctx, wasteGrid, {
+      palette: DebugOverlay.palettes.amber,
+      alpha: 0.28,
+      max: WASTE.maxTile,
+      composite: 'source-over',
+    });
+  }
+  if (DebugOverlay.flags.showStoredFood) {
+    DebugOverlay.drawHeatmapGrid(ctx, storedFoodGrid, {
+      palette: DebugOverlay.palettes.green,
+      alpha: 0.32,
+      max: 6,
+      composite: 'source-over',
+    });
+  }
+  if (DebugOverlay.flags.showDigFrontier && worldState.frontierTiles?.list?.length) {
+    const frontier = worldState.frontierTiles.list;
+    for (const f of frontier) {
+      DebugOverlay.drawTileMark(ctx, f.x, f.y, { color: '#38ffef', lineWidth: 1.2 });
+    }
+  }
+  // Future room debugging hooks: if a room-id grid exists, draw it through this flag.
+  if (DebugOverlay.flags.showRoomIds && worldState.roomIds) {
+    DebugOverlay.drawHeatmapGrid(ctx, worldState.roomIds, {
+      palette: DebugOverlay.palettes.red,
+      alpha: 0.25,
+      composite: 'source-over',
+    });
+  }
+
   // Brood clusters
   if (worldState.brood?.length) {
     for (const b of worldState.brood) {
@@ -2038,6 +2253,33 @@ function render() {
     }
   }
 
+  if (DebugOverlay.flags.showAntState) {
+    ctx.save();
+    ctx.font = '8px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+
+    const padding = 30;
+    const minX = camX - padding;
+    const maxX = camX + VIEW_W / ZOOM + padding;
+    const minY = camY - padding;
+    const maxY = camY + VIEW_H / ZOOM + padding;
+
+    for (const a of ants) {
+      if (a.x < minX || a.x > maxX || a.y < minY || a.y > maxY) continue;
+
+      const tags = [a.role];
+      if (a.hasFood) tags.push('food');
+      if (a.carryingWaste) tags.push('waste');
+      if (a.carryingCorpse) tags.push('corpse');
+      const label = tags.filter(Boolean).join(' | ');
+      ctx.fillText(label || 'ant', a.x, a.y - 6);
+    }
+
+    ctx.restore();
+  }
+
   // Particles
   for (const p of particles) {
     ctx.globalAlpha = clamp01(p.life);
@@ -2194,6 +2436,7 @@ function loop(t) {
 // ==============================
 
 initUI();
+DebugOverlay.init();
 initScentBuffers();
 initEdgeCanvas();
 resize();
