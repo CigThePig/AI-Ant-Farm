@@ -670,6 +670,7 @@ const worldState = {
       status: "unstarted",
       center: null,
       radiusTiles: CONFIG.queenChamberRadiusTiles,
+      priority: false,
     },
   },
   queenChamber: {
@@ -962,6 +963,7 @@ function initQueenChamberObjective(world) {
     center,
     radiusTiles,
     minTiles,
+    priority: true,
   };
 
   world.queenChamber = {
@@ -1019,6 +1021,9 @@ function updateQueenChamberObjective(world) {
   objective.status = ready
     ? "ready"
     : (centerTile === TILES.TUNNEL || hasNearby ? "digging" : "unstarted");
+  if (objective.status === "ready") {
+    objective.priority = false;
+  }
 
   world.queenChamber = chamber;
 }
@@ -1613,20 +1618,20 @@ function resetSimulation() {
   worldState.queenId = queen.id;
   worldState.queen = queen;
 
-  const createWorkerWithAgeFraction = (ageFraction, role) => {
+  const createWorkerWithAgeFraction = (ageFraction, role, options = {}) => {
+    const { skipAgeBasedRole = false } = options;
     const wx = qx + entranceJitter();
     const wy = qy + entranceJitter();
     const worker = new Ant("worker", wx, wy, role);
     worker.age = worker.lifespan * ageFraction;
-    worker.updateAgeBasedRole();
+    if (!skipAgeBasedRole) worker.updateAgeBasedRole();
     return worker;
   };
 
   const foundingWorkers = Math.floor(Math.random() * 7) + 6; // 6-12 workers
   for (let i = 0; i < foundingWorkers; i++) {
     const ageFraction = clamp01(Math.random());
-    const role = ["forager", "nurse", "digger"][Math.floor(Math.random() * 3)];
-    ants.push(createWorkerWithAgeFraction(ageFraction, role));
+    ants.push(createWorkerWithAgeFraction(ageFraction, "digger", { skipAgeBasedRole: true }));
   }
 
   // Build edges once per reset
@@ -1846,6 +1851,16 @@ class Ant {
   updateAgeBasedRole() {
     if (this.type !== "worker") return;
 
+    const queenObjective = worldState?.objectives?.queenChamber;
+    const queenChamberPriority = !!(queenObjective?.priority && queenObjective.status !== "ready");
+    if (queenChamberPriority) {
+      if (this.role !== "digger") {
+        this.role = "digger";
+        this.digRetargetT = 0;
+      }
+      return;
+    }
+
     const ageFrac = clamp01(this.age / this.lifespan);
     const effectiveThreshold = this.getEffectiveThreshold();
     const gx = Math.floor(this.x / CONSTANTS.CELL_SIZE);
@@ -1910,6 +1925,10 @@ class Ant {
       wander: 0.1,
     };
 
+    const queenObjective = worldState?.objectives?.queenChamber;
+    const queenChamberPriority = !!(queenObjective?.priority && queenObjective.status !== "ready");
+    const constructionPush = queenChamberPriority && this.type !== "queen";
+
     scores.panic = this.lostMode ? 1 : (this.panicT > 0 ? 1 : 0);
 
     if (this.role === "nurse") {
@@ -1950,6 +1969,16 @@ class Ant {
     }
 
     scores.wander = Math.max(scores.wander, 0.2 - scores.panic * 0.1);
+
+    if (constructionPush) {
+      scores.dig = Math.max(scores.dig, 1.0);
+      scores.clean = Math.min(scores.clean, 0.02);
+      scores.forage = Math.min(scores.forage, 0.02);
+      scores.wander = Math.min(scores.wander, 0.05);
+      if (!this.carrying) {
+        scores.returnHome = Math.min(scores.returnHome, 0.2);
+      }
+    }
 
     return scores;
   }
