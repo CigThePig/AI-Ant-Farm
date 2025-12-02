@@ -23,6 +23,7 @@ const CONFIG = {
   entranceCueStrength: 0.8,
   entranceCueRadius: 2.4,
   entranceCueFadeDepth: 1,
+  foundingSeedHole: true,
 
   sensorAngle: 0.8,
   sensorDist: 30,
@@ -69,14 +70,27 @@ CONSTANTS.WORLD_W = CONSTANTS.GRID_W * CONSTANTS.CELL_SIZE;
 CONSTANTS.WORLD_H = CONSTANTS.GRID_H * CONSTANTS.CELL_SIZE;
 CONSTANTS.REGION_SPLIT = Math.floor(CONSTANTS.GRID_H * 0.35);
 
-const NEST_ENTRANCE = {
+const ENTRANCE = {
   gx: Math.floor(CONSTANTS.GRID_W / 2),
-  gy: Math.max(2, CONSTANTS.REGION_SPLIT),
-  radius: 2,
-  corridorDepth: 8,
+  gy: Math.max(1, CONSTANTS.REGION_SPLIT - 1),
 };
-NEST_ENTRANCE.x = (NEST_ENTRANCE.gx + 0.5) * CONSTANTS.CELL_SIZE;
-NEST_ENTRANCE.y = (NEST_ENTRANCE.gy + 0.5) * CONSTANTS.CELL_SIZE;
+ENTRANCE.x = (ENTRANCE.gx + 0.5) * CONSTANTS.CELL_SIZE;
+ENTRANCE.y = (ENTRANCE.gy + 0.5) * CONSTANTS.CELL_SIZE;
+
+const DIG_START = {
+  gx: ENTRANCE.gx,
+  gy: CONSTANTS.REGION_SPLIT,
+};
+DIG_START.x = (DIG_START.gx + 0.5) * CONSTANTS.CELL_SIZE;
+DIG_START.y = (DIG_START.gy + 0.5) * CONSTANTS.CELL_SIZE;
+
+const NEST_ENTRANCE = {
+  gx: ENTRANCE.gx,
+  gy: ENTRANCE.gy,
+  radius: 2,
+};
+NEST_ENTRANCE.x = ENTRANCE.x;
+NEST_ENTRANCE.y = ENTRANCE.y;
 
 const QUEEN_RADIUS_PX = CONFIG.queenRadius * CONSTANTS.CELL_SIZE;
 const QUEEN_RADIUS_PX2 = QUEEN_RADIUS_PX * QUEEN_RADIUS_PX;
@@ -614,6 +628,9 @@ const worldState = {
   gridTexture: null,
   particles: null,
   airLevels: null,
+  entrance: ENTRANCE,
+  digStart: DIG_START,
+  foundingMode: false,
   storedFood: 0,
   wasteGrid: null,
   wasteTags: null,
@@ -688,6 +705,7 @@ function getHomeSteeringField(ant, gx, gy, worldState) {
   const signals = [];
   const underground = ant.y > CONSTANTS.REGION_SPLIT * CONSTANTS.CELL_SIZE;
   const queen = worldState?.queen ?? ants[0];
+  const entrance = worldState?.entrance ?? ENTRANCE;
 
   if (queen) {
     const queenSignal = computeDirectionalSignal(ant, queenScent, {
@@ -697,7 +715,7 @@ function getHomeSteeringField(ant, gx, gy, worldState) {
     signals.push(queenSignal);
   }
 
-  const entranceDistance = Math.hypot((NEST_ENTRANCE.x - ant.x), (NEST_ENTRANCE.y - ant.y));
+  const entranceDistance = Math.hypot((entrance.x - ant.x), (entrance.y - ant.y));
   const entranceRadiusPx = (CONFIG.entranceCueRadius ?? NEST_ENTRANCE.radius) * CONSTANTS.CELL_SIZE;
   const entranceWeight = 0.6 + 0.6 * clamp01(1 - (entranceDistance / Math.max(1, entranceRadiusPx * 2.5)));
   const entranceSignal = computeDirectionalSignal(ant, scentToHome, {
@@ -967,6 +985,10 @@ function resetSimulation() {
     }
   }
 
+  if (CONFIG.foundingSeedHole) {
+    grid[DIG_START.gy][DIG_START.gx] = TILES.TUNNEL;
+  }
+
   // Food clusters
   for (let i = 0; i < 15; i++) {
     const cx = Math.floor(Math.random() * (CONSTANTS.GRID_W - 10) + 5);
@@ -988,40 +1010,19 @@ function resetSimulation() {
     }
   }
 
-  // Queen & room
-  const qx = (CONSTANTS.GRID_W / 2) * CONSTANTS.CELL_SIZE;
-  const qy = (CONSTANTS.REGION_SPLIT + 8) * CONSTANTS.CELL_SIZE;
+  // Queen & founding group spawn near the surface entrance
+  const entranceJitter = () => (Math.random() - 0.5) * CONSTANTS.CELL_SIZE * 0.9;
+  const qx = ENTRANCE.x + entranceJitter();
+  const qy = ENTRANCE.y + entranceJitter();
   const qgx = Math.floor(qx / CONSTANTS.CELL_SIZE);
   const qgy = Math.floor(qy / CONSTANTS.CELL_SIZE);
-
-  for (let y = qgy - 4; y <= qgy + 4; y++) {
-    if (y <= 0 || y >= CONSTANTS.GRID_H - 1) continue;
-    for (let x = qgx - 5; x <= qgx + 5; x++) {
-      if (x <= 0 || x >= CONSTANTS.GRID_W - 1) continue;
-      grid[y][x] = TILES.TUNNEL;
-    }
-  }
-
-  // Carve a narrow corridor from the queen's chamber toward the entrance
-  for (let dy = 0; dy <= NEST_ENTRANCE.corridorDepth; dy++) {
-    const y = Math.max(1, qgy - dy);
-    for (let dx = -1; dx <= 1; dx++) {
-      const x = NEST_ENTRANCE.gx + dx;
-      if (x <= 0 || x >= CONSTANTS.GRID_W - 1) continue;
-      grid[y][x] = TILES.TUNNEL;
-    }
-  }
-
-  // Mark the entrance band near the surface
-  for (let y = Math.max(1, NEST_ENTRANCE.gy - 1); y <= Math.min(CONSTANTS.GRID_H - 2, NEST_ENTRANCE.gy + 1); y++) {
-    for (let x = Math.max(1, NEST_ENTRANCE.gx - NEST_ENTRANCE.radius); x <= Math.min(CONSTANTS.GRID_W - 2, NEST_ENTRANCE.gx + NEST_ENTRANCE.radius); x++) {
-      grid[y][x] = TILES.TUNNEL;
-    }
-  }
 
   worldState.grid = grid;
   worldState.gridTexture = gridTexture;
   worldState.particles = particles;
+  worldState.entrance = ENTRANCE;
+  worldState.digStart = DIG_START;
+  worldState.foundingMode = true;
   worldState.wasteGrid = wasteGrid;
   worldState.wasteTags = wasteTags;
   worldState.wasteTotal = wasteTotal;
@@ -1036,18 +1037,19 @@ function resetSimulation() {
   ants.push(new Ant("queen", qx, qy));
 
   const createWorkerWithAgeFraction = (ageFraction, role) => {
-    const worker = new Ant("worker", qx, qy, role);
+    const wx = qx + entranceJitter();
+    const wy = qy + entranceJitter();
+    const worker = new Ant("worker", wx, wy, role);
     worker.age = worker.lifespan * ageFraction;
     worker.updateAgeBasedRole();
     return worker;
   };
 
-  for (let i = 0; i < 10; i++) {
-    ants.push(createWorkerWithAgeFraction(0.1, "nurse"));
-  }
-
-  for (let i = 0; i < 10; i++) {
-    ants.push(createWorkerWithAgeFraction(0.8, "forager"));
+  const foundingWorkers = Math.floor(Math.random() * 7) + 6; // 6-12 workers
+  for (let i = 0; i < foundingWorkers; i++) {
+    const ageFraction = clamp01(Math.random());
+    const role = ["forager", "nurse", "digger"][Math.floor(Math.random() * 3)];
+    ants.push(createWorkerWithAgeFraction(ageFraction, role));
   }
 
   // Build edges once per reset
@@ -1071,10 +1073,10 @@ function resetSimulation() {
 // ==============================
 
 function isInEntranceRegion(gx, gy) {
-  return (
-    Math.abs(gx - NEST_ENTRANCE.gx) <= NEST_ENTRANCE.radius &&
-    Math.abs(gy - NEST_ENTRANCE.gy) <= 1
-  );
+  const radius = CONFIG.entranceCueRadius ?? NEST_ENTRANCE.radius;
+  const dx = gx - ENTRANCE.gx;
+  const dy = gy - ENTRANCE.gy;
+  return (dx * dx + dy * dy) <= radius * radius;
 }
 
 function spreadQueenScent(qgx, qgy) {
@@ -1105,7 +1107,7 @@ function spreadQueenScent(qgx, qgy) {
 }
 
 function seedEntranceHomeScent() {
-  const { gx, gy } = NEST_ENTRANCE;
+  const { gx, gy } = ENTRANCE;
   const cueStrength = CONFIG.entranceCueStrength ?? 0;
   const cueRadius = CONFIG.entranceCueRadius ?? NEST_ENTRANCE.radius;
   const fadeDepth = Math.max(0, Math.min(CONFIG.entranceCueFadeDepth ?? 0, 2));
