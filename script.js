@@ -35,6 +35,12 @@ const maskCtx = maskCanvas.getContext('2d');
   wanderStrength: 0.1,
   forwardBias: 2.0,
   workerSpeed: 60,
+  queenSpeed: 28,
+
+  queenScentSurfaceScale: 0.15,
+  queenScentSurfaceReach: 3,
+  queenScentRelocatingScale: 0.4,
+  queenUnsettledLayMultiplier: 0.0,
 
   postDeliveryDuration: 0.8,   // seconds ants will exit the queen's chamber after dropping food
 
@@ -359,6 +365,8 @@ const DebugOverlay = (() => {
     showAntState: false,
     highlightTransfers: false,
     showCleanTargets: false,
+    showQueenPath: false,
+    showQueenScent: false,
   };
 
   const toggleDefs = [
@@ -373,6 +381,8 @@ const DebugOverlay = (() => {
     { key: 'showAntState', label: 'Ant state labels' },
     { key: 'highlightTransfers', label: 'Highlight trophallaxis transfers' },
     { key: 'showCleanTargets', label: 'Cleaner target lines' },
+    { key: 'showQueenPath', label: 'Queen path & target' },
+    { key: 'showQueenScent', label: 'Queen scent field' },
   ];
 
   const palettes = {
@@ -627,6 +637,7 @@ let trophallaxisEvents = [];
 let foodInStorage = 0;
 let wasteTotal = 0;
 let brood = [];
+let nextAntId = 1;
 
 const FOOD_TYPES = ["seed", "protein", "sugar"];
 
@@ -635,6 +646,10 @@ const worldState = {
   gridTexture: null,
   particles: null,
   airLevels: null,
+  queen: null,
+  queenRef: null,
+  queenId: null,
+  queenMoveTarget: null,
   entrance: ENTRANCE,
   digStart: DIG_START,
   foundingMode: false,
@@ -664,6 +679,200 @@ const worldState = {
     }
   },
 };
+
+function getQueen(world = worldState) {
+  const resolvedWorld = world || worldState;
+
+  if (resolvedWorld?.queenRef && resolvedWorld.queenRef.type === "queen") return resolvedWorld.queenRef;
+
+  if (resolvedWorld?.queenId && Array.isArray(ants)) {
+    const queenById = ants.find((a) => a.id === resolvedWorld.queenId && a.type === "queen");
+    if (queenById) {
+      resolvedWorld.queenRef = queenById;
+      resolvedWorld.queen = queenById;
+      return queenById;
+    }
+  }
+
+  if (Array.isArray(ants)) {
+    const queenFromList = ants.find((a) => a.type === "queen");
+    if (queenFromList) {
+      if (resolvedWorld) {
+        resolvedWorld.queenRef = queenFromList;
+        resolvedWorld.queenId = queenFromList.id;
+        resolvedWorld.queen = queenFromList;
+      }
+      return queenFromList;
+    }
+  }
+
+  return null;
+}
+
+function getNestCorePos(world = worldState) {
+  const queen = getQueen(world);
+  if (!queen) return null;
+
+  return {
+    x: queen.x,
+    y: queen.y,
+    settled: queen.state === "SETTLED",
+    queen,
+  };
+}
+
+function findTunnelPath(start, goal, gridRef = grid) {
+  if (!start || !goal || !gridRef) return null;
+
+  const height = gridRef.length;
+  const width = gridRef[0]?.length || 0;
+  if (width === 0 || height === 0) return null;
+
+  const inBounds = (x, y) => x >= 0 && x < width && y >= 0 && y < height;
+  if (!inBounds(goal.gx, goal.gy)) return null;
+  if (gridRef[goal.gy]?.[goal.gx] !== TILES.TUNNEL) return null;
+
+  const startKey = `${start.gx},${start.gy}`;
+  const goalKey = `${goal.gx},${goal.gy}`;
+  if (startKey === goalKey) return [{ gx: goal.gx, gy: goal.gy }];
+
+  const visited = new Uint8Array(width * height);
+  const prevX = new Int16Array(width * height);
+  const prevY = new Int16Array(width * height);
+
+  const idx = (x, y) => y * width + x;
+  const queue = [];
+
+  const pushNode = (x, y) => {
+    visited[idx(x, y)] = 1;
+    queue.push({ gx: x, gy: y });
+  };
+
+  if (!inBounds(start.gx, start.gy)) return null;
+  pushNode(start.gx, start.gy);
+
+  while (queue.length) {
+    const node = queue.shift();
+    const nKey = `${node.gx},${node.gy}`;
+    if (nKey === goalKey) {
+      const path = [];
+      let cx = node.gx;
+      let cy = node.gy;
+      while (!(cx === start.gx && cy === start.gy)) {
+        path.push({ gx: cx, gy: cy });
+        const pIdx = idx(cx, cy);
+        const px = prevX[pIdx];
+        const py = prevY[pIdx];
+        cx = px;
+        cy = py;
+      }
+      path.push({ gx: start.gx, gy: start.gy });
+      path.reverse();
+      return path;
+    }
+
+    const neighbors = [
+      [node.gx + 1, node.gy],
+      [node.gx - 1, node.gy],
+      [node.gx, node.gy + 1],
+      [node.gx, node.gy - 1],
+    ];
+
+    for (const [nx, ny] of neighbors) {
+      if (!inBounds(nx, ny)) continue;
+      const nIdx = idx(nx, ny);
+      if (visited[nIdx]) continue;
+      const tile = gridRef[ny]?.[nx];
+      const isStart = nx === start.gx && ny === start.gy;
+      if (!isStart && tile !== TILES.TUNNEL) continue;
+
+      visited[nIdx] = 1;
+      prevX[nIdx] = node.gx;
+      prevY[nIdx] = node.gy;
+      queue.push({ gx: nx, gy: ny });
+    }
+  }
+
+  return null;
+}
+
+function initQueenState(queen) {
+  if (!queen || queen.type !== "queen") return;
+  if (queen.state) return;
+  const qgy = Math.floor(queen.y / CONSTANTS.CELL_SIZE);
+  const onSurface = qgy < CONSTANTS.REGION_SPLIT;
+  queen.state = onSurface ? "FOUNDING_SURFACE" : "SETTLED";
+}
+
+function syncQueenTarget(queen, world) {
+  if (!queen || queen.type !== "queen") return false;
+  const target = world?.queenMoveTarget;
+  const changed = !!target && (!queen.targetGxGy || queen.targetGxGy.gx !== target.gx || queen.targetGxGy.gy !== target.gy);
+  if (changed) {
+    queen.targetGxGy = { gx: target.gx, gy: target.gy };
+    queen.path = null;
+    queen.pathIndex = 0;
+  }
+  return changed;
+}
+
+function updateQueenPath(queen, world, force = false) {
+  if (!queen || queen.type !== "queen" || !queen.targetGxGy) return;
+  if (!force && queen.repathCooldown > 0) return;
+
+  const gridRef = world?.grid ?? grid;
+  const start = {
+    gx: Math.floor(queen.x / CONSTANTS.CELL_SIZE),
+    gy: Math.floor(queen.y / CONSTANTS.CELL_SIZE),
+  };
+  const path = findTunnelPath(start, queen.targetGxGy, gridRef);
+  queen.path = path || null;
+  queen.pathIndex = 0;
+  queen.repathCooldown = 0.8;
+}
+
+function stepQueenAlongPath(queen, dt, world) {
+  if (!queen?.path || queen.path.length === 0) return 0;
+
+  const gridRef = world?.grid ?? grid;
+  const cs = CONSTANTS.CELL_SIZE;
+  let remaining = (CONFIG.queenSpeed ?? 25) * dt;
+  let travel = 0;
+
+  while (remaining > 0 && queen.pathIndex < queen.path.length) {
+    const node = queen.path[queen.pathIndex];
+    const nodeTile = gridRef[node.gy]?.[node.gx];
+    const isStart = queen.pathIndex === 0;
+    if (!isStart && nodeTile !== TILES.TUNNEL) {
+      queen.path = null;
+      break;
+    }
+
+    const tx = (node.gx + 0.5) * cs;
+    const ty = (node.gy + 0.5) * cs;
+    const dx = tx - queen.x;
+    const dy = ty - queen.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 0.001) {
+      queen.pathIndex++;
+      continue;
+    }
+
+    const step = Math.min(dist, remaining);
+    const nx = queen.x + (dx / dist) * step;
+    const ny = queen.y + (dy / dist) * step;
+    queen.x = nx;
+    queen.y = ny;
+    remaining -= step;
+    travel += step;
+
+    if (step === dist) {
+      queen.pathIndex++;
+    }
+  }
+
+  return travel;
+}
 
 function clamp01(v){ return Math.max(0, Math.min(1, v)); }
 
@@ -711,12 +920,13 @@ function computeDirectionalSignal(ant, field, opts = {}) {
 function getHomeSteeringField(ant, gx, gy, worldState) {
   const signals = [];
   const underground = ant.y > CONSTANTS.REGION_SPLIT * CONSTANTS.CELL_SIZE;
-  const queen = worldState?.queen ?? ants[0];
+  const nestCore = getNestCorePos(worldState);
+  const queen = nestCore?.queen ?? null;
   const entrance = worldState?.entrance ?? ENTRANCE;
 
   if (queen) {
     const queenSignal = computeDirectionalSignal(ant, queenScent, {
-      weight: underground ? 1.4 : 0.8,
+      weight: nestCore?.settled ? (underground ? 1.4 : 0.8) : 0.4,
       min: 0,
     });
     signals.push(queenSignal);
@@ -965,6 +1175,11 @@ function resetSimulation() {
   foodInStorage = 0;
   wasteTotal = 0;
   brood = [];
+  nextAntId = 1;
+  worldState.queenRef = null;
+  worldState.queenId = null;
+  worldState.queen = null;
+  worldState.queenMoveTarget = null;
 
   for (let y = 0; y < CONSTANTS.GRID_H; y++) {
     grid[y] = new Uint8Array(CONSTANTS.GRID_W);
@@ -995,6 +1210,20 @@ function resetSimulation() {
   if (CONFIG.foundingSeedHole) {
     grid[DIG_START.gy][DIG_START.gx] = TILES.TUNNEL;
   }
+
+  const findEntranceTunnel = () => {
+    const radius = 2;
+    for (let dy = -radius; dy <= radius; dy++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        const nx = DIG_START.gx + dx;
+        const ny = DIG_START.gy + dy;
+        if (getTile(nx, ny) === TILES.TUNNEL) {
+          return { gx: nx, gy: ny };
+        }
+      }
+    }
+    return null;
+  };
 
   // Food clusters
   for (let i = 0; i < 15; i++) {
@@ -1030,6 +1259,9 @@ function resetSimulation() {
   worldState.entrance = ENTRANCE;
   worldState.digStart = DIG_START;
   worldState.foundingMode = true;
+  worldState.queenMoveTarget = getTile(DIG_START.gx, DIG_START.gy) === TILES.TUNNEL
+    ? { gx: DIG_START.gx, gy: DIG_START.gy }
+    : findEntranceTunnel();
   worldState.wasteGrid = wasteGrid;
   worldState.wasteTags = wasteTags;
   worldState.wasteTotal = wasteTotal;
@@ -1041,7 +1273,11 @@ function resetSimulation() {
   brood = BroodSystem.getBrood();
   worldState.brood = brood;
 
-  ants.push(new Ant("queen", qx, qy));
+  const queen = new Ant("queen", qx, qy);
+  ants.push(queen);
+  worldState.queenRef = queen;
+  worldState.queenId = queen.id;
+  worldState.queen = queen;
 
   const createWorkerWithAgeFraction = (ageFraction, role) => {
     const wx = qx + entranceJitter();
@@ -1086,9 +1322,28 @@ function isInEntranceRegion(gx, gy) {
   return (dx * dx + dy * dy) <= radius * radius;
 }
 
-function spreadQueenScent(qgx, qgy) {
-  const coreRadius = 3;
-  const reachRadius = 6;
+function spreadQueenScent(queen, world) {
+  if (!queen) return;
+
+  const gridRef = world?.grid ?? grid;
+  const qgx = Math.floor(queen.x / CONSTANTS.CELL_SIZE);
+  const qgy = Math.floor(queen.y / CONSTANTS.CELL_SIZE);
+
+  const tile = gridRef?.[qgy]?.[qgx];
+  const inTunnel = tile === TILES.TUNNEL;
+  const settled = queen.state === "SETTLED";
+
+  const surfaceScale = CONFIG.queenScentSurfaceScale ?? 0;
+  const relocatingScale = CONFIG.queenScentRelocatingScale ?? 0.4;
+
+  const spreadScale = inTunnel
+    ? (settled ? 1 : relocatingScale)
+    : surfaceScale;
+
+  if (spreadScale <= 0) return;
+
+  const reachRadius = Math.max(1, Math.round(inTunnel ? 6 : (CONFIG.queenScentSurfaceReach ?? 3)));
+  const coreRadius = inTunnel && settled ? 3 : 1.5;
 
   for (let dy = -reachRadius; dy <= reachRadius; dy++) {
     const ny = qgy + dy;
@@ -1098,7 +1353,9 @@ function spreadQueenScent(qgx, qgy) {
       const nx = qgx + dx;
       if (nx <= 0 || nx >= CONSTANTS.GRID_W - 1) continue;
 
-      if (grid[ny][nx] === TILES.SOIL || grid[ny][nx] === TILES.BEDROCK) continue;
+      const targetTile = gridRef?.[ny]?.[nx];
+      if (targetTile === TILES.SOIL || targetTile === TILES.BEDROCK) continue;
+      if (!inTunnel && targetTile !== TILES.TUNNEL) continue;
 
       const dist = Math.hypot(dx, dy);
       if (dist > reachRadius) continue;
@@ -1106,9 +1363,9 @@ function spreadQueenScent(qgx, qgy) {
       let strength = 0;
       if (dist < 0.5) strength = 0.8;
       else if (dist <= coreRadius) strength = 0.45 + (coreRadius - dist) * 0.1;
-      else strength = Math.max(0.12, 0.25 - (dist - coreRadius) * 0.03);
+      else strength = Math.max(0.08, 0.25 - (dist - coreRadius) * 0.03);
 
-      queenScent[ny][nx] = Math.min(1.0, queenScent[ny][nx] + strength);
+      queenScent[ny][nx] = Math.min(1.0, queenScent[ny][nx] + strength * spreadScale);
     }
   }
 }
@@ -1156,7 +1413,9 @@ function seedEntranceHomeScent() {
 
 class Ant {
   constructor(type, x, y, role = null) {
+    this.id = nextAntId++;
     this.type = type;
+    this.isQueen = type === "queen";
     this.x = x; this.y = y;
     this.angle = Math.random() * Math.PI * 2;
     this.carrying = null;
@@ -1220,6 +1479,16 @@ class Ant {
     this.roomCooldown = 0;
 
     this.inNestCore = false;
+
+    if (type === "queen") {
+      this.state = null;
+      this.targetGxGy = null;
+      this.path = null;
+      this.pathIndex = 0;
+      this.repathCooldown = 0;
+      this.pathProgressTimer = 0;
+      this.lastPathSample = { x, y };
+    }
   }
 
   getEffectiveThreshold() {
@@ -1385,7 +1654,7 @@ class Ant {
       return baseBias + sweep + jitter;
     }
 
-    const queen = ants[0];
+    const queen = getQueen(worldState);
     let biasAngle = null;
     if (queen) {
       const queenSignal = computeDirectionalSignal(this, queenScent, { weight: 1.2, min: 0 });
@@ -1475,7 +1744,7 @@ class Ant {
   }
 
   isInsideQueenRadius() {
-    const queen = ants[0];
+    const queen = getQueen(worldState);
     if (!queen) return false;
 
     const dx = queen.x - this.x;
@@ -1491,7 +1760,7 @@ class Ant {
       scentStrength = queenScent[gy][gx];
     }
 
-    const queen = ants[0];
+    const queen = getQueen(worldState);
     if (queen) {
       const dx = queen.x - this.x;
       const dy = queen.y - this.y;
@@ -1639,23 +1908,83 @@ class Ant {
 
     if (this.age > this.lifespan || this.energy <= 0) { handleDeath(); return; }
     if (this.type === "queen") {
-      // Emit a local queen scent used only for nest-core state detection
+      initQueenState(this);
+      this.repathCooldown = Math.max(0, (this.repathCooldown ?? 0) - dt);
+
+      const targetChanged = syncQueenTarget(this, worldState);
       const qgx = Math.floor(this.x / CONSTANTS.CELL_SIZE);
       const qgy = Math.floor(this.y / CONSTANTS.CELL_SIZE);
-      if (
-        qgx >= 0 && qgx < CONSTANTS.GRID_W &&
-        qgy >= 0 && qgy < CONSTANTS.GRID_H &&
-        scentToHome[qgy]
-      ) {
-        spreadQueenScent(qgx, qgy);
+      const gridRef = worldState?.grid ?? grid;
+
+      const atTarget = () => {
+        if (!this.targetGxGy) return false;
+        const tx = (this.targetGxGy.gx + 0.5) * CONSTANTS.CELL_SIZE;
+        const ty = (this.targetGxGy.gy + 0.5) * CONSTANTS.CELL_SIZE;
+        return Math.hypot(this.x - tx, this.y - ty) < 2;
+      };
+
+      const canAttemptRelocate = (this.state === "FOUNDING_SURFACE" || targetChanged) && this.targetGxGy && gridRef;
+      if (canAttemptRelocate && this.repathCooldown <= 0) {
+        updateQueenPath(this, worldState, true);
+        if (this.path && this.path.length > 0) {
+          this.state = "RELOCATING";
+        }
       }
+
+      if (this.state === "RELOCATING") {
+        const pathInvalid = !this.path || this.path.length === 0;
+        const stuckCheckInterval = 1.0;
+        this.pathProgressTimer = (this.pathProgressTimer ?? 0) + dt;
+        let isStuck = false;
+        if (this.pathProgressTimer >= stuckCheckInterval) {
+          const moved = Math.hypot(this.x - this.lastPathSample.x, this.y - this.lastPathSample.y);
+          isStuck = moved < 2;
+          this.lastPathSample = { x: this.x, y: this.y };
+          this.pathProgressTimer = 0;
+        }
+
+        const cooldownElapsed = this.repathCooldown <= 0;
+        const shouldRepath =
+          targetChanged ||
+          isStuck ||
+          (pathInvalid && cooldownElapsed) ||
+          cooldownElapsed;
+        if (shouldRepath) {
+          const forceRepath = targetChanged || isStuck;
+          updateQueenPath(this, worldState, forceRepath || cooldownElapsed);
+        }
+
+        this.stepDistance = stepQueenAlongPath(this, dt, worldState);
+
+        const nextNode = this.path?.[this.pathIndex] || null;
+        if (nextNode && gridRef?.[nextNode.gy]?.[nextNode.gx] !== TILES.TUNNEL && this.pathIndex > 0) {
+          this.path = null;
+        }
+
+        if (this.path && this.pathIndex >= this.path.length) {
+          this.path = null;
+        }
+
+        if (atTarget()) {
+          this.state = "SETTLED";
+          this.path = null;
+          this.pathIndex = 0;
+        } else if (!this.path || this.path.length === 0) {
+          this.state = qgy < CONSTANTS.REGION_SPLIT ? "FOUNDING_SURFACE" : this.state;
+        }
+      } else {
+        this.stepDistance = 0;
+      }
+
+      // Emit a local queen scent used only for nest-core state detection
+      spreadQueenScent(this, worldState);
 
       const intentScores = this.computeIntentScores(worldState);
       this.intentScores = intentScores;
       this.intentTopChoices = Object.entries(intentScores).sort((a, b) => b[1] - a[1]).slice(0, 2);
       this.intent = this.chooseIntent(intentScores);
 
-      ANT_ANIM.step(this.animRig, { dt, travel: dt * 0.6, speedHint: 15 });
+      ANT_ANIM.step(this.animRig, { dt, travel: this.stepDistance, speedHint: CONFIG.queenSpeed });
       return;
     }
 
@@ -1699,7 +2028,7 @@ class Ant {
     let forcedAngle = null;
     if (!this.carrying && this.energy < 25) {
       this.intent = "returnHome";
-      const queen = ants[0];
+      const queen = getQueen(worldState);
       if (queen) forcedAngle = Math.atan2(queen.y - this.y, queen.x - this.x);
       speedMult = 0.7;
     }
@@ -1822,7 +2151,7 @@ class Ant {
 
   sense(dt) {
     if (this.postDeliveryTime > 0) {
-      const queen = ants[0];
+      const queen = getQueen(worldState);
       if (queen) {
         const away = Math.atan2(this.y - queen.y, this.x - queen.x);
         return away + (Math.random() - 0.5) * 0.35;
@@ -1831,7 +2160,7 @@ class Ant {
     }
 
     if (this.role === "nurse") {
-      const queen = ants[0];
+      const queen = getQueen(worldState);
       const preferredRadius = Math.max(QUEEN_RADIUS_PX, 80);
       if (queen) {
         const dx = queen.x - this.x;
@@ -1863,7 +2192,7 @@ class Ant {
     }
 
     if (this.inNestCore) {
-      const queen = ants[0];
+      const queen = getQueen(worldState);
 
       if (this.carrying && queen) {
         const towardQueen = Math.atan2(queen.y - this.y, queen.x - this.x);
@@ -2082,7 +2411,7 @@ class Ant {
     }
 
     if (this.role === "nurse") {
-      const queen = ants[0];
+      const queen = getQueen(worldState);
       
       // 1. CHECK FOR HUNGRY BROOD TO FEED (Priority)
       // Only feed if nurse has energy in social stomach (> 30)
@@ -2222,7 +2551,7 @@ class Ant {
       return;
     }
 
-    const queen = ants[0];
+    const queen = getQueen(worldState);
     const distanceToQueen = queen ? Math.hypot(queen.x - this.x, queen.y - this.y) : Infinity;
     const deepInNest = gy > (CONSTANTS.REGION_SPLIT + 2);
     const canStoreFoodHere = this.inNestCore || this.isInsideQueenRadius() || !queen;
@@ -2385,6 +2714,13 @@ function render() {
       alpha: 0.35,
     });
   }
+  if (DebugOverlay.flags.showQueenScent) {
+    DebugOverlay.drawHeatmapGrid(ctx, queenScent, {
+      palette: DebugOverlay.palettes.red,
+      alpha: 0.35,
+      threshold: 0.02,
+    });
+  }
   if (DebugOverlay.flags.showEntranceCue && CONFIG.entranceCueStrength > 0) {
     const cs = CONSTANTS.CELL_SIZE;
     const px = (NEST_ENTRANCE.gx + 0.5) * cs;
@@ -2529,6 +2865,42 @@ function render() {
     }
 
     ctx.restore();
+  }
+
+  if (DebugOverlay.flags.showQueenPath) {
+    const queen = getQueen(worldState);
+    if (queen) {
+      if (queen.path && queen.path.length > 1) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255,130,210,0.6)';
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        for (let i = 0; i < queen.path.length; i++) {
+          const n = queen.path[i];
+          const px = (n.gx + 0.5) * CONSTANTS.CELL_SIZE;
+          const py = (n.gy + 0.5) * CONSTANTS.CELL_SIZE;
+          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      if (queen.targetGxGy) {
+        DebugOverlay.drawTileMark(ctx, queen.targetGxGy.gx, queen.targetGxGy.gy, { color: '#ff7acc', lineWidth: 1.8 });
+      }
+
+      ctx.save();
+      ctx.font = '9px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.lineWidth = 3 / ZOOM;
+      ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      const label = `Q: ${queen.state ?? 'UNKNOWN'}`;
+      ctx.strokeText(label, queen.x, queen.y - 10);
+      ctx.fillText(label, queen.x, queen.y - 10);
+      ctx.restore();
+    }
   }
 
   // Ants
@@ -2786,7 +3158,7 @@ function loop(t) {
 
   sunAngle = (sunAngle + dt * 0.05) % (Math.PI * 2);
 
-  const queen = ants[0];
+  const queen = getQueen(worldState);
   if (queen) {
     const spoil = Math.max(0, foodInStorage - 6) * WASTE.spoilageRate * dt;
     if (spoil > 0.0001) {
