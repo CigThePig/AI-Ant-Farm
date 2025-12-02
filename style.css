@@ -149,6 +149,95 @@ canvas {
 }
 #settings-btn:active{ transform: translateY(1px) scale(0.99); }
 
+#debug-btn{
+  position: fixed;
+  top: 58px;
+  left: 12px;
+  z-index: 40;
+  cursor: pointer;
+
+  border-radius: 999px;
+  padding: 9px 11px;
+  border: 1px solid rgba(56,255,139,0.20);
+  background: rgba(0,0,0,0.28);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12px;
+  letter-spacing: 0.2px;
+
+  box-shadow:
+    0 10px 22px rgba(0,0,0,0.35),
+    0 0 20px rgba(56,255,139,0.08),
+    inset 0 0 0 1px rgba(255,255,255,0.03);
+
+  transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+  touch-action: manipulation;
+}
+#debug-btn:active{ transform: translateY(1px) scale(0.99); }
+
+#debug-panel{
+  position: fixed;
+  top: 100px;
+  left: 12px;
+  width: 220px;
+  max-height: 60vh;
+  overflow-y: auto;
+  display: none;
+  z-index: 45;
+
+  background: linear-gradient(180deg, rgba(16, 26, 22, 0.88), rgba(12, 20, 16, 0.72));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow:
+    0 14px 28px rgba(0,0,0,0.45),
+    0 0 30px var(--glow2),
+    inset 0 0 0 1px rgba(255,255,255,0.04);
+
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 10px 10px 6px;
+
+  pointer-events: auto;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+}
+#debug-panel.visible{ display:block; }
+
+.ghost-btn{
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(56,255,139,0.15);
+  background: rgba(0,0,0,0.15);
+  color: rgba(184,255,214,0.85);
+  font-family: inherit;
+}
+
+.debug-flags{
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+.debug-flag{
+  display:flex;
+  align-items:center;
+  gap: 8px;
+  padding: 8px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(56,255,139,0.12);
+  background: rgba(0,0,0,0.14);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02);
+  font-size: 12px;
+}
+.debug-flag input[type=checkbox]{
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.panel-foot strong{ color: rgba(184,255,214,0.95); }
+
 .panel-head{
   display:flex;
   align-items:center;
