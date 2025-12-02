@@ -221,7 +221,7 @@ const DiggingSystem = (() => {
       : 0.0;
     if (spacePressure < 0.05) return null;
 
-    const queen = (typeof ants !== "undefined" && ants[0]) ? ants[0] : null;
+    const queen = (typeof getQueen === "function") ? getQueen(world) : null;
     const qx = queen ? queen.x : ant.x;
     const qy = queen ? queen.y : ant.y;
 

@@ -57,6 +57,8 @@ const BroodSystem = (() => {
 
   function canLay(world, queen, antsList) {
     if (!queen || queen.energy <= 25) return false;
+    const unsettled = queen.state === "FOUNDING_SURFACE" || queen.state === "RELOCATING";
+    if (unsettled && (CONFIG.queenUnsettledLayMultiplier ?? 0) <= 0) return false;
     const storedFood = world?.storedFood ?? 0;
     // Queen needs perceived safety (food reserves) to lay
     if (storedFood < SETTINGS.layFoodReserve) return false;
@@ -120,13 +122,16 @@ const BroodSystem = (() => {
 
     // 1. Queen Laying Logic
     if (queen) {
-      layTimer += dt;
-      if (layTimer >= SETTINGS.layInterval) {
-        layTimer = 0;
-        // Queen eats from global storage to produce eggs (energy conversion)
-        if (canLay(world, queen, antsList) && consumeFood(0.5)) {
-          spawnBrood(queen);
-          queen.energy = Math.max(0, queen.energy - 10);
+      const layMultiplier = (queen.state === "SETTLED") ? 1 : (CONFIG.queenUnsettledLayMultiplier ?? 0);
+      if (layMultiplier > 0) {
+        layTimer += dt * layMultiplier;
+        if (layTimer >= SETTINGS.layInterval) {
+          layTimer = 0;
+          // Queen eats from global storage to produce eggs (energy conversion)
+          if (canLay(world, queen, antsList) && consumeFood(0.5)) {
+            spawnBrood(queen);
+            queen.energy = Math.max(0, queen.energy - 10);
+          }
         }
       }
     }
