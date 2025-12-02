@@ -6,17 +6,27 @@ const BroodSystem = (() => {
     layFoodReserve: 3.5,
     baseMaturationTime: 24, // Increased slightly for realism
     maturationJitter: 0.25,
-    
-    // BIOLOGY TWEAK: Larvae can survive longer without food, 
+
+    // Stage durations (scaffolding for future egg/pupa transitions)
+    eggDuration: 6,
+    pupaDuration: 8,
+
+    // BIOLOGY TWEAK: Larvae can survive longer without food,
     // but they stop growing when hungry.
-    starvationTime: 60, 
-    
+    starvationTime: 60,
+
     // How much energy a nurse loses to feed a larva
     nurseEnergyCost: 15,
-    
+
     // Satiation settings
     satiationDuration: 10,
     wastePerMeal: 0.12,
+  };
+
+  const STAGES = {
+    EGG: "egg",
+    LARVA: "larva",
+    PUPA: "pupa",
   };
 
   let layTimer = 0;
@@ -64,7 +74,19 @@ const BroodSystem = (() => {
       type: "worker",
       age: 0,
       timeToMature: base * jitterScale,
-      
+
+      // Stage tracking (spawn as larva to preserve current behavior)
+      stage: STAGES.LARVA,
+      stageTimers: {
+        egg: 0,
+        larva: 0,
+        pupa: 0,
+      },
+      stageDurations: {
+        egg: SETTINGS.eggDuration,
+        pupa: SETTINGS.pupaDuration,
+      },
+
       // State
       isHungry: false,
       hungerTimer: 0, // Time spent starving
@@ -79,7 +101,7 @@ const BroodSystem = (() => {
 
   // EXTERNAL METHOD: Called by Nurse Ants
   function feedBrood(b, addWaste) {
-    if (!b.isHungry) return false;
+    if (!b || b.stage !== STAGES.LARVA || !b.isHungry) return false;
 
     // Reset hunger
     b.isHungry = false;
@@ -111,26 +133,54 @@ const BroodSystem = (() => {
 
     const hatched = [];
     
-    // 2. Larval Development Loop
+    // 2. Development Loop
     for (let i = list.length - 1; i >= 0; i--) {
       const b = list[i];
-      
-      // Digestion / Hunger Logic
-      if (b.satiationTimer > 0) {
-        b.satiationTimer -= dt;
-        // Only grow when fed
-        b.age += dt; 
-      } else {
-        b.isHungry = true;
-        b.hungerTimer += dt;
+
+      // Ensure stage scaffolding is present for legacy brood
+      if (!b.stage) b.stage = STAGES.LARVA;
+      if (!b.stageTimers) {
+        b.stageTimers = { egg: 0, larva: 0, pupa: 0 };
+      }
+      if (!b.stageDurations) {
+        b.stageDurations = { egg: SETTINGS.eggDuration, pupa: SETTINGS.pupaDuration };
+      }
+      if (typeof b.satiationTimer !== "number") b.satiationTimer = SETTINGS.satiationDuration;
+      if (typeof b.hungerTimer !== "number") b.hungerTimer = 0;
+      if (typeof b.age !== "number") b.age = 0;
+      if (typeof b.timeToMature !== "number") b.timeToMature = SETTINGS.baseMaturationTime;
+      if (typeof b.isHungry !== "boolean") b.isHungry = false;
+
+      // Track time spent in the current stage
+      if (b.stageTimers[b.stage] !== undefined) {
+        b.stageTimers[b.stage] += dt;
       }
 
-      // Starvation Death
-      if (b.hungerTimer > SETTINGS.starvationTime) {
-        // Larva dies and turns into waste
-        if (addWaste) addWaste(b.x, b.y, 0.5);
-        list.splice(i, 1);
-        continue;
+      if (b.stage === STAGES.LARVA) {
+        // Digestion / Hunger Logic (larvae only)
+        if (b.satiationTimer > 0) {
+          b.satiationTimer -= dt;
+          // Only grow when fed
+          b.age += dt;
+        } else {
+          b.isHungry = true;
+          b.hungerTimer += dt;
+        }
+
+        // Starvation Death
+        if (b.hungerTimer > SETTINGS.starvationTime) {
+          // Larva dies and turns into waste
+          if (addWaste) addWaste(b.x, b.y, 0.5);
+          list.splice(i, 1);
+          continue;
+        }
+      } else {
+        // Non-larval stages shouldn't be hungry
+        b.isHungry = false;
+        b.hungerTimer = 0;
+
+        // Non-larval stages progress without needing food
+        b.age += dt;
       }
 
       // Maturation
@@ -141,7 +191,7 @@ const BroodSystem = (() => {
       }
 
       // Pheromone Signalling (Begging for food)
-      if (broodScentGrid && !b.lockedBy && b.isHungry) {
+      if (b.stage === STAGES.LARVA && broodScentGrid && !b.lockedBy && b.isHungry) {
         const gx = Math.floor(b.x / world.constants.CELL_SIZE);
         const gy = Math.floor(b.y / world.constants.CELL_SIZE);
 

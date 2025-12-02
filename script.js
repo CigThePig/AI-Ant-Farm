@@ -1812,7 +1812,7 @@ class Ant {
         // Simple collision check with brood
         const feedDist = CONSTANTS.CELL_SIZE;
         const hungryBrood = worldState.brood?.find(b => {
-           return b.isHungry &&
+           return b.stage === "larva" && b.isHungry &&
                   Math.abs(b.x - this.x) < feedDist &&
                   Math.abs(b.y - this.y) < feedDist;
         });
