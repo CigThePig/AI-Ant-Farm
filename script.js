@@ -595,6 +595,8 @@ let foodInStorage = 0;
 let wasteTotal = 0;
 let brood = [];
 
+const FOOD_TYPES = ["seed", "protein", "sugar"];
+
 const worldState = {
   grid: null,
   gridTexture: null,
@@ -669,11 +671,8 @@ function getTexture(x, y) {
 }
 
 function consumeStoredFood(amount) {
-  if (foodInStorage >= amount) {
-    foodInStorage -= amount;
-    return true;
-  }
-  return false;
+  const pulled = takeStoredFoodAnywhere(amount, "seed");
+  return pulled >= amount;
 }
 
 function addWasteAtWorldPos(wx, wy, amount) {
@@ -702,6 +701,73 @@ function takeWaste(gx, gy, amount) {
 function getWaste(gx, gy) {
   if (!wasteGrid[gy]) return 0;
   return wasteGrid[gy][gx] || 0;
+}
+
+function makeFoodStore() {
+  return { seed: 0, protein: 0, sugar: 0 };
+}
+
+function getStoredFoodTotalAt(gx, gy) {
+  const cell = storedFoodGrid[gy]?.[gx];
+  if (!cell) return 0;
+  return FOOD_TYPES.reduce((sum, type) => sum + (cell[type] || 0), 0);
+}
+
+function addStoredFoodAt(gx, gy, type, amount) {
+  if (!storedFoodGrid[gy] || !storedFoodGrid[gy][gx]) return 0;
+  const cell = storedFoodGrid[gy][gx];
+  const amt = Math.max(0, amount || 0);
+  cell[type] = (cell[type] || 0) + amt;
+  foodInStorage += amt;
+  return amt;
+}
+
+function takeStoredFoodAt(gx, gy, type, amount) {
+  const cell = storedFoodGrid[gy]?.[gx];
+  if (!cell || !cell[type]) return 0;
+  const taken = Math.min(amount, cell[type]);
+  cell[type] -= taken;
+  foodInStorage -= taken;
+  if (cell[type] < 0.0001) cell[type] = 0;
+  return taken;
+}
+
+function takeStoredFoodAnywhere(amount, type = "seed") {
+  let remaining = amount;
+  for (let y = 0; y < storedFoodGrid.length; y++) {
+    const row = storedFoodGrid[y];
+    if (!row) continue;
+    for (let x = 0; x < row.length; x++) {
+      const pulled = takeStoredFoodAt(x, y, type, remaining);
+      remaining -= pulled;
+      if (remaining <= 0) return amount;
+    }
+  }
+  return amount - remaining;
+}
+
+function getFoodInStorageTotal() {
+  let total = 0;
+  for (let y = 0; y < storedFoodGrid.length; y++) {
+    const row = storedFoodGrid[y];
+    if (!row) continue;
+    for (let x = 0; x < row.length; x++) {
+      total += getStoredFoodTotalAt(x, y);
+    }
+  }
+  return total;
+}
+
+function getStoredFoodTotalsGrid() {
+  const totals = [];
+  for (let y = 0; y < storedFoodGrid.length; y++) {
+    const row = new Float32Array(storedFoodGrid[y]?.length || 0);
+    for (let x = 0; x < row.length; x++) {
+      row[x] = getStoredFoodTotalAt(x, y);
+    }
+    totals[y] = row;
+  }
+  return totals;
 }
 
 function computeDesiredRoleFractions() {
@@ -763,7 +829,7 @@ function resetSimulation() {
     grid[y] = new Uint8Array(CONSTANTS.GRID_W);
     gridTexture[y] = new Float32Array(CONSTANTS.GRID_W);
     foodGrid[y] = new Uint8Array(CONSTANTS.GRID_W);
-    storedFoodGrid[y] = new Uint8Array(CONSTANTS.GRID_W);
+    storedFoodGrid[y] = new Array(CONSTANTS.GRID_W);
     wasteGrid[y] = new Float32Array(CONSTANTS.GRID_W);
     scentToFood[y] = new Float32Array(CONSTANTS.GRID_W);
     scentToHome[y] = new Float32Array(CONSTANTS.GRID_W);
@@ -774,6 +840,8 @@ function resetSimulation() {
     for (let x = 0; x < CONSTANTS.GRID_W; x++) {
       const n = Math.sin(x*0.27)*Math.cos(y*0.29)*0.5+0.5;
       gridTexture[y][x] = n;
+
+      storedFoodGrid[y][x] = makeFoodStore();
 
       if (x===0 || x===CONSTANTS.GRID_W-1 || y===CONSTANTS.GRID_H-1 || y===0) grid[y][x] = TILES.BEDROCK;
       else if (y < CONSTANTS.REGION_SPLIT) grid[y][x] = TILES.GRASS;
@@ -956,7 +1024,7 @@ class Ant {
     this.type = type;
     this.x = x; this.y = y;
     this.angle = Math.random() * Math.PI * 2;
-    this.hasFood = 0;
+    this.carrying = null;
     this.returnDir = null;
     this.maxEnergy = 100;
     this.energy = this.maxEnergy;
@@ -1096,27 +1164,27 @@ class Ant {
       scores.forage = 0;
     }
 
-    if (this.hasFood) {
+    if (this.carrying) {
       scores.returnHome = 0.95;
     } else {
       const lowEnergy = this.energy / this.maxEnergy;
       if (lowEnergy < 0.35) scores.returnHome = Math.max(scores.returnHome, 0.6);
     }
 
-    if (!this.hasFood && this.role === "digger") {
+    if (!this.carrying && this.role === "digger") {
       let digScore = 0.5;
       if (this.digTarget) digScore += 0.25;
       scores.dig = digScore;
     }
 
-    if (!this.hasFood && this.role === "cleaner") {
+    if (!this.carrying && this.role === "cleaner") {
       const wastePressure = clamp01((worldState?.wasteTotal || 0) / (CONSTANTS.GRID_W * 0.7));
       let cleanScore = 0.35 + wastePressure * 0.4;
       if (this.cleanTarget || this.carryingWaste || this.carryingCorpse) cleanScore = Math.max(cleanScore, 0.8);
       scores.clean = cleanScore;
     }
 
-    if (!this.hasFood && this.role !== "nurse") {
+    if (!this.carrying && this.role !== "nurse") {
       let forageScore = 0.4;
       if (this.role === "forager") forageScore += 0.2;
       if (worldState?.storedFood !== undefined) {
@@ -1298,7 +1366,7 @@ class Ant {
       if (this.type !== "corpse") this.decompositionTimer = 0;
       this.isDead = true;
       this.type = "corpse";
-      this.hasFood = 0;
+      this.carrying = null;
       this.cleanTarget = null;
       ANT_ANIM.step(this.animRig, { dt, travel: 0, speedHint: 0 });
     };
@@ -1337,8 +1405,8 @@ class Ant {
 
     if (this.age > this.lifespan || this.energy <= 0) { handleDeath(); return; }
 
-    if (this.hasFood && this.energy < 15) {
-      this.hasFood = 0;
+    if (this.carrying && this.energy < 15) {
+      this.carrying = null;
       this.energy = Math.min(this.maxEnergy, this.energy + 40);
       this.returnDir = null;
     }
@@ -1368,7 +1436,7 @@ class Ant {
 
     let speedMult = 1.0;
     let forcedAngle = null;
-    if (!this.hasFood && this.energy < 25) {
+    if (!this.carrying && this.energy < 25) {
       this.intent = "returnHome";
       const queen = ants[0];
       if (queen) forcedAngle = Math.atan2(queen.y - this.y, queen.x - this.x);
@@ -1382,7 +1450,7 @@ class Ant {
       return;
     }
 
-    if (this.hasFood || this.role !== "digger") {
+    if (this.carrying || this.role !== "digger") {
       this.digTarget = null;
     } else {
       this.digRetargetT -= dt;
@@ -1530,7 +1598,7 @@ class Ant {
     if (this.inNestCore) {
       const queen = ants[0];
 
-      if (this.hasFood && queen) {
+      if (this.carrying && queen) {
         const towardQueen = Math.atan2(queen.y - this.y, queen.x - this.x);
         return towardQueen + (Math.random() - 0.5) * 0.25;
       }
@@ -1555,12 +1623,12 @@ class Ant {
 
     switch (this.intent) {
       case "clean":
-        if (!this.hasFood) {
+        if (!this.carrying) {
           return this.cleanerSense();
         }
         break;
       case "dig":
-        if (!this.hasFood && this.digTarget) {
+        if (!this.carrying && this.digTarget) {
           const { x, y } = this.digTarget;
           if (!grid[y] || grid[y][x] !== TILES.SOIL) {
             this.digTarget = null;
@@ -1573,8 +1641,8 @@ class Ant {
         break;
     }
 
-    const g = this.hasFood ? scentToHome : scentToFood;
-    const ignoreFoodPheromone = this.inNestCore || (!this.hasFood && this.isInsideQueenRadius());
+    const g = this.carrying ? scentToHome : scentToFood;
+    const ignoreFoodPheromone = this.inNestCore || (!this.carrying && this.isInsideQueenRadius());
     const sa = CONFIG.sensorAngle;
     const sd = CONFIG.sensorDist;
 
@@ -1599,14 +1667,14 @@ class Ant {
         ? this.angle
         : (adjL > adjR ? this.angle - sa : this.angle + sa);
 
-      if (this.hasFood) this.returnDir = best;
+      if (this.carrying) this.returnDir = best;
       this.homeVector.x = NEST_ENTRANCE.x - this.x;
       this.homeVector.y = NEST_ENTRANCE.y - this.y;
       this.vectorUncertainty = 0;
       return best;
     }
 
-    if (this.hasFood) {
+    if (this.carrying) {
       if (this.returnDir === null) this.returnDir = this.angle;
       const homeAngle = Math.atan2(this.homeVector.y, this.homeVector.x);
       return Number.isFinite(homeAngle) ? homeAngle : this.returnDir;
@@ -1668,7 +1736,7 @@ class Ant {
         const targetMatch = this.digTarget && this.digTarget.x === gx && this.digTarget.y === gy;
         const sharedFrontier = digPher[gy][gx] > 0.08;
 
-        if (!this.hasFood && (targetMatch || sharedFrontier)) {
+        if (!this.carrying && (targetMatch || sharedFrontier)) {
           if (DiggingSystem.applyDigAction(this, worldState, gx, gy)) return;
         }
       }
@@ -1714,7 +1782,7 @@ class Ant {
     const movingTowardEntrance = dotToEntrance > 0;
     const movingAwayFromEntrance = dotToEntrance < 0;
 
-    if (this.hasFood) {
+    if (this.carrying) {
       if (movingTowardEntrance) {
         scentToFood[gy][gx] = Math.min(1.0, scentToFood[gy][gx] + CONFIG.depositAmount);
       }
@@ -1847,29 +1915,29 @@ class Ant {
 
     // CONSUME STORED FOOD (Metabolism)
     // If hungry, empty-handed, and standing on stored food in the nest, eat it.
-    if (!this.hasFood && this.energy < this.maxEnergy * 0.6) {
-      if (storedFoodGrid[gy][gx] > 0) {
+    if (!this.carrying && this.energy < this.maxEnergy * 0.6) {
+      const storedTotal = getStoredFoodTotalAt(gx, gy);
+      if (storedTotal > 0) {
         const needed = this.maxEnergy - this.energy;
         // Eat up to 20 energy units or whatever is available
-        const amountToEat = Math.min(20, needed, storedFoodGrid[gy][gx]);
+        const amountToEat = Math.min(20, needed, storedTotal);
 
         if (amountToEat > 0) {
-          storedFoodGrid[gy][gx] -= amountToEat;
-          this.energy += amountToEat;
-          foodInStorage -= amountToEat;
+          const eaten = takeStoredFoodAt(gx, gy, "seed", amountToEat);
+          this.energy += eaten;
 
           // 20% chance to generate waste (metabolic byproduct)
-          if (Math.random() < 0.2) {
+          if (eaten > 0 && Math.random() < 0.2) {
             addWaste(gx, gy, 0.1);
           }
-          return; // Action consumed this tick
+          if (eaten > 0) return; // Action consumed this tick
         }
       }
     }
 
-    if (!this.hasFood && foodGrid[gy][gx] > 0) {
+    if (!this.carrying && foodGrid[gy][gx] > 0) {
       foodGrid[gy][gx]--;
-      this.hasFood = 1;
+      this.carrying = { type: "seed", amount: 1 };
       this.returnDir = this.angle + Math.PI;
       this.resetStuckTimer();
       this.angle += Math.PI;
@@ -1880,12 +1948,12 @@ class Ant {
     const distanceToQueen = queen ? Math.hypot(queen.x - this.x, queen.y - this.y) : Infinity;
     const deepInNest = gy > (CONSTANTS.REGION_SPLIT + 2);
     const canStoreFoodHere = this.inNestCore || this.isInsideQueenRadius() || !queen;
-    if (this.hasFood && canStoreFoodHere && deepInNest && distanceToQueen > 15) {
+    if (this.carrying && canStoreFoodHere && deepInNest && distanceToQueen > 15) {
       const tile = grid[gy]?.[gx];
-      if (tile === TILES.TUNNEL && storedFoodGrid[gy][gx] < 5) {
-        this.hasFood = Math.max(0, this.hasFood - 1);
-        storedFoodGrid[gy][gx]++;
-        foodInStorage++;
+      if (tile === TILES.TUNNEL && getStoredFoodTotalAt(gx, gy) < 5) {
+        addStoredFoodAt(gx, gy, this.carrying.type, 1);
+        this.carrying.amount = Math.max(0, this.carrying.amount - 1);
+        if (this.carrying.amount <= 0) this.carrying = null;
         this.returnDir = null;
         this.postDeliveryTime = CONFIG.postDeliveryDuration;
         this.resetStuckTimer();
@@ -1927,7 +1995,6 @@ function render() {
       const px = x * cs, py = y * cs;
 
       const foodRow = foodGrid[y];
-      const storedRow = storedFoodGrid[y];
 
       if (t === TILES.GRASS) {
         const variation = (n - 0.5) * 0.3;
@@ -1993,7 +2060,7 @@ function render() {
         }
       }
 
-      const stored = storedRow?.[x] ?? 0;
+      const stored = getStoredFoodTotalAt(x, y);
       if (stored > 0) {
         const radius = Math.min(cs * 0.45, 2.2 + stored * 0.7);
         const alpha = 0.35 + Math.min(0.35, stored * 0.08);
@@ -2039,7 +2106,7 @@ function render() {
     });
   }
   if (DebugOverlay.flags.showStoredFood) {
-    DebugOverlay.drawHeatmapGrid(ctx, storedFoodGrid, {
+    DebugOverlay.drawHeatmapGrid(ctx, getStoredFoodTotalsGrid(), {
       palette: DebugOverlay.palettes.green,
       alpha: 0.32,
       max: 6,
@@ -2262,7 +2329,7 @@ function render() {
     ctx.moveTo( 0.4, -4.0 - pose.headLift * 0.4); ctx.quadraticCurveTo( 1.2 + pose.antennaSway, -5.8 - pose.headLift,  2.0 + pose.antennaSway, -6.4 - pose.headLift * 0.4);
     ctx.stroke();
 
-    if (a.hasFood) {
+    if (a.carrying) {
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
       ctx.fillStyle = "rgba(120,255,150,0.35)";
@@ -2303,7 +2370,7 @@ function render() {
     }
   }
 
-  if (DebugOverlay.flags.showAntState) {
+    if (DebugOverlay.flags.showAntState) {
     ctx.save();
     ctx.font = '8px monospace';
     ctx.textAlign = 'center';
@@ -2328,7 +2395,7 @@ function render() {
       if (a.carryingBrood) markers.push('B');
       if (a.carryingWaste) markers.push('W');
       if (a.carryingCorpse) markers.push('C');
-      if (a.hasFood) markers.push('F');
+      if (a.carrying) markers.push('F');
 
       const label = markers.join(' ');
       if (label) {
@@ -2401,10 +2468,10 @@ function loop(t) {
   if (queen) {
     const spoil = Math.max(0, foodInStorage - 6) * WASTE.spoilageRate * dt;
     if (spoil > 0.0001) {
-      foodInStorage = Math.max(0, foodInStorage - spoil);
+      const spoiled = takeStoredFoodAnywhere(spoil, "seed");
       const qgx = Math.floor(queen.x / CONSTANTS.CELL_SIZE);
       const qgy = Math.floor(queen.y / CONSTANTS.CELL_SIZE);
-      addWaste(qgx, qgy, spoil * 0.8);
+      addWaste(qgx, qgy, spoiled * 0.8);
     }
   }
 

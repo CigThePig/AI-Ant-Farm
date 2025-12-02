@@ -160,7 +160,7 @@ const DiggingSystem = (() => {
   }
 
   function chooseDigTarget(ant, world) {
-    if (ant.hasFood || ant.role !== "digger") return null;
+    if (ant.carrying || ant.role !== "digger") return null;
     if (ant.y < regionSplit * cellSize) return null;
 
     const frontier = world.frontierTiles;
