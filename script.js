@@ -25,6 +25,10 @@ const maskCtx = maskCanvas.getContext('2d');
   entranceCueFadeDepth: 1,
   foundingSeedHole: true,
 
+  queenChamberDepthTiles: 12,
+  queenChamberRadiusTiles: 5,
+  queenChamberMinTiles: 36,
+
   sensorAngle: 0.8,
   sensorDist: 30,
 
@@ -661,6 +665,19 @@ const worldState = {
   broodScent: null,
   nurseScent: null,
   frontierTiles: null,
+  objectives: {
+    queenChamber: {
+      status: "unstarted",
+      center: null,
+      radiusTiles: CONFIG.queenChamberRadiusTiles,
+    },
+  },
+  queenChamber: {
+    centerGxGy: null,
+    radiusTiles: CONFIG.queenChamberRadiusTiles,
+    minTiles: CONFIG.queenChamberMinTiles,
+    roomTiles: new Set(),
+  },
   constants: CONSTANTS,
   onTunnelDug: (gx, gy) => {
     updateEdgesAround(gx, gy, grid);
@@ -796,6 +813,322 @@ function findTunnelPath(start, goal, gridRef = grid) {
   return null;
 }
 
+function clampQueenChamberTarget(gx, gy) {
+  const minX = 1;
+  const maxX = CONSTANTS.GRID_W - 2;
+  const minY = CONSTANTS.REGION_SPLIT + 1;
+  const maxY = CONSTANTS.GRID_H - 2;
+
+  return {
+    gx: Math.max(minX, Math.min(maxX, gx)),
+    gy: Math.max(minY, Math.min(maxY, gy)),
+  };
+}
+
+function pickQueenChamberCenter(gridRef = grid) {
+  const depth = CONFIG.queenChamberDepthTiles ?? 12;
+  const desired = clampQueenChamberTarget(
+    ENTRANCE.gx,
+    CONSTANTS.REGION_SPLIT + depth,
+  );
+
+  const tileAt = (gx, gy) => gridRef?.[gy]?.[gx];
+  if (tileAt(desired.gx, desired.gy) !== TILES.BEDROCK) return desired;
+
+  for (let radius = 1; radius <= 3; radius++) {
+    for (let dy = -radius; dy <= radius; dy++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        const nx = desired.gx + dx;
+        const ny = desired.gy + dy;
+        const candidate = clampQueenChamberTarget(nx, ny);
+        if (tileAt(candidate.gx, candidate.gy) !== TILES.BEDROCK) {
+          return candidate;
+        }
+      }
+    }
+  }
+
+  return desired;
+}
+
+function findChamberPathStart(world) {
+  const gridRef = world?.grid;
+  if (!gridRef) return null;
+
+  const bases = [world?.digStart, world?.entrance];
+  const isOpen = (p) => p && gridRef[p.gy]?.[p.gx] === TILES.TUNNEL;
+
+  for (const base of bases) {
+    if (isOpen(base)) return base;
+  }
+
+  const searchAround = (base) => {
+    if (!base) return null;
+    const radius = 3;
+    for (let dy = -radius; dy <= radius; dy++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        const nx = base.gx + dx;
+        const ny = base.gy + dy;
+        if (gridRef[ny]?.[nx] === TILES.TUNNEL) return { gx: nx, gy: ny };
+      }
+    }
+    return null;
+  };
+
+  for (const base of bases) {
+    const found = searchAround(base);
+    if (found) return found;
+  }
+
+  return null;
+}
+
+function collectQueenChamberTiles(center, radius, gridRef, outSet) {
+  if (!center || !gridRef) return { count: 0, tiles: new Set() };
+  const radius2 = radius * radius;
+
+  const inRadius = (x, y) => {
+    const dx = x - center.gx;
+    const dy = y - center.gy;
+    return dx * dx + dy * dy <= radius2;
+  };
+
+  const visited = new Set();
+  if (gridRef[center.gy]?.[center.gx] !== TILES.TUNNEL) {
+    if (outSet?.clear) outSet.clear();
+    return { count: 0, tiles: visited };
+  }
+
+  const queue = [{ gx: center.gx, gy: center.gy }];
+  visited.add(center.gy * CONSTANTS.GRID_W + center.gx);
+
+  while (queue.length) {
+    const node = queue.pop();
+    const neighbors = [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ];
+    for (const [dx, dy] of neighbors) {
+      const nx = node.gx + dx;
+      const ny = node.gy + dy;
+      if (!gridRef[ny] || gridRef[ny][nx] !== TILES.TUNNEL) continue;
+      if (!inRadius(nx, ny)) continue;
+      const key = ny * CONSTANTS.GRID_W + nx;
+      if (visited.has(key)) continue;
+      visited.add(key);
+      queue.push({ gx: nx, gy: ny });
+    }
+  }
+
+  if (outSet?.clear) outSet.clear();
+  if (outSet) {
+    for (const key of visited) outSet.add(key);
+  }
+
+  return { count: visited.size, tiles: visited };
+}
+
+function hasTunnelNearby(center, radius, gridRef) {
+  if (!center || !gridRef) return false;
+  const radius2 = radius * radius;
+  const minX = Math.max(1, Math.floor(center.gx - radius));
+  const maxX = Math.min(CONSTANTS.GRID_W - 2, Math.ceil(center.gx + radius));
+  const minY = Math.max(CONSTANTS.REGION_SPLIT + 1, Math.floor(center.gy - radius));
+  const maxY = Math.min(CONSTANTS.GRID_H - 2, Math.ceil(center.gy + radius));
+
+  for (let y = minY; y <= maxY; y++) {
+    for (let x = minX; x <= maxX; x++) {
+      const dx = x - center.gx;
+      const dy = y - center.gy;
+      if (dx * dx + dy * dy > radius2) continue;
+      if (gridRef[y]?.[x] === TILES.TUNNEL) return true;
+    }
+  }
+  return false;
+}
+
+function initQueenChamberObjective(world) {
+  if (!world) return;
+
+  const radiusTiles = CONFIG.queenChamberRadiusTiles ?? 5;
+  const minTiles = CONFIG.queenChamberMinTiles ?? Math.max(8, Math.round(Math.PI * radiusTiles * radiusTiles * 0.55));
+  const center = pickQueenChamberCenter(world.grid);
+
+  world.objectives = world.objectives || {};
+  world.objectives.queenChamber = {
+    status: "unstarted",
+    center,
+    radiusTiles,
+    minTiles,
+  };
+
+  world.queenChamber = {
+    centerGxGy: center,
+    radiusTiles,
+    minTiles,
+    roomTiles: new Set(),
+  };
+}
+
+function updateQueenChamberObjective(world) {
+  if (!world) return;
+
+  const objective = world.objectives?.queenChamber;
+  if (!objective) return;
+
+  const gridRef = world.grid;
+  const chamber = world.queenChamber || {};
+  const center = objective.center || chamber.centerGxGy;
+  const radius = objective.radiusTiles ?? chamber.radiusTiles ?? CONFIG.queenChamberRadiusTiles;
+  const minTiles = chamber.minTiles || objective.minTiles || CONFIG.queenChamberMinTiles || Math.max(8, Math.round(Math.PI * radius * radius * 0.55));
+
+  if (!center) {
+    objective.status = "unstarted";
+    return;
+  }
+
+  chamber.centerGxGy = center;
+  chamber.radiusTiles = radius;
+  chamber.minTiles = minTiles;
+
+  const roomSet = chamber.roomTiles;
+  if (roomSet?.clear) roomSet.clear();
+
+  const centerTile = gridRef?.[center.gy]?.[center.gx];
+  const hasNearby = hasTunnelNearby(center, radius, gridRef);
+  const start = findChamberPathStart(world);
+  const path = start ? findTunnelPath(start, center, gridRef) : null;
+
+  const tiles = collectQueenChamberTiles(center, radius, gridRef, roomSet);
+  const ready = !!path && tiles.count >= minTiles;
+
+  if (world.zoneGrid && roomSet) {
+    for (const key of roomSet) {
+      const gy = Math.floor(key / CONSTANTS.GRID_W);
+      const gx = key % CONSTANTS.GRID_W;
+      if (!world.zoneGrid[gy]) world.zoneGrid[gy] = [];
+      world.zoneGrid[gy][gx] = "queen";
+    }
+  }
+
+  objective.center = center;
+  objective.radiusTiles = radius;
+  objective.minTiles = minTiles;
+  objective.status = ready
+    ? "ready"
+    : (centerTile === TILES.TUNNEL || hasNearby ? "digging" : "unstarted");
+
+  world.queenChamber = chamber;
+}
+
+function findQueenChamberTunnelTarget(world) {
+  const gridRef = world?.grid;
+  const objective = world?.objectives?.queenChamber;
+  const chamber = world?.queenChamber;
+  if (!gridRef || !objective) return null;
+
+  const center = objective.center || chamber?.centerGxGy;
+  const radius = objective.radiusTiles || chamber?.radiusTiles || CONFIG.queenChamberRadiusTiles || 4;
+  if (!center) return null;
+
+  const radius2 = radius * radius;
+  const roomTiles = chamber?.roomTiles;
+  let best = null;
+  let bestScore = Infinity;
+
+  const consider = (gx, gy) => {
+    if (gridRef[gy]?.[gx] !== TILES.TUNNEL) return;
+    const dx = gx - center.gx;
+    const dy = gy - center.gy;
+    const dist2 = dx * dx + dy * dy;
+    if (dist2 > radius2 + 4) return;
+    if (dist2 < bestScore) {
+      bestScore = dist2;
+      best = { gx, gy };
+    }
+  };
+
+  if (roomTiles?.size) {
+    for (const key of roomTiles) {
+      const gx = key % CONSTANTS.GRID_W;
+      const gy = Math.floor(key / CONSTANTS.GRID_W);
+      consider(gx, gy);
+    }
+  }
+
+  if (!best) consider(center.gx, center.gy);
+
+  if (!best) {
+    const minX = Math.max(1, Math.floor(center.gx - radius));
+    const maxX = Math.min(CONSTANTS.GRID_W - 2, Math.ceil(center.gx + radius));
+    const minY = Math.max(CONSTANTS.REGION_SPLIT + 1, Math.floor(center.gy - radius));
+    const maxY = Math.min(CONSTANTS.GRID_H - 2, Math.ceil(center.gy + radius));
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        const dx = x - center.gx;
+        const dy = y - center.gy;
+        if (dx * dx + dy * dy > radius2) continue;
+        consider(x, y);
+      }
+    }
+  }
+
+  return best;
+}
+
+function getQueenPathStart(queen, world) {
+  const gridRef = world?.grid;
+  if (!queen || !gridRef) return findChamberPathStart(world);
+
+  const cs = CONSTANTS.CELL_SIZE;
+  const qgx = Math.floor(queen.x / cs);
+  const qgy = Math.floor(queen.y / cs);
+
+  if (gridRef[qgy]?.[qgx] === TILES.TUNNEL) return { gx: qgx, gy: qgy };
+
+  const radius = 2;
+  for (let dy = -radius; dy <= radius; dy++) {
+    for (let dx = -radius; dx <= radius; dx++) {
+      const nx = qgx + dx;
+      const ny = qgy + dy;
+      if (gridRef[ny]?.[nx] === TILES.TUNNEL) return { gx: nx, gy: ny };
+    }
+  }
+
+  return findChamberPathStart(world);
+}
+
+function updateQueenRelocation(world) {
+  const objective = world?.objectives?.queenChamber;
+  if (!objective || objective.status !== "ready") return;
+
+  const queen = getQueen(world);
+  const target = findQueenChamberTunnelTarget(world);
+  if (!target) return;
+
+  const start = queen ? getQueenPathStart(queen, world) : findChamberPathStart(world);
+  const hasPath = start && findTunnelPath(start, target, world.grid);
+  if (!hasPath) return;
+
+  const prev = world.queenMoveTarget;
+  const changed = !prev || prev.gx !== target.gx || prev.gy !== target.gy;
+  if (changed) {
+    world.queenMoveTarget = { gx: target.gx, gy: target.gy };
+    if (queen) {
+      queen.targetGxGy = null;
+      queen.path = null;
+      queen.pathIndex = 0;
+      queen.repathCooldown = 0;
+    }
+  }
+
+  if (queen && queen.state === "FOUNDING_SURFACE") {
+    queen.repathCooldown = 0;
+  }
+}
+
 function initQueenState(queen) {
   if (!queen || queen.type !== "queen") return;
   if (queen.state) return;
@@ -821,7 +1154,7 @@ function updateQueenPath(queen, world, force = false) {
   if (!force && queen.repathCooldown > 0) return;
 
   const gridRef = world?.grid ?? grid;
-  const start = {
+  const start = getQueenPathStart(queen, world) || {
     gx: Math.floor(queen.x / CONSTANTS.CELL_SIZE),
     gy: Math.floor(queen.y / CONSTANTS.CELL_SIZE),
   };
@@ -1267,6 +1600,7 @@ function resetSimulation() {
   worldState.wasteTotal = wasteTotal;
   worldState.broodScent = broodScent;
   worldState.nurseScent = nurseScent;
+  initQueenChamberObjective(worldState);
   AirSystem.reset(worldState);
   DiggingSystem.reset(worldState);
   BroodSystem.reset(worldState);
@@ -1969,6 +2303,11 @@ class Ant {
           this.state = "SETTLED";
           this.path = null;
           this.pathIndex = 0;
+          worldState.foundingMode = false;
+          if (worldState?.objectives?.queenChamber) {
+            worldState.objectives.queenChamber.priority = false;
+            worldState.objectives.queenChamber.status = "ready";
+          }
         } else if (!this.path || this.path.length === 0) {
           this.state = qgy < CONSTANTS.REGION_SPLIT ? "FOUNDING_SURFACE" : this.state;
         }
@@ -2554,10 +2893,13 @@ class Ant {
     const queen = getQueen(worldState);
     const distanceToQueen = queen ? Math.hypot(queen.x - this.x, queen.y - this.y) : Infinity;
     const deepInNest = gy > (CONSTANTS.REGION_SPLIT + 2);
+    const queenSettled = queen && queen.state === "SETTLED";
+    const preferQueenDrop = queenSettled && distanceToQueen < Math.max(QUEEN_RADIUS_PX * 0.9, 60);
     const canStoreFoodHere = this.inNestCore || this.isInsideQueenRadius() || !queen;
     if (this.carrying && canStoreFoodHere && deepInNest && distanceToQueen > 15) {
       const tile = grid[gy]?.[gx];
-      if (tile === TILES.TUNNEL && getStoredFoodTotalAt(gx, gy) < 5) {
+      const foodCap = preferQueenDrop ? 8 : 5;
+      if (tile === TILES.TUNNEL && getStoredFoodTotalAt(gx, gy) < foodCap) {
         addStoredFoodAt(gx, gy, this.carrying.type, 1);
         this.carrying.amount = Math.max(0, this.carrying.amount - 1);
         if (this.carrying.amount <= 0) this.carrying = null;
@@ -3201,6 +3543,8 @@ function loop(t) {
   ColonyState.updateColonyState(worldState, ants);
 
   DiggingSystem.updateFrontierTiles(worldState);
+  updateQueenChamberObjective(worldState);
+  updateQueenRelocation(worldState);
 
   airFrameCounter++;
   if ((airFrameCounter % AIR.UPDATE_EVERY_FRAMES) === 0) {

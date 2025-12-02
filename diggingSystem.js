@@ -202,6 +202,94 @@ const DiggingSystem = (() => {
     return candidates;
   }
 
+  function findReachableTunnelNear(center, radius, grid, start) {
+    if (!center || !grid || !start) return null;
+    const visited = new Set();
+    const queue = [start];
+    visited.add(start.gy * width + start.gx);
+    const radius2 = (radius + 0.5) * (radius + 0.5);
+    const maxChecks = Math.min(width * height, 6000);
+    let checks = 0;
+
+    while (queue.length && checks < maxChecks) {
+      const node = queue.shift();
+      checks++;
+      const dx = node.gx - center.gx;
+      const dy = node.gy - center.gy;
+      if (dx * dx + dy * dy <= radius2 && grid[node.gy]?.[node.gx] === TILES.TUNNEL) return node;
+
+      const neighbors = [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ];
+      for (const [ox, oy] of neighbors) {
+        const nx = node.gx + ox;
+        const ny = node.gy + oy;
+        if (nx <= 0 || nx >= width - 1 || ny <= regionSplit || ny >= height - 1) continue;
+        if (grid[ny]?.[nx] !== TILES.TUNNEL) continue;
+        const key = ny * width + nx;
+        if (visited.has(key)) continue;
+        visited.add(key);
+        queue.push({ gx: nx, gy: ny });
+      }
+    }
+    return null;
+  }
+
+  function findCorridorFrontierTarget(start, center, grid) {
+    if (!start || !center || !grid) return null;
+    const maxSteps = Math.max(40, Math.abs(center.gy - start.gy) + Math.abs(center.gx - start.gx));
+    let cx = start.gx;
+    let cy = start.gy;
+
+    for (let i = 0; i < maxSteps; i++) {
+      if (cx === center.gx && cy === center.gy) break;
+
+      const dx = Math.sign(center.gx - cx);
+      const dy = Math.sign(center.gy - cy) || 1;
+      const prioritizeY = Math.abs(center.gy - cy) >= Math.abs(center.gx - cx);
+      const stepChoices = prioritizeY ? [[0, dy], [dx, 0]] : [[dx, 0], [0, dy]];
+
+      let advanced = false;
+      for (const [ox, oy] of stepChoices) {
+        const nx = cx + ox;
+        const ny = cy + oy;
+        if (nx <= 0 || nx >= width - 1 || ny <= regionSplit || ny >= height - 1) continue;
+        const tile = grid[ny]?.[nx];
+        if (tile === TILES.BEDROCK) continue;
+        if (tile === TILES.TUNNEL) { cx = nx; cy = ny; advanced = true; break; }
+        if (tile === TILES.SOIL && frontierMask[ny]?.[nx]) return { x: nx, y: ny };
+        if (tile === TILES.SOIL && isFrontierCell(nx, ny, grid)) return { x: nx, y: ny };
+      }
+
+      if (!advanced) {
+        let best = null;
+        let bestScore = -Infinity;
+        const offsets = [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ];
+        for (const [ox, oy] of offsets) {
+          const nx = cx + ox;
+          const ny = cy + oy;
+          if (nx <= 0 || nx >= width - 1 || ny <= regionSplit || ny >= height - 1) continue;
+          if (!frontierMask[ny]?.[nx] || grid[ny]?.[nx] !== TILES.SOIL) continue;
+          const distDown = (center.gy - ny);
+          const align = -Math.abs(center.gx - nx);
+          const score = distDown * 1.2 + align;
+          if (score > bestScore) { bestScore = score; best = { x: nx, y: ny }; }
+        }
+        if (best) return best;
+        break;
+      }
+    }
+    return null;
+  }
+
   function chooseDigTarget(ant, world) {
     if (ant.carrying || ant.role !== "digger") return null;
     if (ant.y < regionSplit * cellSize) return null;
@@ -225,6 +313,11 @@ const DiggingSystem = (() => {
     const qx = queen ? queen.x : ant.x;
     const qy = queen ? queen.y : ant.y;
 
+    const queenObjective = world?.objectives?.queenChamber;
+    const queenPending = queenObjective && queenObjective.status !== "ready";
+    const queenUnsettled = queen && (queen.state === "FOUNDING_SURFACE" || queen.state === "RELOCATING");
+    const prioritizeQueen = queenPending || queenUnsettled;
+
     let digMode = ant.digMode || "corridor";
     if (digMode === "room" && (!ant.roomCenter || ant.roomDigBudget <= 0)) {
       digMode = "corridor";
@@ -236,15 +329,51 @@ const DiggingSystem = (() => {
     }
 
     const favorSoftSoil = spacePressure < 0.5 && broodPressure < 0.2;
-    const headingStrength = ant.digHeadingStrength || 0;
+    let headingStrength = ant.digHeadingStrength || 0;
     const hasHeading = headingStrength > 0.01 && Number.isFinite(ant.digHeadingAngle);
-    const headingVec = hasHeading ? { x: Math.cos(ant.digHeadingAngle), y: Math.sin(ant.digHeadingAngle) } : null;
+    let headingVec = hasHeading ? { x: Math.cos(ant.digHeadingAngle), y: Math.sin(ant.digHeadingAngle) } : null;
     const lastDug = ant.lastDugCell || null;
 
     const cgx = Math.floor(ant.x / cellSize);
     const cgy = Math.floor(ant.y / cellSize);
 
+    let queenPlan = null;
+    if (prioritizeQueen && queenObjective?.center) {
+      const center = queenObjective.center || world.queenChamber?.centerGxGy;
+      const radius = queenObjective.radiusTiles || world.queenChamber?.radiusTiles || CONFIG.queenChamberRadiusTiles || 4;
+      const pathStart = (typeof findChamberPathStart === "function") ? findChamberPathStart(world) : null;
+      const corridorTarget = findCorridorFrontierTarget(pathStart, center, world.grid);
+      const chamberTunnel = findReachableTunnelNear(center, radius, world.grid, pathStart);
+      const phase = chamberTunnel ? "chamber" : "corridor";
+      const anchor = phase === "chamber" ? (chamberTunnel || center) : (corridorTarget || pathStart || center);
+
+      if (anchor) {
+        queenPlan = { phase, anchor, center, radius, pathStart, tunnel: chamberTunnel };
+        const dirX = center.gx - anchor.x;
+        const dirY = center.gy - anchor.y;
+        const mag = Math.hypot(dirX, dirY) || 1;
+        headingVec = { x: dirX / mag, y: dirY / mag };
+        headingStrength = Math.max(headingStrength, phase === "corridor" ? 0.95 : 0.65);
+        if (phase === "chamber") {
+          ant.digMode = "room";
+          ant.roomCenter = { x: center.gx, y: center.gy };
+          ant.roomRadius = radius;
+          ant.roomDigBudget = Math.max(ant.roomDigBudget || 0, (queenObjective.minTiles || radius * radius));
+        } else {
+          ant.digMode = "corridor";
+          ant.roomCenter = null;
+          ant.roomRadius = 0;
+          ant.roomDigBudget = 0;
+          ant.roomDug = 0;
+          ant.digHeadingAngle = Math.atan2(dirY, dirX);
+          ant.digHeadingStrength = headingStrength;
+        }
+        digMode = ant.digMode || digMode;
+      }
+    }
+
     const shouldStartRoom =
+      !queenPlan &&
       digMode !== "room" &&
       ant.roomCooldown <= 0 &&
       ant.digIdleTime >= (CONFIG?.roomModeStuckTime ?? 6) &&
@@ -274,18 +403,46 @@ const DiggingSystem = (() => {
     let bestBranching = false;
 
     let searchRadius = SETTINGS.sampleRadius;
-    let candidates = collectFrontierCandidates(cgx, cgy, searchRadius, world.grid);
-    while (!candidates.length && searchRadius < SETTINGS.maxSampleRadius) {
-      searchRadius += SETTINGS.sampleRadiusStep;
+    let candidates;
+    if (queenPlan) {
+      const baseRadius = queenPlan.phase === "corridor" ? 7 : Math.max(4, Math.round(queenPlan.radius * 0.6));
+      searchRadius = baseRadius;
+      const anchorX = queenPlan.anchor.x ?? queenPlan.anchor.gx;
+      const anchorY = queenPlan.anchor.y ?? queenPlan.anchor.gy;
+      candidates = collectFrontierCandidates(anchorX, anchorY, searchRadius, world.grid);
+      while (!candidates.length && searchRadius < baseRadius + 10) {
+        searchRadius += 3;
+        candidates = collectFrontierCandidates(anchorX, anchorY, searchRadius, world.grid);
+      }
+      if (queenPlan.phase === "chamber") {
+        const radius2 = (queenPlan.radius + 1) * (queenPlan.radius + 1);
+        candidates = candidates.filter((t) => {
+          const dx = t.x - queenPlan.center.gx;
+          const dy = t.y - queenPlan.center.gy;
+          return dx * dx + dy * dy <= radius2;
+        });
+      }
+    } else {
       candidates = collectFrontierCandidates(cgx, cgy, searchRadius, world.grid);
+      while (!candidates.length && searchRadius < SETTINGS.maxSampleRadius) {
+        searchRadius += SETTINGS.sampleRadiusStep;
+        candidates = collectFrontierCandidates(cgx, cgy, searchRadius, world.grid);
+      }
+
+      if (!candidates.length) {
+        const fallbackSamples = Math.min(SETTINGS.frontierSampleCount, frontier.list.length);
+        for (let i = 0; i < fallbackSamples; i++) {
+          const tile = frontier.list[Math.floor(Math.random() * frontier.list.length)];
+          candidates.push(tile);
+        }
+      }
     }
 
-    if (!candidates.length) {
-      const fallbackSamples = Math.min(SETTINGS.frontierSampleCount, frontier.list.length);
-      for (let i = 0; i < fallbackSamples; i++) {
-        const tile = frontier.list[Math.floor(Math.random() * frontier.list.length)];
-        candidates.push(tile);
+    if (!candidates || !candidates.length) {
+      if (queenPlan) {
+        candidates = collectFrontierCandidates(cgx, cgy, Math.min(SETTINGS.maxSampleRadius, searchRadius + SETTINGS.sampleRadiusStep), world.grid);
       }
+      if (!candidates || !candidates.length) return null;
     }
 
     for (const tile of candidates) {
@@ -320,8 +477,8 @@ const DiggingSystem = (() => {
 
       let headingBonus = 1;
       if (headingVec) {
-        const anchorX = lastDug ? lastDug.x + 0.5 : cgx + 0.5;
-        const anchorY = lastDug ? lastDug.y + 0.5 : cgy + 0.5;
+        const anchorX = queenPlan ? (queenPlan.anchor.x ?? queenPlan.anchor.gx) + 0.5 : (lastDug ? lastDug.x + 0.5 : cgx + 0.5);
+        const anchorY = queenPlan ? (queenPlan.anchor.y ?? queenPlan.anchor.gy) + 0.5 : (lastDug ? lastDug.y + 0.5 : cgy + 0.5);
         const dx = x + 0.5 - anchorX;
         const dy = y + 0.5 - anchorY;
         const dist = Math.hypot(dx, dy);
