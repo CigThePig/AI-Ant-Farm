@@ -11,6 +11,8 @@ const ColonyState = (() => {
     larvaCount: 0,
     nurseryTiles: 0,
     nurseryPressure: 0,
+    pantryPressure: 0,
+    pantryPressureByType: { seed: 0, protein: 0, sugar: 0 },
   };
 
   const SETTINGS = {
@@ -150,6 +152,38 @@ const ColonyState = (() => {
     return pressure;
   }
 
+  function computePantryPressures(world) {
+    const maxPerTile = CONFIG?.maxFoodPerTile ?? 10;
+    const softCap = CONFIG?.pantrySoftCap ?? 0.7;
+    const constants = world?.constants;
+    const width = Math.max(1, constants?.GRID_W || 0);
+    const pantries = world?.pantries || {};
+    const storage = world?.storedFoodGrid || [];
+
+    const result = { seed: 0, protein: 0, sugar: 0 };
+
+    for (const type of Object.keys(pantries)) {
+      const pantry = pantries[type];
+      if (!pantry || !pantry.tiles) { result[type] = 0; continue; }
+
+      const tileCount = pantry.tiles.size;
+      let load = 0;
+
+      for (const key of pantry.tiles) {
+        const gx = key % width;
+        const gy = Math.floor(key / Math.max(1, width));
+        load += storage?.[gy]?.[gx]?.[type] || 0;
+      }
+
+      const capacity = tileCount * maxPerTile;
+      const pressure = clamp01((load - capacity * softCap) / Math.max(1, capacity));
+      result[type] = pressure;
+    }
+
+    state.pantryPressureByType = { ...result };
+    state.pantryPressure = Math.max(0, ...Object.values(result));
+  }
+
   function updateColonyState(world, ants) {
     state.antCount = ants?.length || 0;
     state.storedFood = world?.storedFood ?? 0;
@@ -164,6 +198,7 @@ const ColonyState = (() => {
     state.wastePressure = computeWastePressure(world, queen);
     state.broodPressure = computeBroodPressure();
     state.nurseryPressure = computeNurseryPressure(world, queen);
+    computePantryPressures(world);
   }
 
   return {
@@ -173,6 +208,8 @@ const ColonyState = (() => {
     getWastePressure: () => state.wastePressure,
     getBroodPressure: () => state.broodPressure,
     getNurseryPressure: () => state.nurseryPressure,
+    getPantryPressure: (type = null) => type ? (state.pantryPressureByType?.[type] || 0) : state.pantryPressure,
+    getPantryPressureByType: () => ({ ...state.pantryPressureByType }),
     getState: () => ({ ...state }),
   };
 })();

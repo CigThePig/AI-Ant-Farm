@@ -59,6 +59,25 @@ const maskCtx = maskCanvas.getContext('2d');
 
   queenRadius: 8,             // tiles; pheromone-free buffer around the queen
 
+  // Pantry placement and storage tuning
+  maxFoodPerTile: 10,
+  pantryTileThreshold: 2.5,
+  pantryTileHysteresis: 1.2,
+  pantryUpdateInterval: 12,
+  pantryScentDeposit: 0.05,
+  pantryScentDecay: 0.995,
+  pantryScentDiffuse: 0.06,
+  pantryQueenBuffer: 3.5,
+  pantryEntranceAvoidRadius: 9,
+  pantrySoftCap: 0.7,
+  pantryPressureDigThreshold: 0.55,
+  pantryDigRadius: 9,
+  pantryPreferred: {
+    seed: { min: 6, max: 12 },
+    protein: { min: 8, max: 14 },
+    sugar: { min: 6, max: 12 },
+  },
+
   renderWastePiles: false,
 
   digHeadingDecayRate: 0.45,
@@ -648,6 +667,8 @@ let scentToHome = [];
 let queenScent = [];
 let broodScent = [];
 let nurseScent = [];
+let pantryScent = { seed: [], protein: [], sugar: [] };
+let pantryScentScratch = { seed: [], protein: [], sugar: [] };
 let ants = [];
 let particles = [];
 let trophallaxisEvents = [];
@@ -655,12 +676,39 @@ let foodInStorage = 0;
 let wasteTotal = 0;
 let brood = [];
 let nextAntId = 1;
+let pantryUpdateCounter = 0;
 
 const FOOD_TYPES = ["seed", "protein", "sugar"];
+
+function createPantries() {
+  const base = () => ({ tiles: new Set(), center: null });
+  return {
+    seed: base(),
+    protein: base(),
+    sugar: base(),
+  };
+}
+
+function createPantryScentGrid() {
+  const grid = [];
+  for (let y = 0; y < CONSTANTS.GRID_H; y++) {
+    grid[y] = new Float32Array(CONSTANTS.GRID_W);
+  }
+  return grid;
+}
+
+function createPantryScentBuffers() {
+  return {
+    seed: createPantryScentGrid(),
+    protein: createPantryScentGrid(),
+    sugar: createPantryScentGrid(),
+  };
+}
 
 const worldState = {
   grid: null,
   gridTexture: null,
+  storedFoodGrid: null,
   particles: null,
   airLevels: null,
   queen: null,
@@ -677,7 +725,9 @@ const worldState = {
   brood: null,
   broodScent: null,
   nurseScent: null,
+  pantryScent: null,
   frontierTiles: null,
+  pantries: createPantries(),
   objectives: {
     queenChamber: {
       status: "unstarted",
@@ -1551,6 +1601,236 @@ function getStoredFoodTotalsGrid() {
   return totals;
 }
 
+function getPantryState(type, world = worldState) {
+  const resolved = world || worldState;
+  if (!resolved.pantries) resolved.pantries = createPantries();
+  if (!resolved.pantries[type]) resolved.pantries[type] = { tiles: new Set(), center: null };
+  return resolved.pantries[type];
+}
+
+function applyPantrySpoilage(dt, world = worldState) {
+  const rate = WASTE.spoilageRate ?? 0;
+  if (rate <= 0 || !world?.pantries) return;
+
+  const decay = rate * Math.max(0, dt || 0);
+  if (decay <= 0) return;
+
+  for (const type of FOOD_TYPES) {
+    const pantry = getPantryState(type, world);
+    if (!pantry?.tiles?.size) continue;
+
+    for (const key of pantry.tiles) {
+      const gx = key % CONSTANTS.GRID_W;
+      const gy = Math.floor(key / CONSTANTS.GRID_W);
+      const cell = storedFoodGrid[gy]?.[gx];
+      const amount = cell?.[type] || 0;
+      if (amount <= 0) continue;
+
+      const spoil = amount * decay;
+      if (spoil <= 0.0001) continue;
+
+      const spoiled = takeStoredFoodAt(gx, gy, type, spoil);
+      if (spoiled <= 0) continue;
+
+      const wasted = spoiled * 0.8;
+      addWaste(gx, gy, wasted);
+      tagWaste(gx, gy, "refuse", wasted);
+      tagWaste(gx, gy, "spoiledFood", wasted);
+    }
+  }
+}
+
+function addPantryScent(type, gx, gy, amount = 1) {
+  const grid = pantryScent?.[type];
+  if (!grid || !grid[gy]) return;
+  const deposit = amount * (CONFIG.pantryScentDeposit ?? 0.05);
+  grid[gy][gx] = Math.min(1, grid[gy][gx] + deposit);
+}
+
+function decayAndDiffusePantryScent() {
+  const decay = CONFIG.pantryScentDecay ?? 0.995;
+  const diffuse = CONFIG.pantryScentDiffuse ?? 0.04;
+
+  for (const type of FOOD_TYPES) {
+    const src = pantryScent[type];
+    const dst = pantryScentScratch[type];
+    if (!src || !dst) continue;
+
+    for (let y = 0; y < CONSTANTS.GRID_H; y++) {
+      const srcRow = src[y];
+      const dstRow = dst[y];
+      const up = y > 0 ? src[y - 1] : null;
+      const down = y < CONSTANTS.GRID_H - 1 ? src[y + 1] : null;
+
+      for (let x = 0; x < CONSTANTS.GRID_W; x++) {
+        let val = srcRow[x] * decay;
+        if (val < 0.0001) {
+          dstRow[x] = 0;
+          continue;
+        }
+
+        if (diffuse > 0) {
+          const left = x > 0 ? srcRow[x - 1] : srcRow[x];
+          const right = x < CONSTANTS.GRID_W - 1 ? srcRow[x + 1] : srcRow[x];
+          const nUp = up ? up[x] : srcRow[x];
+          const nDown = down ? down[x] : srcRow[x];
+          const avg = (left + right + nUp + nDown + srcRow[x]) / 5;
+          val = val + (avg - val) * diffuse;
+        }
+
+        dstRow[x] = val;
+      }
+    }
+
+    for (let y = 0; y < CONSTANTS.GRID_H; y++) {
+      pantryScent[type][y].set(dst[y]);
+    }
+  }
+}
+
+function updatePantryCenter(pantry) {
+
+function updatePantryCenter(pantry) {
+  if (!pantry || !pantry.tiles) return;
+  let sumX = 0, sumY = 0, count = 0;
+  for (const key of pantry.tiles) {
+    const gx = key % CONSTANTS.GRID_W;
+    const gy = Math.floor(key / CONSTANTS.GRID_W);
+    sumX += gx;
+    sumY += gy;
+    count++;
+  }
+  pantry.center = count > 0 ? { gx: Math.round(sumX / count), gy: Math.round(sumY / count) } : null;
+}
+
+function registerPantryTile(type, gx, gy, world = worldState) {
+  const pantry = getPantryState(type, world);
+  const key = gy * CONSTANTS.GRID_W + gx;
+  if (!pantry.tiles.has(key)) {
+    pantry.tiles.add(key);
+    updatePantryCenter(pantry);
+  }
+}
+
+function updatePantryZones(world = worldState) {
+  const high = CONFIG.pantryTileThreshold ?? 2.5;
+  const hysteresis = CONFIG.pantryTileHysteresis ?? 1.2;
+  const low = high / Math.max(1, hysteresis);
+
+  for (const type of FOOD_TYPES) {
+    const pantry = getPantryState(type, world);
+    const nextTiles = new Set();
+
+    for (let y = 1; y < CONSTANTS.GRID_H - 1; y++) {
+      for (let x = 1; x < CONSTANTS.GRID_W - 1; x++) {
+        if (grid[y][x] !== TILES.TUNNEL) continue;
+
+        const cell = storedFoodGrid[y][x];
+        const amount = cell?.[type] || 0;
+        const key = y * CONSTANTS.GRID_W + x;
+        const wasPantry = pantry.tiles.has(key);
+
+        const meetsThreshold = amount >= high || (wasPantry && amount >= low);
+        if (meetsThreshold) {
+          nextTiles.add(key);
+          continue;
+        }
+
+        if (amount <= 0) continue;
+
+        let adjacentPantry = false;
+        const neighbors = [
+          key - 1,
+          key + 1,
+          key - CONSTANTS.GRID_W,
+          key + CONSTANTS.GRID_W,
+        ];
+        for (const n of neighbors) {
+          if (pantry.tiles.has(n) || nextTiles.has(n)) { adjacentPantry = true; break; }
+        }
+
+        if (adjacentPantry) {
+          nextTiles.add(key);
+        }
+      }
+    }
+
+    pantry.tiles = nextTiles;
+    updatePantryCenter(pantry);
+  }
+}
+
+function findBestPantryTile(type, world, antGxGy = null) {
+  const queen = getQueen(world);
+  if (!queen) return null;
+
+  const queenGx = Math.floor(queen.x / CONSTANTS.CELL_SIZE);
+  const queenGy = Math.floor(queen.y / CONSTANTS.CELL_SIZE);
+  const pref = CONFIG.pantryPreferred?.[type] || { min: 6, max: 12 };
+  const queenBuffer = CONFIG.pantryQueenBuffer ?? 3;
+  const entranceAvoid = CONFIG.pantryEntranceAvoidRadius ?? 6;
+  const capacity = CONFIG.maxFoodPerTile ?? 8;
+  const pantry = getPantryState(type, world);
+  const scentGrid = pantryScent?.[type];
+
+  const searchRadius = Math.max(pref.max + 4, queenBuffer + 2);
+  let best = null;
+  let bestScore = -Infinity;
+
+  const minY = Math.max(1, queenGy - searchRadius);
+  const maxY = Math.min(CONSTANTS.GRID_H - 2, queenGy + searchRadius);
+  const minX = Math.max(1, queenGx - searchRadius);
+  const maxX = Math.min(CONSTANTS.GRID_W - 2, queenGx + searchRadius);
+
+  const bandHalf = Math.max(1, (pref.max - pref.min) / 2);
+  const idealDist = (pref.min + pref.max) / 2;
+
+  for (let y = minY; y <= maxY; y++) {
+    const row = grid[y];
+    if (!row) continue;
+    for (let x = minX; x <= maxX; x++) {
+      if (row[x] !== TILES.TUNNEL) continue;
+      if (getStoredFoodTotalAt(x, y) >= capacity) continue;
+
+      const dist = Math.hypot(x - queenGx, y - queenGy);
+      if (dist < queenBuffer) continue;
+
+      let distScore = 1 - Math.abs(dist - idealDist) / (bandHalf * 1.2);
+      distScore = clamp01(distScore);
+
+      const entranceDist = Math.hypot(x - ENTRANCE.gx, y - ENTRANCE.gy);
+      const entrancePenalty = clamp01((Math.max(0, entranceAvoid - entranceDist)) / Math.max(1, entranceAvoid)) * 0.6;
+      const wastePenalty = (wasteGrid[y]?.[x] || 0) * 0.15;
+      const broodPenalty = (broodScent[y]?.[x] || 0) * 0.8;
+      const storedPenalty = (getStoredFoodTotalAt(x, y) / Math.max(1, capacity)) * 0.25;
+
+      let clusterBonus = 0;
+      if (pantry?.center) {
+        const dx = x - pantry.center.gx;
+        const dy = y - pantry.center.gy;
+        const d = Math.hypot(dx, dy);
+        clusterBonus = clamp01(1 - (d / (bandHalf * 2 + 1))) * 0.2;
+      }
+
+      let travelPenalty = 0;
+      if (antGxGy) {
+        const travel = Math.hypot(x - antGxGy.gx, y - antGxGy.gy);
+        travelPenalty = Math.min(travel, 12) * 0.01;
+      }
+
+      const scentBonus = scentGrid?.[y]?.[x] ? scentGrid[y][x] * 0.4 : 0;
+
+      const score = distScore - entrancePenalty - wastePenalty - broodPenalty - storedPenalty - travelPenalty + clusterBonus + scentBonus;
+      if (score > bestScore) {
+        bestScore = score;
+        best = { gx: x, gy: y };
+      }
+    }
+  }
+
+  return best;
+}
+
 function computeDesiredRoleFractions() {
   const spacePressure = ColonyState?.getSpacePressure ? ColonyState.getSpacePressure() : 0.3;
   const foodPressure = ColonyState?.getFoodPressure ? ColonyState.getFoodPressure() : 0.3;
@@ -1601,16 +1881,20 @@ function resetSimulation() {
   queenScent = [];
   broodScent = [];
   nurseScent = [];
+  pantryScent = createPantryScentBuffers();
+  pantryScentScratch = createPantryScentBuffers();
   ants = [];
   particles = [];
   foodInStorage = 0;
   wasteTotal = 0;
   brood = [];
   nextAntId = 1;
+  pantryUpdateCounter = 0;
   worldState.queenRef = null;
   worldState.queenId = null;
   worldState.queen = null;
   worldState.queenMoveTarget = null;
+  worldState.pantries = createPantries();
 
   for (let y = 0; y < CONSTANTS.GRID_H; y++) {
     grid[y] = new Uint8Array(CONSTANTS.GRID_W);
@@ -1686,6 +1970,7 @@ function resetSimulation() {
 
   worldState.grid = grid;
   worldState.gridTexture = gridTexture;
+  worldState.storedFoodGrid = storedFoodGrid;
   worldState.particles = particles;
   worldState.entrance = ENTRANCE;
   worldState.digStart = DIG_START;
@@ -1698,6 +1983,7 @@ function resetSimulation() {
   worldState.wasteTotal = wasteTotal;
   worldState.broodScent = broodScent;
   worldState.nurseScent = nurseScent;
+  worldState.pantryScent = pantryScent;
   initQueenChamberObjective(worldState);
   AirSystem.reset(worldState);
   DiggingSystem.reset(worldState);
@@ -2015,6 +2301,7 @@ class Ant {
       dig: 0,
       clean: 0,
       forage: 0,
+      store: 0,
       returnHome: 0,
       wander: 0.1,
     };
@@ -2033,7 +2320,8 @@ class Ant {
     }
 
     if (this.carrying) {
-      scores.returnHome = 0.95;
+      scores.returnHome = 0.8;
+      scores.store = 0.95;
     } else {
       const lowEnergy = this.energy / this.maxEnergy;
       if (lowEnergy < 0.35) scores.returnHome = Math.max(scores.returnHome, 0.6);
@@ -2628,6 +2916,17 @@ class Ant {
       return offset + (Math.random() - 0.5) * 0.25;
     }
 
+    const cgx = Math.floor(this.x / CONSTANTS.CELL_SIZE);
+    const cgy = Math.floor(this.y / CONSTANTS.CELL_SIZE);
+
+    let pantryTarget = null;
+    if (this.carrying && this.intent === "store") {
+      pantryTarget = findBestPantryTile(this.carrying.type, worldState, { gx: cgx, gy: cgy });
+      this.storeTarget = pantryTarget;
+    } else {
+      this.storeTarget = null;
+    }
+
     if (this.role === "nurse") {
       const queen = getQueen(worldState);
       const preferredRadius = Math.max(QUEEN_RADIUS_PX, 80);
@@ -2712,20 +3011,29 @@ class Ant {
     const sd = CONFIG.sensorDist;
 
     if (this.carrying || this.intent === "returnHome") {
-      const cgx = Math.floor(this.x / CONSTANTS.CELL_SIZE);
-      const cgy = Math.floor(this.y / CONSTANTS.CELL_SIZE);
       const steering = getHomeSteeringField(this, cgx, cgy, worldState);
       this.registerHomeSignal(steering.confidence, dt);
 
+      const targetAngle = pantryTarget
+        ? Math.atan2((pantryTarget.gy + 0.5) * CONSTANTS.CELL_SIZE - this.y, (pantryTarget.gx + 0.5) * CONSTANTS.CELL_SIZE - this.x)
+        : null;
+
+      let desired = null;
       if (steering.angle !== null) {
         this.returnDir = steering.angle;
-        const smoothed = angleLerp(this.angle, steering.angle, 0.2);
-        return smoothed;
+        desired = angleLerp(this.angle, steering.angle, 0.2);
       }
+
+      if (targetAngle !== null) {
+        desired = desired !== null ? angleLerp(desired, targetAngle, 0.35) : targetAngle;
+      }
+
+      if (desired !== null) return desired;
 
       if (this.returnDir === null) this.returnDir = this.angle;
       const homeAngle = Math.atan2(this.homeVector.y, this.homeVector.x);
-      return Number.isFinite(homeAngle) ? homeAngle : this.returnDir;
+      const fallback = Number.isFinite(homeAngle) ? homeAngle : this.returnDir;
+      return targetAngle !== null ? angleLerp(fallback, targetAngle, 0.25) : fallback;
     }
 
     const valL = ignoreFoodPheromone ? 0 : this.sample(g, -sa, sd);
@@ -3041,17 +3349,26 @@ class Ant {
       return;
     }
 
+    const pantryTarget = (this.carrying && this.intent === "store")
+      ? findBestPantryTile(this.carrying.type, worldState, { gx, gy })
+      : null;
+
     const queen = getQueen(worldState);
-    const distanceToQueen = queen ? Math.hypot(queen.x - this.x, queen.y - this.y) : Infinity;
-    const deepInNest = gy > (CONSTANTS.REGION_SPLIT + 2);
-    const queenSettled = queen && queen.state === "SETTLED";
-    const preferQueenDrop = queenSettled && distanceToQueen < Math.max(QUEEN_RADIUS_PX * 0.9, 60);
-    const canStoreFoodHere = this.inNestCore || this.isInsideQueenRadius() || !queen;
-    if (this.carrying && canStoreFoodHere && deepInNest && distanceToQueen > 15) {
-      const tile = grid[gy]?.[gx];
-      const foodCap = preferQueenDrop ? 8 : 5;
-      if (tile === TILES.TUNNEL && getStoredFoodTotalAt(gx, gy) < foodCap) {
+    const queenGx = queen ? Math.floor(queen.x / CONSTANTS.CELL_SIZE) : null;
+    const queenGy = queen ? Math.floor(queen.y / CONSTANTS.CELL_SIZE) : null;
+    const queenTileDist = queen ? Math.hypot((queenGx ?? 0) - gx, (queenGy ?? 0) - gy) : Infinity;
+    const tile = grid[gy]?.[gx];
+    const capacityOk = getStoredFoodTotalAt(gx, gy) < (CONFIG.maxFoodPerTile ?? 8);
+    const fallbackBuffer = CONFIG.pantryQueenBuffer ?? 3.5;
+
+    if (this.carrying && tile === TILES.TUNNEL && capacityOk) {
+      const atPantry = pantryTarget && pantryTarget.gx === gx && pantryTarget.gy === gy;
+      const fallbackOk = !pantryTarget && queenTileDist > fallbackBuffer;
+
+      if (atPantry || fallbackOk) {
         addStoredFoodAt(gx, gy, this.carrying.type, 1);
+        addPantryScent(this.carrying.type, gx, gy, 1);
+        registerPantryTile(this.carrying.type, gx, gy, worldState);
         this.carrying.amount = Math.max(0, this.carrying.amount - 1);
         if (this.carrying.amount <= 0) this.carrying = null;
         this.returnDir = null;
@@ -3652,25 +3969,16 @@ function loop(t) {
   sunAngle = (sunAngle + dt * 0.05) % (Math.PI * 2);
 
   const queen = getQueen(worldState);
-  if (queen) {
-    const spoil = Math.max(0, foodInStorage - 6) * WASTE.spoilageRate * dt;
-    if (spoil > 0.0001) {
-      const spoiled = takeStoredFoodAnywhere(spoil, "seed");
-      const qgx = Math.floor(queen.x / CONSTANTS.CELL_SIZE);
-      const qgy = Math.floor(queen.y / CONSTANTS.CELL_SIZE);
-      const wasted = spoiled * 0.8;
-      addWaste(qgx, qgy, wasted);
-      tagWaste(qgx, qgy, "refuse", wasted);
-      tagWaste(qgx, qgy, "spoiledFood", wasted);
-    }
-  }
+  applyPantrySpoilage(dt, worldState);
 
   worldState.storedFood = foodInStorage;
+  worldState.storedFoodGrid = storedFoodGrid;
   worldState.wasteTotal = wasteTotal;
   worldState.wasteGrid = wasteGrid;
   worldState.wasteTags = wasteTags;
   worldState.broodScent = broodScent;
   worldState.nurseScent = nurseScent;
+  worldState.pantryScent = pantryScent;
   worldState.brood = BroodSystem.getBrood();
   ColonyState.updateColonyState(worldState, ants);
   const colonySnapshot = ColonyState.getState();
@@ -3697,6 +4005,12 @@ function loop(t) {
   updateQueenChamberObjective(worldState);
   updateQueenRelocation(worldState);
 
+  pantryUpdateCounter++;
+  const pantryInterval = Math.max(1, Math.round(CONFIG.pantryUpdateInterval ?? 12));
+  if ((pantryUpdateCounter % pantryInterval) === 0) {
+    updatePantryZones(worldState);
+  }
+
   airFrameCounter++;
   if ((airFrameCounter % AIR.UPDATE_EVERY_FRAMES) === 0) {
     AirSystem.updateAirField(worldState);
@@ -3721,6 +4035,8 @@ function loop(t) {
       }
     }
   }
+
+  decayAndDiffusePantryScent();
 
   seedEntranceHomeScent();
 
