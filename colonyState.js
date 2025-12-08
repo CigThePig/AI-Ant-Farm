@@ -8,6 +8,9 @@ const ColonyState = (() => {
     wastePressure: 0,
     broodCount: 0,
     broodPressure: 0,
+    larvaCount: 0,
+    nurseryTiles: 0,
+    nurseryPressure: 0,
   };
 
   const SETTINGS = {
@@ -15,6 +18,8 @@ const ColonyState = (() => {
     targetAntsPerTile: 0.35,
     desiredFoodPerAnt: 0.6,
     minimumDesiredFood: 4,
+    nurseryBandInner: 3,
+    nurseryBandOuter: 6,
   };
 
   function clamp01(v) {
@@ -99,10 +104,57 @@ const ColonyState = (() => {
     return clamp01(ratio);
   }
 
+  function countLarvae(list) {
+    if (!Array.isArray(list)) return 0;
+    let total = 0;
+    for (const b of list) {
+      const stage = b?.stage || b?.type;
+      if (stage === "larva" || stage === "LARVA") total++;
+    }
+    return total;
+  }
+
+  function countNurseryTiles(grid, queen, constants) {
+    const inner = CONFIG?.nurseryBandInner ?? SETTINGS.nurseryBandInner;
+    const outer = CONFIG?.nurseryBandOuter ?? SETTINGS.nurseryBandOuter;
+    if (!queen || !grid || inner >= outer) return 0;
+
+    const cs = constants?.CELL_SIZE || 1;
+    const qgx = Math.floor(queen.x / cs);
+    const qgy = Math.floor(queen.y / cs);
+    const inner2 = inner * inner;
+    const outer2 = outer * outer;
+
+    let tiles = 0;
+    for (let y = qgy - outer; y <= qgy + outer; y++) {
+      const row = grid[y];
+      if (!row) continue;
+      for (let x = qgx - outer; x <= qgx + outer; x++) {
+        if (row[x] !== TILES.TUNNEL) continue;
+        const dx = x - qgx;
+        const dy = y - qgy;
+        const d2 = dx * dx + dy * dy;
+        if (d2 >= inner2 && d2 <= outer2) tiles++;
+      }
+    }
+    return tiles;
+  }
+
+  function computeNurseryPressure(world, queen) {
+    const capacityPerTile = CONFIG?.larvaePerTileTarget ?? 1.1;
+    const larvaLoad = state.larvaCount;
+    const tiles = countNurseryTiles(world?.grid, queen, world?.constants);
+    state.nurseryTiles = tiles;
+    const capacity = Math.max(0, tiles * capacityPerTile);
+    const pressure = clamp01((larvaLoad - capacity) / Math.max(1, capacity));
+    return pressure;
+  }
+
   function updateColonyState(world, ants) {
     state.antCount = ants?.length || 0;
     state.storedFood = world?.storedFood ?? 0;
     state.broodCount = world?.brood?.length ?? 0;
+    state.larvaCount = countLarvae(world?.brood);
 
     const queen = findQueen(ants || []);
     state.nestTiles = countNestTiles(world?.grid, queen, world?.constants);
@@ -111,6 +163,7 @@ const ColonyState = (() => {
     state.foodPressure = computeFoodPressure();
     state.wastePressure = computeWastePressure(world, queen);
     state.broodPressure = computeBroodPressure();
+    state.nurseryPressure = computeNurseryPressure(world, queen);
   }
 
   return {
@@ -119,6 +172,7 @@ const ColonyState = (() => {
     getFoodPressure: () => state.foodPressure,
     getWastePressure: () => state.wastePressure,
     getBroodPressure: () => state.broodPressure,
+    getNurseryPressure: () => state.nurseryPressure,
     getState: () => ({ ...state }),
   };
 })();

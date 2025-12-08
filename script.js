@@ -29,6 +29,13 @@ const maskCtx = maskCanvas.getContext('2d');
   queenChamberRadiusTiles: 5,
   queenChamberMinTiles: 36,
 
+  nurseryBandInner: 3,
+  nurseryBandOuter: 6,
+  larvaePerTileTarget: 1.1,
+  nurseryPressureDigThreshold: 0.35,
+  nurseryRoomRadius: 2.6,
+  nurseryRoomDigBudget: 18,
+
   sensorAngle: 0.8,
   sensorDist: 30,
 
@@ -113,6 +120,12 @@ const QUEEN_RADIUS_PX = CONFIG.queenRadius * CONSTANTS.CELL_SIZE;
 const QUEEN_RADIUS_PX2 = QUEEN_RADIUS_PX * QUEEN_RADIUS_PX;
 
 const TILES = { GRASS: 0, SOIL: 1, TUNNEL: 2, BEDROCK: 3 };
+
+const BROOD_PLACEMENT = {
+  egg: { min: 0.8, max: 2, target: 1.2, searchRadius: 3, maxPerTile: 5 },
+  larva: { min: 3, max: 6, target: 4.5, searchRadius: 7, maxPerTile: 3 },
+  pupa: { min: 5, max: 9, target: 7, searchRadius: 9, maxPerTile: 3 },
+};
 
 // ==============================
 // NEW: SCENT HEATMAP BUFFERS (PERF FIRST)
@@ -1331,6 +1344,86 @@ function getTexture(x, y) {
   return (val === undefined || val === null) ? 0 : val;
 }
 
+function broodCountAtTile(gx, gy, stage = null) {
+  let count = 0;
+  const cs = CONSTANTS.CELL_SIZE;
+  for (const b of brood) {
+    const bx = Math.floor(b.x / cs);
+    const by = Math.floor(b.y / cs);
+    if (bx === gx && by === gy && (!stage || b.stage === stage)) count++;
+  }
+  return count;
+}
+
+function countNearbyBrood(gx, gy, radius, stage = null) {
+  const r2 = radius * radius;
+  let count = 0;
+  for (const b of brood) {
+    if (stage && b.stage !== stage) continue;
+    const bx = Math.floor(b.x / CONSTANTS.CELL_SIZE);
+    const by = Math.floor(b.y / CONSTANTS.CELL_SIZE);
+    const dx = bx - gx;
+    const dy = by - gy;
+    if ((dx * dx + dy * dy) <= r2) count++;
+  }
+  return count;
+}
+
+function findPlacementTile(stage, queenGx, queenGy) {
+  const prefs = BROOD_PLACEMENT[stage] || BROOD_PLACEMENT.larva;
+  const search = Math.ceil(prefs.searchRadius);
+  let best = null;
+  let bestScore = -Infinity;
+
+  for (let dy = -search; dy <= search; dy++) {
+    const gy = queenGy + dy;
+    if (gy < 0 || gy >= CONSTANTS.GRID_H) continue;
+    for (let dx = -search; dx <= search; dx++) {
+      const gx = queenGx + dx;
+      if (gx < 0 || gx >= CONSTANTS.GRID_W) continue;
+      const tile = getTile(gx, gy);
+      if (tile !== TILES.TUNNEL) continue;
+
+      const dist = Math.hypot(dx, dy);
+      const stageCount = broodCountAtTile(gx, gy, stage);
+      if (stageCount >= (prefs.maxPerTile || 3)) continue;
+
+      if (dist < 0.6) continue; // avoid stacking on the queen's exact tile
+
+      // Distance band preference
+      const bandCenter = prefs.target ?? ((prefs.min + prefs.max) / 2);
+      let score = Math.max(0, 6 - Math.abs(dist - bandCenter) * 3);
+      if (dist < prefs.min) score -= (prefs.min - dist) * 2.5;
+      if (dist > prefs.max) score -= (dist - prefs.max) * 2.0;
+
+      // Entrance avoidance
+      const distToEntrance = Math.hypot(gx - NEST_ENTRANCE.gx, gy - NEST_ENTRANCE.gy);
+      if (distToEntrance < 6) score -= (6 - distToEntrance) * 0.8;
+
+      // Waste penalty
+      if (wasteGrid && wasteGrid[gy]) {
+        const wasteAmt = wasteGrid[gy][gx] || 0;
+        score -= wasteAmt * 2.5;
+      }
+
+      // Traffic approximation: avoid strong food/home trails for brood storage
+      const traffic = Math.max(scentToFood?.[gy]?.[gx] || 0, scentToHome?.[gy]?.[gx] || 0);
+      score -= traffic * 0.5;
+
+      // Cluster with same stage nearby but avoid overcrowding
+      const nearbySame = countNearbyBrood(gx, gy, 2, stage);
+      score += Math.min(nearbySame, 3) * 0.5;
+
+      if (score > bestScore) {
+        bestScore = score;
+        best = { gx, gy };
+      }
+    }
+  }
+
+  return best;
+}
+
 function consumeStoredFood(amount) {
   const pulled = takeStoredFoodAnywhere(amount, "seed");
   return pulled >= amount;
@@ -1776,6 +1869,7 @@ class Ant {
     this.cleanTarget = null;
     this.carryingCorpse = false;
     this.carryingBrood = null;
+    this.broodDropTarget = null;
     this.broodTimer = 0;
 
     this.baseThreshold = 0.1 + Math.random() * 0.5;
@@ -2527,6 +2621,13 @@ class Ant {
       return this.angle + (Math.random() - 0.5) * 0.8;
     }
 
+    if (this.carryingBrood && this.broodDropTarget) {
+      const targetX = (this.broodDropTarget.gx + 0.5) * CONSTANTS.CELL_SIZE;
+      const targetY = (this.broodDropTarget.gy + 0.5) * CONSTANTS.CELL_SIZE;
+      const offset = Math.atan2(targetY - this.y, targetX - this.x);
+      return offset + (Math.random() - 0.5) * 0.25;
+    }
+
     if (this.role === "nurse") {
       const queen = getQueen(worldState);
       const preferredRadius = Math.max(QUEEN_RADIUS_PX, 80);
@@ -2780,79 +2881,100 @@ class Ant {
 
     if (this.role === "nurse") {
       const queen = getQueen(worldState);
-      
+      const cs = CONSTANTS.CELL_SIZE;
+
       // 1. CHECK FOR HUNGRY BROOD TO FEED (Priority)
       // Only feed if nurse has energy in social stomach (> 30)
       if (this.energy > 30) {
-        // Simple collision check with brood
-        const feedDist = CONSTANTS.CELL_SIZE;
+        const feedDist = cs;
         const hungryBrood = worldState.brood?.find(b => {
-           return b.stage === "larva" && b.isHungry &&
+           return b.stage === "larva" && b.needsFood &&
                   Math.abs(b.x - this.x) < feedDist &&
                   Math.abs(b.y - this.y) < feedDist;
         });
 
         if (hungryBrood) {
-          // Perform Trophallaxis (Nurse -> Larva)
           const cost = BroodSystem.getNurseEnergyCost();
           this.energy -= cost;
           BroodSystem.feedBrood(hungryBrood, addWasteAtWorldPos);
-          
-          // Visual feedback
+
           trophallaxisEvents.push({
             x1: this.x, y1: this.y,
             x2: hungryBrood.x, y2: hungryBrood.y,
-            amount: 20, life: trophallaxisLife(0.3)
+            amount: 28, life: trophallaxisLife(0.5)
           });
-          
-          // Stop moving for a moment to feed
-          this.stuckT = -0.5; 
+
+          this.stuckT = -0.5;
         }
       }
 
-      // 2. EXISTING CARRYING LOGIC (Secondary)
       if (queen) {
-        const dx = queen.x - this.x;
-        const dy = queen.y - this.y;
-        const distTiles = Math.hypot(dx, dy) / CONSTANTS.CELL_SIZE;
+        const queenGx = Math.floor(queen.x / cs);
+        const queenGy = Math.floor(queen.y / cs);
+        const larvaCrowding = countNearbyBrood(queenGx, queenGy, 2.5, "larva");
 
-        if (!this.carryingBrood && distTiles < 4) {
-          const broodHere = worldState.brood?.find((b) => {
-            const bx = Math.floor(b.x / CONSTANTS.CELL_SIZE);
-            const by = Math.floor(b.y / CONSTANTS.CELL_SIZE);
-            return bx === gx && by === gy && (!b.lockedBy || b.lockedBy === this);
-          });
+        const broodHere = worldState.brood?.find((b) => {
+          const bx = Math.floor(b.x / cs);
+          const by = Math.floor(b.y / cs);
+          return bx === gx && by === gy && (!b.lockedBy || b.lockedBy === this);
+        });
 
-          if (broodHere) {
-            this.carryingBrood = broodHere;
-            broodHere.lockedBy = this;
-            this.broodTimer = 2.0;
-          }
+        const shouldPickupBrood = (b) => {
+          const prefs = BROOD_PLACEMENT[b.stage] || BROOD_PLACEMENT.larva;
+          const distTiles = Math.hypot(b.x - queen.x, b.y - queen.y) / cs;
+
+          if (b.stage === "larva" && b.needsFood) return true;
+          if (b.stage === "larva" && larvaCrowding > prefs.maxPerTile + 1 && distTiles < prefs.min + 0.5) return true;
+
+          if (distTiles < prefs.min - 0.1) return true;
+          if (distTiles > prefs.max + 0.6) return true;
+
+          return false;
+        };
+
+        if (!this.carryingBrood && broodHere && shouldPickupBrood(broodHere)) {
+          this.carryingBrood = broodHere;
+          broodHere.lockedBy = this;
+          this.broodTimer = 2.0;
+          this.broodDropTarget = findPlacementTile(broodHere.stage, queenGx, queenGy) || null;
         }
 
         if (this.carryingBrood) {
           BroodSystem.updateBroodPos(this.carryingBrood, this.x, this.y);
 
+          if (!this.broodDropTarget || broodCountAtTile(this.broodDropTarget.gx, this.broodDropTarget.gy, this.carryingBrood.stage) >= (BROOD_PLACEMENT[this.carryingBrood.stage]?.maxPerTile || 3)) {
+            this.broodDropTarget = findPlacementTile(this.carryingBrood.stage, queenGx, queenGy) || this.broodDropTarget;
+          }
+
           if (this.broodTimer > 0) this.broodTimer -= 0.016;
 
-          // BIOLOGY TWEAK: Nurses move brood to optimal temperature/humidity zones.
-          // In this sim, that's a ring around the queen.
-          const inDropRing = distTiles >= 3 && distTiles <= 7;
-          
-          // Don't drop if there's no pheromone marker (keep it tidy)
-          const dropChance = inDropRing && Math.random() < 0.05 && this.broodTimer <= 0;
-          const wanderedTooFar = distTiles > 12;
+          const target = this.broodDropTarget;
+          if (target) {
+            const targetX = (target.gx + 0.5) * cs;
+            const targetY = (target.gy + 0.5) * cs;
+            const dist = Math.hypot(targetX - this.x, targetY - this.y);
+            const crowded = broodCountAtTile(target.gx, target.gy, this.carryingBrood.stage) >= (BROOD_PLACEMENT[this.carryingBrood.stage]?.maxPerTile || 3);
+            const reachedTile = gx === target.gx && gy === target.gy;
 
-          if (dropChance || wanderedTooFar) {
+            if (dist < cs * 0.6 && reachedTile && !crowded && this.broodTimer <= 0) {
+              BroodSystem.updateBroodPos(this.carryingBrood, targetX, targetY);
+              delete this.carryingBrood.lockedBy;
+              this.carryingBrood = null;
+              this.broodDropTarget = null;
+              this.broodTimer = 0;
+            } else if (crowded) {
+              this.broodDropTarget = findPlacementTile(this.carryingBrood.stage, queenGx, queenGy) || null;
+            }
+          } else if (this.broodTimer <= 0) {
             delete this.carryingBrood.lockedBy;
             this.carryingBrood = null;
             this.broodTimer = 0;
-
-            if (wanderedTooFar) {
-              this.angle += Math.PI; // Turn back
-            }
           }
         }
+      } else if (this.carryingBrood && this.broodTimer <= 0) {
+        delete this.carryingBrood.lockedBy;
+        this.carryingBrood = null;
+        this.broodDropTarget = null;
       }
     }
 
@@ -3627,7 +3749,7 @@ function loop(t) {
 
   const fps = Math.round(1 / Math.max(dt, 0.00001));
   statsDisplay.innerHTML =
-    `<span class="dim">Ants</span>: ${ants.length} &nbsp;|&nbsp; <span class="dim">Brood</span>: ${worldState.brood?.length ?? 0} &nbsp;|&nbsp; <span class="dim">Food</span>: ${foodInStorage.toFixed(1)} &nbsp;|&nbsp; <span class="dim">Waste</span>: ${wasteTotal.toFixed(1)} &nbsp;|&nbsp; <span class="dim">FPS</span>: ${fps}`;
+    `<span class="dim">Ants</span>: ${ants.length} &nbsp;|&nbsp; <span class="dim">Brood</span>: ${worldState.brood?.length ?? 0} &nbsp;|&nbsp; <span class="dim">Nursery P</span>: ${ColonyState.getNurseryPressure().toFixed(2)} &nbsp;|&nbsp; <span class="dim">Food</span>: ${foodInStorage.toFixed(1)} &nbsp;|&nbsp; <span class="dim">Waste</span>: ${wasteTotal.toFixed(1)} &nbsp;|&nbsp; <span class="dim">FPS</span>: ${fps}`;
 }
 
 // ==============================
