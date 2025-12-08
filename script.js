@@ -3340,7 +3340,11 @@ class Ant {
       }
     }
 
-    if (!this.carrying && foodGrid[gy][gx] > 0) {
+    const queenObjective = worldState?.objectives?.queenChamber;
+    const queenChamberPriority = !!(queenObjective?.priority && queenObjective.status !== "ready");
+    const canForageLooseFood = !queenChamberPriority || this.role === "forager";
+
+    if (!this.carrying && canForageLooseFood && foodGrid[gy][gx] > 0) {
       foodGrid[gy][gx]--;
       this.carrying = { type: "seed", amount: 1 };
       this.returnDir = this.angle + Math.PI;
