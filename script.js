@@ -138,8 +138,6 @@ NEST_ENTRANCE.y = ENTRANCE.y;
 const QUEEN_RADIUS_PX = CONFIG.queenRadius * CONSTANTS.CELL_SIZE;
 const QUEEN_RADIUS_PX2 = QUEEN_RADIUS_PX * QUEEN_RADIUS_PX;
 
-const TILES = { GRASS: 0, SOIL: 1, TUNNEL: 2, BEDROCK: 3 };
-
 const BROOD_PLACEMENT = {
   egg: { min: 0.8, max: 2, target: 1.2, searchRadius: 3, maxPerTile: 5 },
   larva: { min: 3, max: 6, target: 4.5, searchRadius: 7, maxPerTile: 3 },
