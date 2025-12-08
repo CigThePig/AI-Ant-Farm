@@ -1687,8 +1687,6 @@ function decayAndDiffusePantryScent() {
 }
 
 function updatePantryCenter(pantry) {
-
-function updatePantryCenter(pantry) {
   if (!pantry || !pantry.tiles) return;
   let sumX = 0, sumY = 0, count = 0;
   for (const key of pantry.tiles) {
