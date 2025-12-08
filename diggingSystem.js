@@ -30,6 +30,8 @@ const DiggingSystem = (() => {
     digDamage: 1.0,
   };
 
+  const clamp01 = (v) => Math.max(0, Math.min(1, v));
+
   let width = 0;
   let height = 0;
   let regionSplit = 0;
@@ -274,6 +276,61 @@ const DiggingSystem = (() => {
     return best ? { anchor: best, center, targetRadius } : null;
   }
 
+  function findPantryFrontier(pantry, center, grid, queen) {
+    if (!pantry || !pantry.tiles?.size || !center || !grid) return null;
+
+    const radius = CONFIG?.pantryDigRadius ?? SETTINGS.sampleRadius;
+    const radius2 = radius * radius;
+    let best = null;
+    let bestScore = -Infinity;
+
+    const queenGx = queen ? Math.floor(queen.x / cellSize) : null;
+    const queenGy = queen ? Math.floor(queen.y / cellSize) : null;
+
+    for (const key of pantry.tiles) {
+      const gx = key % width;
+      const gy = Math.floor(key / width);
+
+      const dxCenter = gx - center.gx;
+      const dyCenter = gy - center.gy;
+      if (dxCenter * dxCenter + dyCenter * dyCenter > radius2) continue;
+
+      const neighbors = [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ];
+
+      for (const [ox, oy] of neighbors) {
+        const nx = gx + ox;
+        const ny = gy + oy;
+        if (nx <= 0 || nx >= width - 1 || ny <= regionSplit || ny >= height - 1) continue;
+        if (!frontierMask[ny]?.[nx] || grid[ny]?.[nx] !== TILES.SOIL) continue;
+
+        const distCenter = Math.hypot(nx - center.gx, ny - center.gy);
+        const ringScore = clamp01(1 - Math.abs(distCenter - radius * 0.55) / Math.max(1, radius * 0.8));
+        const tunnelNeighbors = countTunnelNeighbors4(nx, ny, grid);
+        const edgeBonus = tunnelNeighbors <= 1 ? 1.1 : tunnelNeighbors === 2 ? 0.7 : 0.2;
+
+        let queenPenalty = 0;
+        if (queenGx !== null && queenGy !== null) {
+          const qd = Math.hypot(nx - queenGx, ny - queenGy);
+          const buffer = CONFIG?.pantryQueenBuffer ?? 3.5;
+          queenPenalty = clamp01(Math.max(0, buffer - qd) / Math.max(1, buffer)) * 0.7;
+        }
+
+        const score = ringScore * 1.2 + edgeBonus - queenPenalty + Math.random() * 0.05;
+        if (score > bestScore) {
+          bestScore = score;
+          best = { anchor: { x: nx, y: ny }, center, radius };
+        }
+      }
+    }
+
+    return best;
+  }
+
   function findCorridorFrontierTarget(start, center, grid) {
     if (!start || !center || !grid) return null;
     const maxSteps = Math.max(40, Math.abs(center.gy - start.gy) + Math.abs(center.gx - start.gx));
@@ -383,6 +440,7 @@ const DiggingSystem = (() => {
 
     let queenPlan = null;
     let nurseryPlan = null;
+    let pantryPlan = null;
     if (prioritizeQueen && queenObjective?.center) {
       const center = queenObjective.center || world.queenChamber?.centerGxGy;
       const radius = queenObjective.radiusTiles || world.queenChamber?.radiusTiles || CONFIG.queenChamberRadiusTiles || 4;
@@ -437,6 +495,48 @@ const DiggingSystem = (() => {
         headingVec = { x: dirX / mag, y: dirY / mag };
         headingStrength = Math.max(headingStrength, 0.55);
         digMode = ant.digMode || digMode;
+      }
+    }
+
+    const pantryPressures = (typeof ColonyState !== "undefined" && ColonyState.getPantryPressureByType)
+      ? ColonyState.getPantryPressureByType()
+      : null;
+    const pantryPressure = (typeof ColonyState !== "undefined" && ColonyState.getPantryPressure)
+      ? ColonyState.getPantryPressure()
+      : 0;
+    const pantryPressureThreshold = CONFIG?.pantryPressureDigThreshold ?? 0.55;
+    const pantryReady = queenObjective?.status === "ready" && queen && queen.state === "SETTLED";
+    const canExpandPantry = pantryReady && pantryPressure > pantryPressureThreshold && wastePressure < 0.95;
+    if (!queenPlan && !nurseryPlan && canExpandPantry && pantryPressures) {
+      let targetType = null;
+      let bestPressure = pantryPressureThreshold;
+      for (const [type, pressure] of Object.entries(pantryPressures)) {
+        if (pressure > bestPressure) {
+          bestPressure = pressure;
+          targetType = type;
+        }
+      }
+
+      const pantry = targetType ? world.pantries?.[targetType] : null;
+      const pantryCenter = pantry?.center || null;
+      if (pantry && pantryCenter) {
+        const pick = findPantryFrontier(pantry, pantryCenter, world.grid, queen);
+        if (pick) {
+          pantryPlan = pick;
+          const radius = CONFIG?.pantryRoomRadius ?? 2.8;
+          const budget = CONFIG?.pantryRoomDigBudget ?? Math.max(6, Math.round(Math.PI * radius * radius * 0.55));
+          ant.digMode = "room";
+          ant.roomCenter = { x: pick.anchor.x, y: pick.anchor.y };
+          ant.roomRadius = radius;
+          ant.roomDigBudget = Math.max(ant.roomDigBudget || 0, budget);
+          ant.roomDug = 0;
+          const dirX = pick.anchor.x - cgx;
+          const dirY = pick.anchor.y - cgy;
+          const mag = Math.hypot(dirX, dirY) || 1;
+          headingVec = { x: dirX / mag, y: dirY / mag };
+          headingStrength = Math.max(headingStrength, 0.6);
+          digMode = ant.digMode || digMode;
+        }
       }
     }
 
@@ -506,6 +606,20 @@ const DiggingSystem = (() => {
         searchRadius += 2;
         candidates = collectFrontierCandidates(anchorX, anchorY, searchRadius, world.grid);
       }
+    } else if (pantryPlan) {
+      searchRadius = Math.max(CONFIG?.pantryDigRadius ?? SETTINGS.sampleRadius, SETTINGS.sampleRadius);
+      const anchorX = pantryPlan.anchor.x;
+      const anchorY = pantryPlan.anchor.y;
+      candidates = collectFrontierCandidates(anchorX, anchorY, searchRadius, world.grid);
+      candidates = candidates.filter((t) => {
+        const dx = t.x - pantryPlan.center.gx;
+        const dy = t.y - pantryPlan.center.gy;
+        return Math.hypot(dx, dy) <= pantryPlan.radius + 2;
+      });
+      while (!candidates.length && searchRadius < SETTINGS.maxSampleRadius) {
+        searchRadius += 2;
+        candidates = collectFrontierCandidates(anchorX, anchorY, searchRadius, world.grid);
+      }
     } else {
       candidates = collectFrontierCandidates(cgx, cgy, searchRadius, world.grid);
       while (!candidates.length && searchRadius < SETTINGS.maxSampleRadius) {
@@ -527,6 +641,9 @@ const DiggingSystem = (() => {
         candidates = collectFrontierCandidates(cgx, cgy, Math.min(SETTINGS.maxSampleRadius, searchRadius + SETTINGS.sampleRadiusStep), world.grid);
       }
       if ((!candidates || !candidates.length) && nurseryPlan) {
+        candidates = collectFrontierCandidates(cgx, cgy, Math.min(SETTINGS.maxSampleRadius, searchRadius + SETTINGS.sampleRadiusStep), world.grid);
+      }
+      if ((!candidates || !candidates.length) && pantryPlan) {
         candidates = collectFrontierCandidates(cgx, cgy, Math.min(SETTINGS.maxSampleRadius, searchRadius + SETTINGS.sampleRadiusStep), world.grid);
       }
       if (!candidates || !candidates.length) return null;
