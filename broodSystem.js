@@ -10,6 +10,7 @@ const BroodSystem = (() => {
     // Stage durations (scaffolding for future egg/pupa transitions)
     eggDuration: 6,
     pupaDuration: 8,
+    larvaToPupaCondition: 10, // seconds of fed growth needed
 
     // BIOLOGY TWEAK: Larvae can survive longer without food,
     // but they stop growing when hungry.
@@ -77,8 +78,8 @@ const BroodSystem = (() => {
       age: 0,
       timeToMature: base * jitterScale,
 
-      // Stage tracking (spawn as larva to preserve current behavior)
-      stage: STAGES.LARVA,
+      // Stage tracking
+      stage: STAGES.EGG,
       stageTimers: {
         egg: 0,
         larva: 0,
@@ -89,8 +90,12 @@ const BroodSystem = (() => {
         pupa: SETTINGS.pupaDuration,
       },
 
+      larvaGrowth: 0,
+      larvaGrowthNeeded: SETTINGS.larvaToPupaCondition,
+
       // State
       isHungry: false,
+      needsFood: false,
       hungerTimer: 0, // Time spent starving
       satiationTimer: SETTINGS.satiationDuration, // Born full
     });
@@ -107,6 +112,7 @@ const BroodSystem = (() => {
 
     // Reset hunger
     b.isHungry = false;
+    b.needsFood = false;
     b.hungerTimer = 0;
     b.satiationTimer = SETTINGS.satiationDuration;
     
@@ -150,60 +156,98 @@ const BroodSystem = (() => {
       if (!b.stageDurations) {
         b.stageDurations = { egg: SETTINGS.eggDuration, pupa: SETTINGS.pupaDuration };
       }
+      if (typeof b.larvaGrowth !== "number") b.larvaGrowth = Math.max(0, b.age || 0);
+      if (typeof b.larvaGrowthNeeded !== "number") {
+        const fallback = Math.max(SETTINGS.baseMaturationTime - (SETTINGS.eggDuration + SETTINGS.pupaDuration), SETTINGS.larvaToPupaCondition);
+        b.larvaGrowthNeeded = fallback;
+      }
       if (typeof b.satiationTimer !== "number") b.satiationTimer = SETTINGS.satiationDuration;
       if (typeof b.hungerTimer !== "number") b.hungerTimer = 0;
       if (typeof b.age !== "number") b.age = 0;
       if (typeof b.timeToMature !== "number") b.timeToMature = SETTINGS.baseMaturationTime;
       if (typeof b.isHungry !== "boolean") b.isHungry = false;
+      if (typeof b.needsFood !== "boolean") b.needsFood = false;
+
+      // Always track total age
+      b.age += dt;
 
       // Track time spent in the current stage
       if (b.stageTimers[b.stage] !== undefined) {
         b.stageTimers[b.stage] += dt;
       }
 
-      if (b.stage === STAGES.LARVA) {
-        // Digestion / Hunger Logic (larvae only)
-        if (b.satiationTimer > 0) {
-          b.satiationTimer -= dt;
-          // Only grow when fed
-          b.age += dt;
-        } else {
-          b.isHungry = true;
-          b.hungerTimer += dt;
+      switch (b.stage) {
+        case STAGES.EGG: {
+          b.isHungry = false;
+          b.needsFood = false;
+          b.hungerTimer = 0;
+
+          if (b.stageTimers.egg >= b.stageDurations.egg) {
+            b.stage = STAGES.LARVA;
+            b.stageTimers.larva = 0;
+            b.isHungry = false;
+            b.needsFood = false;
+            b.hungerTimer = 0;
+            b.satiationTimer = SETTINGS.satiationDuration;
+          }
+          break;
         }
+        case STAGES.LARVA: {
+          // Digestion / Hunger Logic (larvae only)
+          if (b.satiationTimer > 0) {
+            b.satiationTimer = Math.max(0, b.satiationTimer - dt);
+            b.isHungry = false;
+            b.needsFood = false;
+            // Only grow when fed
+            b.larvaGrowth += dt;
+          } else {
+            b.isHungry = true;
+            b.needsFood = true;
+            b.hungerTimer += dt;
+          }
 
-        // Starvation Death
-        if (b.hungerTimer > SETTINGS.starvationTime) {
-          // Larva dies and turns into waste
-          if (addWaste) addWaste(b.x, b.y, 0.5);
-          list.splice(i, 1);
-          continue;
+          // Starvation Death
+          if (b.hungerTimer > SETTINGS.starvationTime) {
+            // Larva dies and turns into waste
+            if (addWaste) addWaste(b.x, b.y, 0.5);
+            list.splice(i, 1);
+            continue;
+          }
+
+          if (b.larvaGrowth >= b.larvaGrowthNeeded) {
+            b.stage = STAGES.PUPA;
+            b.stageTimers.pupa = 0;
+            b.isHungry = false;
+            b.needsFood = false;
+            b.hungerTimer = 0;
+          }
+          break;
         }
-      } else {
-        // Non-larval stages shouldn't be hungry
-        b.isHungry = false;
-        b.hungerTimer = 0;
+        case STAGES.PUPA: {
+          b.isHungry = false;
+          b.needsFood = false;
+          b.hungerTimer = 0;
 
-        // Non-larval stages progress without needing food
-        b.age += dt;
-      }
-
-      // Maturation
-      if (b.age >= b.timeToMature) {
-        hatched.push(b);
-        list.splice(i, 1);
-        continue;
+          if (b.stageTimers.pupa >= b.stageDurations.pupa) {
+            hatched.push(b);
+            list.splice(i, 1);
+            continue;
+          }
+          break;
+        }
+        default:
+          break;
       }
 
       // Pheromone Signalling (Begging for food)
-      if (b.stage === STAGES.LARVA && broodScentGrid && !b.lockedBy && b.isHungry) {
+      if (b.stage === STAGES.LARVA && broodScentGrid && !b.lockedBy) {
         const gx = Math.floor(b.x / world.constants.CELL_SIZE);
         const gy = Math.floor(b.y / world.constants.CELL_SIZE);
 
         if (gx >= 0 && gx < world.constants.GRID_W && gy >= 0 && gy < world.constants.GRID_H) {
            // The hungrier they are, the louder they scream (chemically)
-           const urgency = Math.min(1.0, b.hungerTimer / (SETTINGS.starvationTime * 0.5));
-           broodScentGrid[gy][gx] = Math.min(1.0, broodScentGrid[gy][gx] + 0.05 + urgency * 0.1);
+           const urgency = b.isHungry ? Math.min(1.0, b.hungerTimer / (SETTINGS.starvationTime * 0.5)) : 0.2;
+           broodScentGrid[gy][gx] = Math.min(1.0, broodScentGrid[gy][gx] + 0.02 + urgency * 0.1);
         }
       }
     }

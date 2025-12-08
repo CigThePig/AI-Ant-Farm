@@ -238,6 +238,42 @@ const DiggingSystem = (() => {
     return null;
   }
 
+  function findNurseryFrontier(center, bandInner, bandOuter, grid, wasteGrid) {
+    if (!center || !grid) return null;
+    const searchRadius = Math.max(bandOuter + 6, SETTINGS.sampleRadius);
+    let candidates = collectFrontierCandidates(center.gx, center.gy, searchRadius, grid);
+    if (!candidates.length) return null;
+
+    const targetRadius = bandOuter + 1.5;
+    const minRadius = Math.max(1, bandInner - 1);
+    const maxRadius = bandOuter + 4;
+
+    let best = null;
+    let bestScore = -Infinity;
+    for (const tile of candidates) {
+      const dx = tile.x - center.gx;
+      const dy = tile.y - center.gy;
+      const dist = Math.hypot(dx, dy);
+      if (dist < minRadius || dist > maxRadius) continue;
+
+      const ringDelta = Math.abs(dist - targetRadius);
+      const neighborCount = countTunnelNeighbors4(tile.x, tile.y, grid);
+      const neighborBonus = neighborCount === 1 ? 0.8 : neighborCount === 2 ? 0.45 : -0.5;
+      const entranceDist = Math.hypot(tile.x - NEST_ENTRANCE.gx, tile.y - NEST_ENTRANCE.gy);
+      const entrancePenalty = 0.4 / Math.max(1, entranceDist);
+      const wastePenalty = wasteGrid?.[tile.y]?.[tile.x] ?? 0;
+      const depthBonus = Math.max(0, (tile.y - regionSplit) / Math.max(1, height - regionSplit)) * 0.3;
+
+      const score = -ringDelta * 0.9 + neighborBonus - entrancePenalty - wastePenalty * 0.35 + depthBonus;
+      if (score > bestScore) {
+        bestScore = score;
+        best = tile;
+      }
+    }
+
+    return best ? { anchor: best, center, targetRadius } : null;
+  }
+
   function findCorridorFrontierTarget(start, center, grid) {
     if (!start || !center || !grid) return null;
     const maxSteps = Math.max(40, Math.abs(center.gy - start.gy) + Math.abs(center.gx - start.gx));
@@ -307,6 +343,9 @@ const DiggingSystem = (() => {
     const broodPressure = (typeof ColonyState !== "undefined" && ColonyState.getBroodPressure)
       ? ColonyState.getBroodPressure()
       : 0.0;
+    const nurseryPressure = (typeof ColonyState !== "undefined" && ColonyState.getNurseryPressure)
+      ? ColonyState.getNurseryPressure()
+      : 0.0;
     if (spacePressure < 0.05) return null;
 
     const queen = (typeof getQueen === "function") ? getQueen(world) : null;
@@ -317,6 +356,11 @@ const DiggingSystem = (() => {
     const queenPending = queenObjective && queenObjective.status !== "ready";
     const queenUnsettled = queen && (queen.state === "FOUNDING_SURFACE" || queen.state === "RELOCATING");
     const prioritizeQueen = queenPending || queenUnsettled;
+
+    const nurseryReady = queenObjective?.status === "ready" && !queenUnsettled;
+    const bandInner = CONFIG?.nurseryBandInner ?? 3;
+    const bandOuter = CONFIG?.nurseryBandOuter ?? 6;
+    const nurseryDigThreshold = CONFIG?.nurseryPressureDigThreshold ?? 0.35;
 
     let digMode = ant.digMode || "corridor";
     if (digMode === "room" && (!ant.roomCenter || ant.roomDigBudget <= 0)) {
@@ -338,6 +382,7 @@ const DiggingSystem = (() => {
     const cgy = Math.floor(ant.y / cellSize);
 
     let queenPlan = null;
+    let nurseryPlan = null;
     if (prioritizeQueen && queenObjective?.center) {
       const center = queenObjective.center || world.queenChamber?.centerGxGy;
       const radius = queenObjective.radiusTiles || world.queenChamber?.radiusTiles || CONFIG.queenChamberRadiusTiles || 4;
@@ -372,8 +417,32 @@ const DiggingSystem = (() => {
       }
     }
 
+    if (!queenPlan && nurseryReady && nurseryPressure > nurseryDigThreshold && wastePressure < 0.8) {
+      const center = queen
+        ? { gx: Math.floor(queen.x / cellSize), gy: Math.floor(queen.y / cellSize) }
+        : queenObjective?.center;
+      const pick = center ? findNurseryFrontier(center, bandInner, bandOuter, world.grid, world.wasteGrid) : null;
+      if (pick) {
+        nurseryPlan = pick;
+        const radius = CONFIG?.nurseryRoomRadius ?? 2.6;
+        const budget = CONFIG?.nurseryRoomDigBudget ?? Math.max(6, Math.round(Math.PI * radius * radius * 0.6));
+        ant.digMode = "room";
+        ant.roomCenter = { x: pick.anchor.x, y: pick.anchor.y };
+        ant.roomRadius = radius;
+        ant.roomDigBudget = Math.max(ant.roomDigBudget || 0, budget);
+        ant.roomDug = 0;
+        const dirX = pick.anchor.x - cgx;
+        const dirY = pick.anchor.y - cgy;
+        const mag = Math.hypot(dirX, dirY) || 1;
+        headingVec = { x: dirX / mag, y: dirY / mag };
+        headingStrength = Math.max(headingStrength, 0.55);
+        digMode = ant.digMode || digMode;
+      }
+    }
+
     const shouldStartRoom =
       !queenPlan &&
+      !nurseryPlan &&
       digMode !== "room" &&
       ant.roomCooldown <= 0 &&
       ant.digIdleTime >= (CONFIG?.roomModeStuckTime ?? 6) &&
@@ -422,6 +491,21 @@ const DiggingSystem = (() => {
           return dx * dx + dy * dy <= radius2;
         });
       }
+    } else if (nurseryPlan) {
+      searchRadius = Math.max(bandOuter + 5, SETTINGS.sampleRadius);
+      const anchorX = nurseryPlan.anchor.x;
+      const anchorY = nurseryPlan.anchor.y;
+      candidates = collectFrontierCandidates(anchorX, anchorY, searchRadius, world.grid);
+      candidates = candidates.filter((t) => {
+        const dx = t.x - nurseryPlan.center.gx;
+        const dy = t.y - nurseryPlan.center.gy;
+        const dist = Math.hypot(dx, dy);
+        return dist >= bandInner - 1 && dist <= bandOuter + 4;
+      });
+      while (!candidates.length && searchRadius < SETTINGS.maxSampleRadius) {
+        searchRadius += 2;
+        candidates = collectFrontierCandidates(anchorX, anchorY, searchRadius, world.grid);
+      }
     } else {
       candidates = collectFrontierCandidates(cgx, cgy, searchRadius, world.grid);
       while (!candidates.length && searchRadius < SETTINGS.maxSampleRadius) {
@@ -440,6 +524,9 @@ const DiggingSystem = (() => {
 
     if (!candidates || !candidates.length) {
       if (queenPlan) {
+        candidates = collectFrontierCandidates(cgx, cgy, Math.min(SETTINGS.maxSampleRadius, searchRadius + SETTINGS.sampleRadiusStep), world.grid);
+      }
+      if ((!candidates || !candidates.length) && nurseryPlan) {
         candidates = collectFrontierCandidates(cgx, cgy, Math.min(SETTINGS.maxSampleRadius, searchRadius + SETTINGS.sampleRadiusStep), world.grid);
       }
       if (!candidates || !candidates.length) return null;
