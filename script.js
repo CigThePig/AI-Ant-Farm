@@ -2710,11 +2710,6 @@ class Ant {
           this.state = "SETTLED";
           this.path = null;
           this.pathIndex = 0;
-          worldState.foundingMode = false;
-          if (worldState?.objectives?.queenChamber) {
-            worldState.objectives.queenChamber.priority = false;
-            worldState.objectives.queenChamber.status = "ready";
-          }
         } else if (!this.path || this.path.length === 0) {
           this.state = qgy < CONSTANTS.REGION_SPLIT ? "FOUNDING_SURFACE" : this.state;
         }
