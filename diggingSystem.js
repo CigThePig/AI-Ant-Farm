@@ -395,7 +395,11 @@ const DiggingSystem = (() => {
 
   function chooseDigTarget(ant, world) {
     if (ant.carrying || ant.role !== "digger") return null;
-    if (ant.y < regionSplit * cellSize) return null;
+
+    const aboveSplit = ant.y < regionSplit * cellSize;
+    const anchor = world?.digStart;
+    const effectiveX = aboveSplit ? (anchor?.x ?? ant.x) : ant.x;
+    const effectiveY = aboveSplit ? (anchor?.y ?? ant.y) : ant.y;
 
     const frontier = world.frontierTiles;
     const airField = world.airLevels;
@@ -416,8 +420,8 @@ const DiggingSystem = (() => {
     if (spacePressure < 0.05) return null;
 
     const queen = (typeof getQueen === "function") ? getQueen(world) : null;
-    const qx = queen ? queen.x : ant.x;
-    const qy = queen ? queen.y : ant.y;
+    const qx = queen ? queen.x : effectiveX;
+    const qy = queen ? queen.y : effectiveY;
 
     const queenObjective = world?.objectives?.queenChamber;
     const queenPending = queenObjective && queenObjective.status !== "ready";
@@ -459,8 +463,8 @@ const DiggingSystem = (() => {
       return { x: dx / mag, y: dy / mag };
     };
 
-    const cgx = Math.floor(ant.x / cellSize);
-    const cgy = Math.floor(ant.y / cellSize);
+    const cgx = Math.floor(effectiveX / cellSize);
+    const cgy = Math.floor(effectiveY / cellSize);
 
     let queenPlan = null;
     let nurseryPlan = null;
@@ -696,7 +700,7 @@ const DiggingSystem = (() => {
       const nestDist = Math.hypot(tx - qx, ty - qy);
       const nestPenalty = 1 + nestDist / (cellSize * 10);
 
-      const antDist = Math.hypot(tx - ant.x, ty - ant.y);
+      const antDist = Math.hypot(tx - effectiveX, ty - effectiveY);
       const antPenalty = 1 + antDist / (cellSize * 4);
 
       const noise = Math.random() * 0.05;
