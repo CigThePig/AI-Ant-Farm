@@ -268,18 +268,35 @@ const ExcavationPlanner = (() => {
     return connectsToTip;
   }
 
-  function tooCloseToOtherTunnels(nx, ny, tipX, tipY, grid) {
-    for (let dy = -2; dy <= 2; dy++) {
-      for (let dx = -2; dx <= 2; dx++) {
-        const cx = nx + dx;
-        const cy = ny + dy;
-        if (grid?.[cy]?.[cx] !== TILES.TUNNEL) continue;
-        if (cx === tipX && cy === tipY) continue;
-        return true;
+    function tooCloseToOtherTunnels(nx, ny, tipX, tipY, grid) {
+      const dirX = nx - tipX;
+      const dirY = ny - tipY;
+
+      for (let dy = -2; dy <= 2; dy++) {
+        for (let dx = -2; dx <= 2; dx++) {
+          const cx = nx + dx;
+          const cy = ny + dy;
+          if (grid?.[cy]?.[cx] !== TILES.TUNNEL) continue;
+
+          // Ignore the current tip and tunnels immediately touching the tip since those
+          // are part of the active corridor being extended.
+          if (cx === tipX && cy === tipY) continue;
+          if (Math.max(Math.abs(cx - tipX), Math.abs(cy - tipY)) === 1) continue;
+
+          // Also ignore up to two tiles directly behind the tip along the current heading
+          // so the corridor can keep advancing without tripping its own proximity check.
+          if (
+            (cx === tipX - dirX && cy === tipY - dirY) ||
+            (cx === tipX - 2 * dirX && cy === tipY - 2 * dirY)
+          ) {
+            continue;
+          }
+
+          return true;
+        }
       }
+      return false;
     }
-    return false;
-  }
 
   function randomCooldown() {
     return Math.floor(8 + Math.random() * 7);
