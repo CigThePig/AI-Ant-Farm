@@ -253,6 +253,7 @@ function isSolid(t) { return t === TILES.SOIL || t === TILES.BEDROCK; }
 
 AirSystem.init(CONSTANTS);
 DiggingSystem.init(CONSTANTS);
+if (typeof ExcavationPlanner !== "undefined") ExcavationPlanner.init(CONSTANTS);
 
 function drawEdgesForCell(gx, gy, grid) {
   const t = grid[gy][gx];
@@ -2030,6 +2031,7 @@ function resetSimulation() {
   initQueenChamberObjective(worldState);
   AirSystem.reset(worldState);
   DiggingSystem.reset(worldState);
+  if (typeof ExcavationPlanner !== "undefined") ExcavationPlanner.reset(worldState);
   BroodSystem.reset(worldState);
   brood = BroodSystem.getBrood();
   worldState.brood = brood;
@@ -4054,6 +4056,7 @@ function loop(t) {
   ColonyState.updateColonyState(worldState, ants);
 
   DiggingSystem.updateFrontierTiles(worldState);
+  if (typeof ExcavationPlanner !== "undefined") ExcavationPlanner.update(worldState, dt);
   updateQueenChamberObjective(worldState);
   updateQueenRelocation(worldState);
 

@@ -569,6 +569,8 @@ const DiggingSystem = (() => {
       }
     }
 
+    const currentPlan = queenPlan;
+
     if (headingVec) {
       headingVec = makeUnitVector(headingVec.x, headingVec.y, { x: 1, y: 0 }, "heading-normalize");
     }
@@ -597,6 +599,19 @@ const DiggingSystem = (() => {
       ant.roomDug = 0;
       ant.digIdleTime = 0;
       digMode = "room";
+    }
+
+    if (
+      digMode === "corridor" &&
+      !currentPlan &&
+      !nurseryPlan &&
+      !pantryPlan &&
+      typeof ExcavationPlanner !== "undefined"
+    ) {
+      const planned = ExcavationPlanner.requestDigTarget(ant, world, { reason: "free-dig" });
+      if (planned && planned.x !== undefined) {
+        return { x: planned.x, y: planned.y, mode: "corridor", workfaceId: planned.workfaceId };
+      }
     }
 
     const pressureBoost = 0.6 + spacePressure * 1.4;
@@ -936,6 +951,8 @@ const DiggingSystem = (() => {
     digPheromone[gy][gx] = 0;
     frontierMask[gy][gx] = 0;
 
+    const meta = ant.digTarget ? { workfaceId: ant.digTarget.workfaceId } : null;
+
     ant.digIdleTime = 0;
     if (ant.digMode === "room") {
       ant.roomDug = (ant.roomDug || 0) + 1;
@@ -985,6 +1002,10 @@ const DiggingSystem = (() => {
     enqueueFrontierNeighborhood(gx, gy, 2);
     if (typeof world.onTunnelDug === 'function') world.onTunnelDug(gx, gy);
     if (typeof world.spawnDigParticles === 'function') world.spawnDigParticles(gx, gy);
+
+    if (typeof ExcavationPlanner !== "undefined" && meta && meta.workfaceId !== undefined) {
+      ExcavationPlanner.notifyTunnelDug(gx, gy, ant, world, meta);
+    }
 
     ant.digTarget = null;
     return true;
