@@ -2415,6 +2415,12 @@ class Ant {
 
     const cgx = Math.floor(this.x / CONSTANTS.CELL_SIZE);
     const cgy = Math.floor(this.y / CONSTANTS.CELL_SIZE);
+
+    const queenObjective = worldState?.objectives?.queenChamber;
+    const queenDigPriorityActive = queenObjective && queenObjective.priority && queenObjective.status !== "ready";
+    const bypassNestCore =
+      (!this.carrying && this.intent === "dig") ||
+      (queenDigPriorityActive && this.role === "digger" && !this.carrying);
     const homeSignal = getHomeSteeringField(this, cgx, cgy, worldState);
     this.lastHomeConfidence = homeSignal.confidence;
 
@@ -2999,7 +3005,7 @@ class Ant {
       return this.angle + (Math.random() - 0.5) * 0.35;
     }
 
-    if (this.inNestCore) {
+    if (this.inNestCore && !bypassNestCore) {
       const queen = getQueen(worldState);
 
       if (this.carrying && queen) {
@@ -3051,8 +3057,6 @@ class Ant {
     }
 
     const g = this.carrying || this.intent === "returnHome" ? scentToHome : scentToFood;
-    const queenObjective = worldState?.objectives?.queenChamber;
-    const queenDigPriorityActive = queenObjective && queenObjective.priority && queenObjective.status !== "ready";
     const ignoreFoodPheromone =
       this.inNestCore ||
       (!this.carrying && this.isInsideQueenRadius()) ||
