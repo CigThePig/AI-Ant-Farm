@@ -756,6 +756,8 @@ const DiggingSystem = (() => {
         } else {
           shapeBonus *= SETTINGS.corridorBalloonPenalty;
         }
+
+        if (tunnelNeighbors >= 2 && allowBranch !== true) continue;
       } else {
         if (tunnelNeighbors <= 1) shapeBonus *= SETTINGS.roomNeighborBonus;
         else if (tunnelNeighbors === 2) shapeBonus *= 1;
@@ -786,6 +788,21 @@ const DiggingSystem = (() => {
     if (best) {
       best.allowBranching = bestBranching;
       best.mode = digMode;
+    }
+
+    if (best && best.mode === "corridor") {
+      const verifyNeighbors = countTunnelNeighbors4(best.x, best.y, world.grid);
+      if (verifyNeighbors >= 2 && best.allowBranching !== true) {
+        if (!chooseDigTarget.branchingMismatchWarned) {
+          chooseDigTarget.branchingMismatchWarned = true;
+          if (typeof CONFIG === "undefined" || CONFIG?.devMode !== false) {
+            if (typeof console !== "undefined" && console.warn) {
+              console.warn("[diggingSystem] chooseDigTarget picked corridor target rejected by canCarveHere", best);
+            }
+          }
+        }
+        return null;
+      }
     }
 
     return best;
