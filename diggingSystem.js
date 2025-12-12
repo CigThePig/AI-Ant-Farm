@@ -929,18 +929,14 @@ const DiggingSystem = (() => {
     const grid = world.grid;
     if (!grid[gy] || grid[gy][gx] !== TILES.SOIL) return false;
 
-    digHP[gy][gx] -= SETTINGS.digDamage;
-    if (digHP[gy][gx] > 0) {
-      digPheromone[gy][gx] = Math.max(digPheromone[gy][gx], SETTINGS.neighborDeposit);
-      return true;
-    }
+    if (!canCarveHere(gx, gy, ant, world)) return false;
 
     const spacePressure = (typeof ColonyState !== "undefined" && ColonyState.getSpacePressure)
       ? ColonyState.getSpacePressure()
       : 0.3;
 
     if (spacePressure <= 0.9) {
-      const openTiles = new Set([TILES.TUNNEL, TILES.BEDROCK]);
+      const openTiles = new Set([TILES.TUNNEL]);
       if (typeof TILES.AIR !== "undefined") openTiles.add(TILES.AIR);
       let openNeighbors = 0;
       for (let dy = -1; dy <= 1; dy++) {
@@ -956,6 +952,12 @@ const DiggingSystem = (() => {
       if (openNeighbors > 3) {
         return false;
       }
+    }
+
+    digHP[gy][gx] -= SETTINGS.digDamage;
+    if (digHP[gy][gx] > 0) {
+      digPheromone[gy][gx] = Math.max(digPheromone[gy][gx], SETTINGS.neighborDeposit);
+      return true;
     }
 
     if (!canCarveHere(gx, gy, ant, world)) {
