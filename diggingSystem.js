@@ -861,6 +861,7 @@ const DiggingSystem = (() => {
     const visited = new Set();
     const addDeposit = (tx, ty, weight) => {
       if (!grid[ty] || grid[ty][tx] !== TILES.SOIL) return;
+      if (countTunnelNeighbors4(tx, ty, grid) <= 0 && isFrontierCell(tx, ty, grid) !== true) return; // avoid marking non-frontier soil (prevents false sharedFrontier signals)
       const key = (ty << 16) | tx;
       if (visited.has(key)) return;
       visited.add(key);
