@@ -656,6 +656,7 @@ canvas.addEventListener("pointerleave", removeEv);
 
 let grid = [];
 let gridTexture = [];
+let zoneGrid = [];
 let foodGrid = [];
 let storedFoodGrid = [];
 let wasteGrid = [];
@@ -706,6 +707,7 @@ function createPantryScentBuffers() {
 const worldState = {
   grid: null,
   gridTexture: null,
+  zoneGrid: null,
   storedFoodGrid: null,
   particles: null,
   airLevels: null,
@@ -1868,6 +1870,7 @@ function pickRoleForNewWorker() {
 function resetSimulation() {
   grid = [];
   gridTexture = [];
+  zoneGrid = [];
   foodGrid = [];
   storedFoodGrid = [];
   wasteGrid = [];
@@ -1895,6 +1898,7 @@ function resetSimulation() {
   for (let y = 0; y < CONSTANTS.GRID_H; y++) {
     grid[y] = new Uint8Array(CONSTANTS.GRID_W);
     gridTexture[y] = new Float32Array(CONSTANTS.GRID_W);
+    zoneGrid[y] = new Array(CONSTANTS.GRID_W).fill(null);
     foodGrid[y] = new Uint8Array(CONSTANTS.GRID_W);
     storedFoodGrid[y] = new Array(CONSTANTS.GRID_W);
     wasteGrid[y] = new Float32Array(CONSTANTS.GRID_W);
@@ -1966,6 +1970,7 @@ function resetSimulation() {
 
   worldState.grid = grid;
   worldState.gridTexture = gridTexture;
+  worldState.zoneGrid = zoneGrid;
   worldState.storedFoodGrid = storedFoodGrid;
   worldState.particles = particles;
   worldState.entrance = ENTRANCE;
