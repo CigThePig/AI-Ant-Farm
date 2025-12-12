@@ -1926,12 +1926,14 @@ function resetSimulation() {
     grid[DIG_START.gy][DIG_START.gx] = TILES.TUNNEL;
   }
 
+  // Search for an entrance tunnel around the surface entrance coordinates so
+  // the queen heads to the actual nest entrance rather than the dig start.
   const findEntranceTunnel = () => {
     const radius = 2;
     for (let dy = -radius; dy <= radius; dy++) {
       for (let dx = -radius; dx <= radius; dx++) {
-        const nx = DIG_START.gx + dx;
-        const ny = DIG_START.gy + dy;
+        const nx = ENTRANCE.gx + dx;
+        const ny = ENTRANCE.gy + dy;
         if (getTile(nx, ny) === TILES.TUNNEL) {
           return { gx: nx, gy: ny };
         }
