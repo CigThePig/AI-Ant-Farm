@@ -658,9 +658,12 @@ let grid = [];
 let gridTexture = [];
 let zoneGrid = [];
 let foodGrid = [];
-let storedFoodGrid = [];
+let storedFoodSeed = null;
+let storedFoodProtein = null;
+let storedFoodSugar = null;
+let storedFoodGrid = null;
 let wasteGrid = [];
-let wasteTags = [];
+let wasteTags = new Map();
 let scentToFood = [];
 let scentToHome = [];
 let queenScent = [];
@@ -678,6 +681,91 @@ let nextAntId = 1;
 let pantryUpdateCounter = 0;
 
 const FOOD_TYPES = ["seed", "protein", "sugar"];
+
+const storageIdx = (gx, gy) => (gy * CONSTANTS.GRID_W) + gx;
+
+function getFoodArray(type) {
+  if (type === "seed") return storedFoodSeed;
+  if (type === "protein") return storedFoodProtein;
+  if (type === "sugar") return storedFoodSugar;
+  return null;
+}
+
+function getStoredFood(gx, gy) {
+  if (!storedFoodSeed || gx < 0 || gy < 0 || gx >= CONSTANTS.GRID_W || gy >= CONSTANTS.GRID_H) {
+    return { seed: 0, protein: 0, sugar: 0 };
+  }
+  const idx = storageIdx(gx, gy);
+  return {
+    seed: storedFoodSeed[idx] || 0,
+    protein: storedFoodProtein[idx] || 0,
+    sugar: storedFoodSugar[idx] || 0,
+  };
+}
+
+function getStoredFoodAmount(gx, gy, type) {
+  const arr = getFoodArray(type);
+  if (!arr || gx < 0 || gy < 0 || gx >= CONSTANTS.GRID_W || gy >= CONSTANTS.GRID_H) return 0;
+  return arr[storageIdx(gx, gy)] || 0;
+}
+
+function addStoredFoodAt(gx, gy, type, amount) {
+  const arr = getFoodArray(type);
+  if (!arr || gx < 0 || gy < 0 || gx >= CONSTANTS.GRID_W || gy >= CONSTANTS.GRID_H) return 0;
+  const idx = storageIdx(gx, gy);
+  const amt = Math.max(0, amount || 0);
+  arr[idx] += amt;
+  foodInStorage += amt;
+  return amt;
+}
+
+function takeStoredFoodAt(gx, gy, type, amount) {
+  const arr = getFoodArray(type);
+  if (!arr || gx < 0 || gy < 0 || gx >= CONSTANTS.GRID_W || gy >= CONSTANTS.GRID_H) return 0;
+  const idx = storageIdx(gx, gy);
+  const available = arr[idx] || 0;
+  const taken = Math.min(amount, available);
+  arr[idx] = Math.max(0, available - taken);
+  foodInStorage -= taken;
+  return taken;
+}
+
+function getStoredFoodTotalAt(gx, gy) {
+  if (!storedFoodSeed) return 0;
+  const idx = storageIdx(gx, gy);
+  return (storedFoodSeed[idx] || 0) + (storedFoodProtein[idx] || 0) + (storedFoodSugar[idx] || 0);
+}
+
+function takeStoredFoodAnywhere(amount, type = "seed") {
+  const arr = getFoodArray(type);
+  if (!arr) return 0;
+  let remaining = amount;
+  for (let i = 0; i < arr.length && remaining > 0; i++) {
+    const taken = Math.min(remaining, arr[i]);
+    if (taken > 0) {
+      arr[i] -= taken;
+      remaining -= taken;
+      foodInStorage -= taken;
+    }
+  }
+  return amount - remaining;
+}
+
+function getStoredFoodTotalsGrid() {
+  const totals = [];
+  for (let y = 0; y < CONSTANTS.GRID_H; y++) {
+    const row = new Float32Array(CONSTANTS.GRID_W);
+    for (let x = 0; x < CONSTANTS.GRID_W; x++) {
+      row[x] = getStoredFoodTotalAt(x, y);
+    }
+    totals[y] = row;
+  }
+  return totals;
+}
+
+function getFoodInStorageTotal() {
+  return foodInStorage;
+}
 
 function createPantries() {
   const base = () => ({ tiles: new Set(), center: null });
@@ -1510,95 +1598,45 @@ function getWaste(gx, gy) {
   return wasteGrid[gy][gx] || 0;
 }
 
+function getWasteTagEntry(gx, gy) {
+  return wasteTags.get(storageIdx(gx, gy)) || null;
+}
+
+function ensureWasteTag(gx, gy) {
+  const key = storageIdx(gx, gy);
+  if (!wasteTags.has(key)) {
+    wasteTags.set(key, {});
+  }
+  return wasteTags.get(key) || null;
+}
+
+function clearWasteTag(gx, gy) {
+  wasteTags.delete(storageIdx(gx, gy));
+}
+
 function tagWaste(gx, gy, tag, amount = 1) {
-  if (!wasteTags[gy] || wasteTags[gy][gx] === undefined) return;
   if (amount <= 0) return;
-  const cell = wasteTags[gy][gx];
+  const cell = ensureWasteTag(gx, gy);
   cell[tag] = (cell[tag] || 0) + amount;
 }
 
 function getWasteTag(gx, gy, tag) {
-  return wasteTags[gy]?.[gx]?.[tag] || 0;
+  const cell = getWasteTagEntry(gx, gy);
+  return cell?.[tag] || 0;
 }
 
 function rescaleWasteTags(gx, gy, ratio) {
-  const cell = wasteTags[gy]?.[gx];
+  const cell = getWasteTagEntry(gx, gy);
   if (!cell) return;
   if (ratio <= 0) {
-    wasteTags[gy][gx] = {};
+    clearWasteTag(gx, gy);
     return;
   }
   for (const key of Object.keys(cell)) {
     cell[key] *= ratio;
     if (cell[key] < 0.0001) delete cell[key];
   }
-}
-
-function makeFoodStore() {
-  return { seed: 0, protein: 0, sugar: 0 };
-}
-
-function getStoredFoodTotalAt(gx, gy) {
-  const cell = storedFoodGrid[gy]?.[gx];
-  if (!cell) return 0;
-  return FOOD_TYPES.reduce((sum, type) => sum + (cell[type] || 0), 0);
-}
-
-function addStoredFoodAt(gx, gy, type, amount) {
-  if (!storedFoodGrid[gy] || !storedFoodGrid[gy][gx]) return 0;
-  const cell = storedFoodGrid[gy][gx];
-  const amt = Math.max(0, amount || 0);
-  cell[type] = (cell[type] || 0) + amt;
-  foodInStorage += amt;
-  return amt;
-}
-
-function takeStoredFoodAt(gx, gy, type, amount) {
-  const cell = storedFoodGrid[gy]?.[gx];
-  if (!cell || !cell[type]) return 0;
-  const taken = Math.min(amount, cell[type]);
-  cell[type] -= taken;
-  foodInStorage -= taken;
-  if (cell[type] < 0.0001) cell[type] = 0;
-  return taken;
-}
-
-function takeStoredFoodAnywhere(amount, type = "seed") {
-  let remaining = amount;
-  for (let y = 0; y < storedFoodGrid.length; y++) {
-    const row = storedFoodGrid[y];
-    if (!row) continue;
-    for (let x = 0; x < row.length; x++) {
-      const pulled = takeStoredFoodAt(x, y, type, remaining);
-      remaining -= pulled;
-      if (remaining <= 0) return amount;
-    }
-  }
-  return amount - remaining;
-}
-
-function getFoodInStorageTotal() {
-  let total = 0;
-  for (let y = 0; y < storedFoodGrid.length; y++) {
-    const row = storedFoodGrid[y];
-    if (!row) continue;
-    for (let x = 0; x < row.length; x++) {
-      total += getStoredFoodTotalAt(x, y);
-    }
-  }
-  return total;
-}
-
-function getStoredFoodTotalsGrid() {
-  const totals = [];
-  for (let y = 0; y < storedFoodGrid.length; y++) {
-    const row = new Float32Array(storedFoodGrid[y]?.length || 0);
-    for (let x = 0; x < row.length; x++) {
-      row[x] = getStoredFoodTotalAt(x, y);
-    }
-    totals[y] = row;
-  }
-  return totals;
+  if (Object.keys(cell).length === 0) clearWasteTag(gx, gy);
 }
 
 function getPantryState(type, world = worldState) {
@@ -1622,8 +1660,7 @@ function applyPantrySpoilage(dt, world = worldState) {
     for (const key of pantry.tiles) {
       const gx = key % CONSTANTS.GRID_W;
       const gy = Math.floor(key / CONSTANTS.GRID_W);
-      const cell = storedFoodGrid[gy]?.[gx];
-      const amount = cell?.[type] || 0;
+      const amount = getStoredFoodAmount(gx, gy, type);
       if (amount <= 0) continue;
 
       const spoil = amount * decay;
@@ -1723,8 +1760,7 @@ function updatePantryZones(world = worldState) {
       for (let x = 1; x < CONSTANTS.GRID_W - 1; x++) {
         if (grid[y][x] !== TILES.TUNNEL) continue;
 
-        const cell = storedFoodGrid[y][x];
-        const amount = cell?.[type] || 0;
+        const amount = getStoredFoodAmount(x, y, type);
         const key = y * CONSTANTS.GRID_W + x;
         const wasPantry = pantry.tiles.has(key);
 
@@ -1872,9 +1908,18 @@ function resetSimulation() {
   gridTexture = [];
   zoneGrid = [];
   foodGrid = [];
-  storedFoodGrid = [];
+  storedFoodSeed = new Float32Array(CONSTANTS.GRID_W * CONSTANTS.GRID_H);
+  storedFoodProtein = new Float32Array(CONSTANTS.GRID_W * CONSTANTS.GRID_H);
+  storedFoodSugar = new Float32Array(CONSTANTS.GRID_W * CONSTANTS.GRID_H);
+  storedFoodGrid = {
+    seed: storedFoodSeed,
+    protein: storedFoodProtein,
+    sugar: storedFoodSugar,
+    width: CONSTANTS.GRID_W,
+    height: CONSTANTS.GRID_H,
+  };
   wasteGrid = [];
-  wasteTags = [];
+  wasteTags = new Map();
   scentToFood = [];
   scentToHome = [];
   queenScent = [];
@@ -1900,9 +1945,7 @@ function resetSimulation() {
     gridTexture[y] = new Float32Array(CONSTANTS.GRID_W);
     zoneGrid[y] = new Array(CONSTANTS.GRID_W).fill(null);
     foodGrid[y] = new Uint8Array(CONSTANTS.GRID_W);
-    storedFoodGrid[y] = new Array(CONSTANTS.GRID_W);
     wasteGrid[y] = new Float32Array(CONSTANTS.GRID_W);
-    wasteTags[y] = new Array(CONSTANTS.GRID_W);
     scentToFood[y] = new Float32Array(CONSTANTS.GRID_W);
     scentToHome[y] = new Float32Array(CONSTANTS.GRID_W);
     queenScent[y] = new Float32Array(CONSTANTS.GRID_W);
@@ -1912,9 +1955,6 @@ function resetSimulation() {
     for (let x = 0; x < CONSTANTS.GRID_W; x++) {
       const n = Math.sin(x*0.27)*Math.cos(y*0.29)*0.5+0.5;
       gridTexture[y][x] = n;
-
-      storedFoodGrid[y][x] = makeFoodStore();
-      wasteTags[y][x] = {};
 
       if (x===0 || x===CONSTANTS.GRID_W-1 || y===CONSTANTS.GRID_H-1 || y===0) grid[y][x] = TILES.BEDROCK;
       else if (y < CONSTANTS.REGION_SPLIT) grid[y][x] = TILES.GRASS;

@@ -159,6 +159,9 @@ const ColonyState = (() => {
     const width = Math.max(1, constants?.GRID_W || 0);
     const pantries = world?.pantries || {};
     const storage = world?.storedFoodGrid || [];
+    const readStoredFood = typeof getStoredFoodAmount === "function"
+      ? getStoredFoodAmount
+      : ((gx, gy, type) => storage?.[gy]?.[gx]?.[type] || 0);
 
     const result = { seed: 0, protein: 0, sugar: 0 };
 
@@ -172,7 +175,7 @@ const ColonyState = (() => {
       for (const key of pantry.tiles) {
         const gx = key % width;
         const gy = Math.floor(key / Math.max(1, width));
-        load += storage?.[gy]?.[gx]?.[type] || 0;
+        load += readStoredFood(gx, gy, type) || 0;
       }
 
       const capacity = tileCount * maxPerTile;
