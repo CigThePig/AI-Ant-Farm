@@ -3045,6 +3045,14 @@ class Ant {
       return this.angle + (Math.random() - 0.5) * 0.35;
     }
 
+    const queenObjective = worldState?.objectives?.queenChamber;
+    const queenDigPriorityActive =
+      queenObjective && queenObjective.priority && queenObjective.status !== "ready";
+
+    const bypassNestCore =
+      (!this.carrying && this.intent === "dig") ||
+      (queenDigPriorityActive && this.role === "digger" && !this.carrying);
+
     if (this.inNestCore && !bypassNestCore) {
       const queen = getQueen(worldState);
 
