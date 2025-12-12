@@ -32,6 +32,16 @@ const DiggingSystem = (() => {
 
   const clamp01 = (v) => Math.max(0, Math.min(1, v));
 
+  let headingNaNWarningIssued = false;
+  const warnHeadingNaNOnce = (context) => {
+    if (headingNaNWarningIssued) return;
+    headingNaNWarningIssued = true;
+    if (typeof CONFIG !== "undefined" && CONFIG?.devMode === false) return;
+    if (typeof console !== "undefined" && console.warn) {
+      console.warn("[diggingSystem] Invalid heading vector in chooseDigTarget", context);
+    }
+  };
+
   let width = 0;
   let height = 0;
   let regionSplit = 0;
@@ -435,6 +445,20 @@ const DiggingSystem = (() => {
     let headingVec = hasHeading ? { x: Math.cos(ant.digHeadingAngle), y: Math.sin(ant.digHeadingAngle) } : null;
     const lastDug = ant.lastDugCell || null;
 
+    const makeUnitVector = (dx, dy, fallbackVec, context) => {
+      const safeFallback = fallbackVec || headingVec || { x: 1, y: 0 };
+      if (!Number.isFinite(dx) || !Number.isFinite(dy)) {
+        warnHeadingNaNOnce({ context, dx, dy });
+        return safeFallback;
+      }
+      const mag = Math.hypot(dx, dy);
+      if (!Number.isFinite(mag) || mag < 1e-6) {
+        warnHeadingNaNOnce({ context, dx, dy, mag });
+        return safeFallback;
+      }
+      return { x: dx / mag, y: dy / mag };
+    };
+
     const cgx = Math.floor(ant.x / cellSize);
     const cgy = Math.floor(ant.y / cellSize);
 
@@ -452,10 +476,13 @@ const DiggingSystem = (() => {
 
       if (anchor) {
         queenPlan = { phase, anchor, center, radius, pathStart, tunnel: chamberTunnel };
-        const dirX = center.gx - anchor.x;
-        const dirY = center.gy - anchor.y;
-        const mag = Math.hypot(dirX, dirY) || 1;
-        headingVec = { x: dirX / mag, y: dirY / mag };
+        const anchorGx = anchor.gx ?? anchor.x;
+        const anchorGy = anchor.gy ?? anchor.y;
+        const centerGx = center.gx ?? center.x;
+        const centerGy = center.gy ?? center.y;
+        const dirX = centerGx - anchorGx;
+        const dirY = centerGy - anchorGy;
+        headingVec = makeUnitVector(dirX, dirY, headingVec ?? { x: 1, y: 0 }, "queen-plan-heading");
         headingStrength = Math.max(headingStrength, phase === "corridor" ? 0.95 : 0.65);
         if (phase === "chamber") {
           ant.digMode = "room";
@@ -491,8 +518,7 @@ const DiggingSystem = (() => {
         ant.roomDug = 0;
         const dirX = pick.anchor.x - cgx;
         const dirY = pick.anchor.y - cgy;
-        const mag = Math.hypot(dirX, dirY) || 1;
-        headingVec = { x: dirX / mag, y: dirY / mag };
+        headingVec = makeUnitVector(dirX, dirY, headingVec ?? { x: 1, y: 0 }, "nursery-plan-heading");
         headingStrength = Math.max(headingStrength, 0.55);
         digMode = ant.digMode || digMode;
       }
@@ -532,12 +558,15 @@ const DiggingSystem = (() => {
           ant.roomDug = 0;
           const dirX = pick.anchor.x - cgx;
           const dirY = pick.anchor.y - cgy;
-          const mag = Math.hypot(dirX, dirY) || 1;
-          headingVec = { x: dirX / mag, y: dirY / mag };
+          headingVec = makeUnitVector(dirX, dirY, headingVec ?? { x: 1, y: 0 }, "pantry-plan-heading");
           headingStrength = Math.max(headingStrength, 0.6);
           digMode = ant.digMode || digMode;
         }
       }
+    }
+
+    if (headingVec) {
+      headingVec = makeUnitVector(headingVec.x, headingVec.y, { x: 1, y: 0 }, "heading-normalize");
     }
 
     const shouldStartRoom =
@@ -576,8 +605,8 @@ const DiggingSystem = (() => {
     if (queenPlan) {
       const baseRadius = queenPlan.phase === "corridor" ? 7 : Math.max(4, Math.round(queenPlan.radius * 0.6));
       searchRadius = baseRadius;
-      const anchorX = queenPlan.anchor.x ?? queenPlan.anchor.gx;
-      const anchorY = queenPlan.anchor.y ?? queenPlan.anchor.gy;
+      const anchorX = queenPlan.anchor.gx ?? queenPlan.anchor.x;
+      const anchorY = queenPlan.anchor.gy ?? queenPlan.anchor.y;
       candidates = collectFrontierCandidates(anchorX, anchorY, searchRadius, world.grid);
       while (!candidates.length && searchRadius < baseRadius + 10) {
         searchRadius += 3;
@@ -681,7 +710,7 @@ const DiggingSystem = (() => {
 
       let headingBonus = 1;
       if (headingVec) {
-        const anchorX = queenPlan ? (queenPlan.anchor.x ?? queenPlan.anchor.gx) + 0.5 : (lastDug ? lastDug.x + 0.5 : cgx + 0.5);
+      const anchorX = queenPlan ? (queenPlan.anchor.gx ?? queenPlan.anchor.x) + 0.5 : (lastDug ? lastDug.x + 0.5 : cgx + 0.5);
         const anchorY = queenPlan ? (queenPlan.anchor.y ?? queenPlan.anchor.gy) + 0.5 : (lastDug ? lastDug.y + 0.5 : cgy + 0.5);
         const dx = x + 0.5 - anchorX;
         const dy = y + 0.5 - anchorY;
