@@ -2990,6 +2990,11 @@ class Ant {
           } else {
             return Math.atan2((y + 0.5) * CONSTANTS.CELL_SIZE - this.y, (x + 0.5) * CONSTANTS.CELL_SIZE - this.x);
           }
+        } else if (!this.carrying && !this.digTarget) {
+          const digAnchor = worldState?.digStart;
+          if (digAnchor) {
+            return Math.atan2(digAnchor.y - this.y, digAnchor.x - this.x);
+          }
         }
         break;
       default:
@@ -2997,7 +3002,12 @@ class Ant {
     }
 
     const g = this.carrying || this.intent === "returnHome" ? scentToHome : scentToFood;
-    const ignoreFoodPheromone = this.inNestCore || (!this.carrying && this.isInsideQueenRadius());
+    const queenObjective = worldState?.objectives?.queenChamber;
+    const queenDigPriorityActive = queenObjective && queenObjective.priority && queenObjective.status !== "ready";
+    const ignoreFoodPheromone =
+      this.inNestCore ||
+      (!this.carrying && this.isInsideQueenRadius()) ||
+      (queenDigPriorityActive && this.role === "digger" && !this.carrying);
     const sa = CONFIG.sensorAngle;
     const sd = CONFIG.sensorDist;
 
