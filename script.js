@@ -90,6 +90,7 @@ const maskCtx = maskCanvas.getContext('2d');
 
 // Energy drains more slowly so ants take longer to seek food.
 const ENERGY_DECAY_RATE = 0.15;
+const DIG_INTERVAL = 0.08;
 
 const ROLE_SETTINGS = {
   reassessPeriod: 2.5,
@@ -2241,6 +2242,8 @@ class Ant {
     this.roomDigBudget = 0;
     this.roomDug = 0;
     this.roomCooldown = 0;
+    this.digApproach = null;
+    this.digWorkT = 0;
 
     this.inNestCore = false;
 
@@ -2253,6 +2256,43 @@ class Ant {
       this.pathProgressTimer = 0;
       this.lastPathSample = { x, y };
     }
+  }
+
+  setDigTarget(target) {
+    this.digTarget = target;
+    this.digWorkT = 0;
+    this.digApproach = this.computeDigApproach(target);
+  }
+
+  computeDigApproach(target) {
+    if (!target) return null;
+
+    const candidates = [
+      { x: target.x + 1, y: target.y },
+      { x: target.x - 1, y: target.y },
+      { x: target.x, y: target.y + 1 },
+      { x: target.x, y: target.y - 1 },
+    ];
+
+    let best = null;
+    let bestD2 = Infinity;
+
+    for (const c of candidates) {
+      if (!grid[c.y] || grid[c.y][c.x] !== TILES.TUNNEL) continue;
+
+      const cx = (c.x + 0.5) * CONSTANTS.CELL_SIZE;
+      const cy = (c.y + 0.5) * CONSTANTS.CELL_SIZE;
+      const dx = cx - this.x;
+      const dy = cy - this.y;
+      const d2 = dx * dx + dy * dy;
+
+      if (d2 < bestD2) {
+        bestD2 = d2;
+        best = { x: c.x, y: c.y };
+      }
+    }
+
+    return best;
   }
 
   getEffectiveThreshold() {
@@ -2311,7 +2351,7 @@ class Ant {
     }
 
     if (nextRole !== this.role) {
-      if (nextRole !== "digger") this.digTarget = null;
+      if (nextRole !== "digger") this.setDigTarget(null);
       if (nextRole === "digger") this.digRetargetT = 0;
       this.role = nextRole;
     }
@@ -2835,11 +2875,11 @@ class Ant {
     }
 
     if (this.carrying || this.role !== "digger") {
-      this.digTarget = null;
+      this.setDigTarget(null);
     } else {
       this.digRetargetT -= dt;
       if (this.digRetargetT <= 0) {
-        this.digTarget = DiggingSystem.chooseDigTarget(this, worldState);
+        this.setDigTarget(DiggingSystem.chooseDigTarget(this, worldState));
         this.digRetargetT = 0.6 + Math.random() * 0.6;
       }
     }
@@ -3041,8 +3081,17 @@ class Ant {
         if (!this.carrying && this.digTarget) {
           const { x, y } = this.digTarget;
           if (!grid[y] || grid[y][x] !== TILES.SOIL) {
-            this.digTarget = null;
+            this.setDigTarget(null);
           } else {
+            const onApproach = this.digApproach && cgx === this.digApproach.x && cgy === this.digApproach.y;
+
+            if (this.digApproach && !onApproach) {
+              return Math.atan2(
+                (this.digApproach.y + 0.5) * CONSTANTS.CELL_SIZE - this.y,
+                (this.digApproach.x + 0.5) * CONSTANTS.CELL_SIZE - this.x,
+              );
+            }
+
             return Math.atan2((y + 0.5) * CONSTANTS.CELL_SIZE - this.y, (x + 0.5) * CONSTANTS.CELL_SIZE - this.x);
           }
         } else if (!this.carrying && !this.digTarget) {
@@ -3154,6 +3203,27 @@ class Ant {
     const wasteSlow = 1 - Math.min(0.35, getWaste(cgx, cgy) * 0.08);
     const speed = CONFIG.workerSpeed * speedMult * wasteSlow;
     const look = 6;
+
+    const standingOnApproach = this.intent === "dig" && this.digTarget && this.digApproach &&
+      cgx === this.digApproach.x && cgy === this.digApproach.y;
+
+    if (standingOnApproach) {
+      const { x: tgx, y: tgy } = this.digTarget;
+      const adjacent = Math.abs(tgx - cgx) + Math.abs(tgy - cgy) === 1;
+
+      if (adjacent && grid[tgy] && grid[tgy][tgx] === TILES.SOIL) {
+        this.digWorkT += dt;
+        if (this.digWorkT >= DIG_INTERVAL) {
+          DiggingSystem.applyDigAction(this, worldState, tgx, tgy);
+          this.digWorkT = 0;
+        }
+      } else {
+        this.digWorkT = 0;
+      }
+
+      this.stepDistance = 0;
+      return;
+    }
 
     const nx = this.x + Math.cos(this.angle) * look;
     const ny = this.y + Math.sin(this.angle) * look;
