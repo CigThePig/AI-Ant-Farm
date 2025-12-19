@@ -2246,6 +2246,18 @@ class Ant {
     this.roomCooldown = 0;
     this.digApproach = null;
     this.digWorkT = 0;
+    this.digFailCount = 0;
+    this.digFailX = null;
+    this.digFailY = null;
+    this.avoidDigT = 0;
+    this.avoidDigX = null;
+    this.avoidDigY = null;
+    this.digFailCount = 0;
+    this.digFailX = null;
+    this.digFailY = null;
+    this.avoidDigT = 0;
+    this.avoidDigX = null;
+    this.avoidDigY = null;
 
     this.inNestCore = false;
 
@@ -2726,6 +2738,7 @@ class Ant {
     this.stepDistance = 0;
     this.age += dt;
     this.updateAgeBasedRole();
+    if (this.avoidDigT > 0) this.avoidDigT = Math.max(0, this.avoidDigT - dt);
 
     const handleDeath = () => {
       if (this.type !== "corpse") this.decompositionTimer = 0;
@@ -3224,7 +3237,28 @@ class Ant {
       if (adjacent && grid[tgy] && grid[tgy][tgx] === TILES.SOIL) {
         this.digWorkT += dt;
         if (this.digWorkT >= DIG_INTERVAL) {
-          DiggingSystem.applyDigAction(this, worldState, tgx, tgy);
+          const dug = DiggingSystem.applyDigAction(this, worldState, tgx, tgy);
+          if (dug) {
+            this.digFailCount = 0;
+          } else {
+            if (this.digFailX === tgx && this.digFailY === tgy) {
+              this.digFailCount++;
+            } else {
+              this.digFailCount = 1;
+              this.digFailX = tgx;
+              this.digFailY = tgy;
+            }
+
+            if (this.digFailCount >= 4) {
+              this.avoidDigX = tgx;
+              this.avoidDigY = tgy;
+              this.avoidDigT = 3.0;
+              this.setDigTarget(null);
+              this.digRetargetT = 0;
+              this.digWorkT = 0;
+              this.digFailCount = 0;
+            }
+          }
           this.digWorkT = 0;
         }
       } else {

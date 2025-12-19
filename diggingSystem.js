@@ -713,6 +713,7 @@ const DiggingSystem = (() => {
     for (const tile of candidates) {
       const { x, y } = tile;
       if (!frontierMask[y][x]) continue;
+      if (ant.avoidDigT > 0 && ant.avoidDigX === x && ant.avoidDigY === y) continue;
 
       const tx = (x + 0.5) * cellSize;
       const ty = (y + 0.5) * cellSize;
