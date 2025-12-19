@@ -977,9 +977,24 @@ const DiggingSystem = (() => {
       return true;
     }
 
+    const mode = ant.digMode || "corridor";
+    const target = ant.digTarget;
+    const allowBranching = !!(target && target.x === gx && target.y === gy && target.allowBranching);
+    const tunnelNeighbors = countTunnelNeighbors4(gx, gy, grid);
+    const checkerboard = formsCheckerboardArtifact(gx, gy, grid);
+
     if (!canCarveHere(gx, gy, ant, world)) {
-      digHP[gy][gx] = computeTileHP(gx, gy, grid);
-      return false;
+      const allowCorridorBreakthrough =
+        mode === "corridor" &&
+        tunnelNeighbors >= 2 &&
+        tunnelNeighbors > 0 &&
+        !allowBranching &&
+        !checkerboard;
+
+      if (!allowCorridorBreakthrough) {
+        digHP[gy][gx] = computeTileHP(gx, gy, grid);
+        return false;
+      }
     }
 
     grid[gy][gx] = TILES.TUNNEL;
