@@ -14,6 +14,7 @@ const AirSystem = (() => {
   let airLevels = [];
   let queue = [];
   let reseedCounter = 0;
+  let enqueuedWhileEmpty = false;
 
   function init(constants) {
     width = constants.GRID_W;
@@ -27,24 +28,27 @@ const AirSystem = (() => {
 
     queue.length = 0;
     reseedCounter = 0;
+    enqueuedWhileEmpty = false;
   }
 
   function isOpen(tile) {
     return tile !== TILES.SOIL && tile !== TILES.BEDROCK;
   }
 
-  function enqueue(x, y, level) {
+  function enqueue(x, y, level, { markEnqueue = true } = {}) {
     if (level <= airLevels[y][x] + 0.001) return;
+    const wasEmpty = queue.length === 0;
     airLevels[y][x] = level;
     queue.push({ x, y, level });
+    if (wasEmpty && markEnqueue) enqueuedWhileEmpty = true;
   }
 
-  function seedSurface(grid) {
-    queue.length = 0;
-    for (let y = 1; y < regionSplit; y++) {
+  function seedSurface(grid, { clearQueue = true } = {}) {
+    if (clearQueue) queue.length = 0;
+    for (let y = 1; y <= regionSplit; y++) {
       const row = grid[y];
       for (let x = 1; x < width - 1; x++) {
-        if (isOpen(row[x])) enqueue(x, y, 1.0);
+        if (isOpen(row[x])) enqueue(x, y, 1.0, { markEnqueue: false });
       }
     }
   }
@@ -83,10 +87,18 @@ const AirSystem = (() => {
     const grid = world.grid;
     if (!grid || !grid.length) return;
 
-    if (queue.length === 0 || reseedCounter >= SETTINGS.reseedInterval) {
+    const queueWasEmptyAtStart = queue.length === 0;
+
+    if (queueWasEmptyAtStart || reseedCounter >= SETTINGS.reseedInterval) {
       seedSurface(grid);
       reseedCounter = 0;
+      enqueuedWhileEmpty = false;
+    } else if (enqueuedWhileEmpty) {
+      seedSurface(grid, { clearQueue: false });
+      reseedCounter = 0;
+      enqueuedWhileEmpty = false;
     }
+
     reseedCounter++;
 
     let budget = SETTINGS.propagationBudget;
@@ -125,6 +137,7 @@ const AirSystem = (() => {
     for (let y = 0; y < height; y++) airLevels[y].fill(0);
     queue.length = 0;
     reseedCounter = 0;
+    enqueuedWhileEmpty = false;
     seedSurface(world.grid);
     world.airLevels = airLevels;
   }

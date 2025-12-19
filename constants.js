@@ -5,5 +5,5 @@ const TILES = {
   SOIL: 1,
   TUNNEL: 2,
   BEDROCK: 3,
+  AIR: 4,
 };
-
