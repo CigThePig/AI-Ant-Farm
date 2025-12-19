@@ -6,6 +6,7 @@ const ExcavationPlanner = (() => {
   const junctionHistory = [];
   const MAX_JUNCTION_HISTORY = 40;
   const MAX_BRANCH_DEPTH = 3;
+  const blockedTargets = new Map();
 
   const DIRS = [
     { dx: 0, dy: -1 },
@@ -23,6 +24,7 @@ const ExcavationPlanner = (() => {
     nextWorkfaceId = 1;
     endpointSet.clear();
     junctionHistory.length = 0;
+    blockedTargets.clear();
 
     const start = findStartingTunnel(world);
     if (!start) return;
@@ -47,6 +49,45 @@ const ExcavationPlanner = (() => {
 
   function update(world) {
     maintainBranchTargets(world);
+  }
+
+  function nowSeconds() {
+    if (typeof performance !== "undefined" && performance?.now) {
+      return performance.now() / 1000;
+    }
+    return Date.now() / 1000;
+  }
+
+  function pruneBlocked(currentTime) {
+    for (const [key, expireAt] of blockedTargets.entries()) {
+      if (expireAt <= currentTime) {
+        blockedTargets.delete(key);
+      }
+    }
+  }
+
+  function packKey(x, y) {
+    return (y << 16) | x;
+  }
+
+  function markBlocked(x, y, ttlSeconds = 8) {
+    const now = nowSeconds();
+    pruneBlocked(now);
+    const expireAt = now + ttlSeconds;
+    blockedTargets.set(packKey(x, y), expireAt);
+  }
+
+  function isBlocked(x, y) {
+    const now = nowSeconds();
+    pruneBlocked(now);
+    const key = packKey(x, y);
+    const expireAt = blockedTargets.get(key);
+    if (expireAt === undefined) return false;
+    if (expireAt <= now) {
+      blockedTargets.delete(key);
+      return false;
+    }
+    return true;
   }
 
   function requestDigTarget(ant, world) {
@@ -169,6 +210,7 @@ const ExcavationPlanner = (() => {
       const ny = gy + dy;
       const tile = grid[ny]?.[nx];
       if (tile !== TILES.SOIL) continue;
+      if (isBlocked(nx, ny)) continue;
 
       const tunnelNeighbors = countTunnelNeighbors4(nx, ny, grid);
       if (tunnelNeighbors !== 1) continue;
@@ -374,6 +416,7 @@ const ExcavationPlanner = (() => {
       const nx = origin.gx + dir.dx;
       const ny = origin.gy + dir.dy;
       if (grid?.[ny]?.[nx] !== TILES.SOIL) continue;
+      if (isBlocked(nx, ny)) continue;
       if (countTunnelNeighbors4(nx, ny, grid) !== 1) continue;
       if (!connectsToTipOnly(nx, ny, origin.gx, origin.gy, grid)) continue;
       if (tooCloseToOtherTunnels(nx, ny, origin.gx, origin.gy, grid)) continue;
@@ -409,6 +452,7 @@ const ExcavationPlanner = (() => {
     requestDigTarget,
     notifyTunnelDug,
     getDebugState,
+    markBlocked,
+    isBlocked,
   };
 })();
-

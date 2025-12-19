@@ -251,6 +251,31 @@ const DiggingSystem = (() => {
     return null;
   }
 
+  function validatePlannedCorridorTarget(target, spacePressure, grid, allowBranching) {
+    if (!target || !grid[target.y] || grid[target.y][target.x] !== TILES.SOIL) return false;
+
+    const tunnelNeighbors = countTunnelNeighbors4(target.x, target.y, grid);
+    if (tunnelNeighbors <= 0) return false;
+    if (tunnelNeighbors >= 2 && !allowBranching) return false;
+    if (formsCheckerboardArtifact(target.x, target.y, grid)) return false;
+
+    if (spacePressure <= 0.9) {
+      let openNeighbors = 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          const nx = target.x + dx;
+          const ny = target.y + dy;
+          if (!grid[ny] || typeof grid[ny][nx] === "undefined") continue;
+          if (grid[ny][nx] === TILES.TUNNEL) openNeighbors++;
+        }
+      }
+      if (openNeighbors > 3) return false;
+    }
+
+    return true;
+  }
+
   function findNurseryFrontier(center, bandInner, bandOuter, grid, wasteGrid) {
     if (!center || !grid) return null;
     const searchRadius = Math.max(bandOuter + 6, SETTINGS.sampleRadius);
@@ -613,17 +638,28 @@ const DiggingSystem = (() => {
       !pantryPlan &&
       typeof ExcavationPlanner !== "undefined"
     ) {
-      const planned = ExcavationPlanner.requestDigTarget(ant, world, { reason: "free-dig" });
-      if (planned && planned.x !== undefined) {
+      let attempts = 0;
+      while (attempts < 3) {
+        const planned = ExcavationPlanner.requestDigTarget(ant, world, { reason: "free-dig" });
+        if (!planned || planned.x === undefined) break;
         const neighborCount = countTunnelNeighbors4(planned.x, planned.y, world.grid);
         const allowBranching = planned.allowBranching === true || neighborCount >= 2;
-        return {
-          x: planned.x,
-          y: planned.y,
-          mode: "corridor",
-          workfaceId: planned.workfaceId,
-          allowBranching,
-        };
+        const valid = validatePlannedCorridorTarget(planned, spacePressure, world.grid, allowBranching);
+        if (valid) {
+          return {
+            x: planned.x,
+            y: planned.y,
+            mode: "corridor",
+            workfaceId: planned.workfaceId,
+            allowBranching,
+          };
+        }
+
+        if (typeof ExcavationPlanner.markBlocked === "function") {
+          ExcavationPlanner.markBlocked(planned.x, planned.y, 10);
+        }
+
+        attempts++;
       }
     }
 
