@@ -2243,6 +2243,7 @@ class Ant {
     this.roomRadius = 0;
     this.roomDigBudget = 0;
     this.roomDug = 0;
+    this.roomPurpose = null;
     this.roomCooldown = 0;
     this.digApproach = null;
     this.digWorkT = 0;

@@ -31,6 +31,7 @@ const DiggingSystem = (() => {
   };
 
   const clamp01 = (v) => Math.max(0, Math.min(1, v));
+  const clamp = (min, max, v) => Math.max(min, Math.min(max, v));
   const isOpenTile = (tile) => tile === TILES.TUNNEL || tile === TILES.AIR;
 
   let headingNaNWarningIssued = false;
@@ -422,6 +423,18 @@ const DiggingSystem = (() => {
   function chooseDigTarget(ant, world) {
     if (ant.carrying || ant.role !== "digger") return null;
 
+    const countDiggers = () => {
+      if (world?.ants && Array.isArray(world.ants)) {
+        const count = world.ants.filter((a) => a && a.role === "digger").length;
+        if (count > 0) return count;
+      }
+      if (typeof ants !== "undefined" && Array.isArray(ants)) {
+        const count = ants.filter((a) => a && a.role === "digger").length;
+        if (count > 0) return count;
+      }
+      return 0;
+    };
+
     const aboveSplit = ant.y < regionSplit * cellSize;
     const anchor = world?.digStart;
     const effectiveX = aboveSplit ? (anchor?.x ?? ant.x) : ant.x;
@@ -453,6 +466,23 @@ const DiggingSystem = (() => {
     const queenUnsettled = queen && (queen.state === "FOUNDING_SURFACE" || queen.state === "RELOCATING");
     const prioritizeQueen = queenPending || queenUnsettled;
 
+    const queenObjectiveReady = queenObjective?.status === "ready";
+    const queenRelocating = queen && queen.state === "RELOCATING";
+    if (
+      ant.digMode === "room" &&
+      ant.roomPurpose === "queenChamber" &&
+      queenObjectiveReady &&
+      !queenRelocating
+    ) {
+      ant.digMode = "corridor";
+      ant.roomCenter = null;
+      ant.roomRadius = 0;
+      ant.roomDigBudget = 0;
+      ant.roomDug = 0;
+      ant.roomCooldown = CONFIG?.roomCooldown ?? 6;
+      ant.roomPurpose = null;
+    }
+
     const nurseryReady = queenObjective?.status === "ready" && !queenUnsettled;
     const bandInner = CONFIG?.nurseryBandInner ?? 3;
     const bandOuter = CONFIG?.nurseryBandOuter ?? 6;
@@ -466,6 +496,7 @@ const DiggingSystem = (() => {
       ant.roomRadius = 0;
       ant.roomDigBudget = 0;
       ant.roomDug = 0;
+      ant.roomPurpose = null;
     }
 
     const favorSoftSoil = spacePressure < 0.5 && broodPressure < 0.2;
@@ -517,13 +548,18 @@ const DiggingSystem = (() => {
           ant.digMode = "room";
           ant.roomCenter = { x: center.gx, y: center.gy };
           ant.roomRadius = radius;
-          ant.roomDigBudget = Math.max(ant.roomDigBudget || 0, (queenObjective.minTiles || radius * radius));
+          ant.roomPurpose = "queenChamber";
+          const minTiles = queenObjective.minTiles || 36;
+          const diggerCount = countDiggers() || 1;
+          const perAntBudget = clamp(4, 12, Math.ceil(minTiles / diggerCount) + 2);
+          ant.roomDigBudget = Math.max(ant.roomDigBudget || 0, perAntBudget);
         } else {
           ant.digMode = "corridor";
           ant.roomCenter = null;
           ant.roomRadius = 0;
           ant.roomDigBudget = 0;
           ant.roomDug = 0;
+          ant.roomPurpose = null;
           ant.digHeadingAngle = Math.atan2(dirY, dirX);
           ant.digHeadingStrength = headingStrength;
         }
@@ -1050,6 +1086,7 @@ const DiggingSystem = (() => {
         ant.roomRadius = 0;
         ant.roomDigBudget = 0;
         ant.roomDug = 0;
+        ant.roomPurpose = null;
       }
     }
 
