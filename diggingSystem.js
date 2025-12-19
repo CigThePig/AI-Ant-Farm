@@ -786,6 +786,11 @@ const DiggingSystem = (() => {
       const { x, y } = tile;
       if (!frontierMask[y][x]) continue;
       if (ant.avoidDigT > 0 && ant.avoidDigX === x && ant.avoidDigY === y) continue;
+      if (digMode === "room" && ant.roomCenter) {
+        const distCenter = Math.hypot(x - ant.roomCenter.x, y - ant.roomCenter.y);
+        const hardLimit = (ant.roomRadius || 2.5) + 0.75;
+        if (distCenter > hardLimit) continue;
+      }
 
       const tx = (x + 0.5) * cellSize;
       const ty = (y + 0.5) * cellSize;
