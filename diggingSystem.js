@@ -947,15 +947,14 @@ const DiggingSystem = (() => {
     const grid = world.grid;
     if (!grid[gy] || grid[gy][gx] !== TILES.SOIL) return false;
 
+    const mode = ant.digMode || "corridor";
     if (!canCarveHere(gx, gy, ant, world)) return false;
 
     const spacePressure = (typeof ColonyState !== "undefined" && ColonyState.getSpacePressure)
       ? ColonyState.getSpacePressure()
       : 0.3;
 
-    if (spacePressure <= 0.9) {
-      const openTiles = new Set([TILES.TUNNEL]);
-      if (typeof TILES.AIR !== "undefined") openTiles.add(TILES.AIR);
+    if (mode === "corridor" && spacePressure <= 0.9) {
       let openNeighbors = 0;
       for (let dy = -1; dy <= 1; dy++) {
         for (let dx = -1; dx <= 1; dx++) {
@@ -963,7 +962,7 @@ const DiggingSystem = (() => {
           const nx = gx + dx;
           const ny = gy + dy;
           if (!grid[ny] || typeof grid[ny][nx] === "undefined") continue;
-          if (openTiles.has(grid[ny][nx])) openNeighbors++;
+          if (grid[ny][nx] === TILES.TUNNEL) openNeighbors++;
         }
       }
 
@@ -978,7 +977,6 @@ const DiggingSystem = (() => {
       return true;
     }
 
-    const mode = ant.digMode || "corridor";
     const target = ant.digTarget;
     const allowBranching = !!(target && target.x === gx && target.y === gy && target.allowBranching);
     const tunnelNeighbors = countTunnelNeighbors4(gx, gy, grid);
