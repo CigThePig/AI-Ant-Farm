@@ -1261,7 +1261,8 @@ function getQueenPathStart(queen, world) {
 
 function updateQueenRelocation(world) {
   const objective = world?.objectives?.queenChamber;
-  if (!objective || objective.status !== "ready") return;
+  const status = objective?.status;
+  if (!objective || (status !== "digging" && status !== "ready")) return;
 
   const queen = getQueen(world);
   const target = findQueenChamberTunnelTarget(world);
