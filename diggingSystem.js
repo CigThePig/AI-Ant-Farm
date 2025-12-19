@@ -31,6 +31,7 @@ const DiggingSystem = (() => {
   };
 
   const clamp01 = (v) => Math.max(0, Math.min(1, v));
+  const isOpenTile = (tile) => tile === TILES.TUNNEL || tile === TILES.AIR;
 
   let headingNaNWarningIssued = false;
   const warnHeadingNaNOnce = (context) => {
@@ -84,19 +85,19 @@ const DiggingSystem = (() => {
     if (grid[y][x] !== TILES.SOIL) return false;
 
     return (
-      grid[y - 1][x] === TILES.TUNNEL ||
-      grid[y + 1][x] === TILES.TUNNEL ||
-      grid[y][x - 1] === TILES.TUNNEL ||
-      grid[y][x + 1] === TILES.TUNNEL
+      isOpenTile(grid[y - 1][x]) ||
+      isOpenTile(grid[y + 1][x]) ||
+      isOpenTile(grid[y][x - 1]) ||
+      isOpenTile(grid[y][x + 1])
     );
   }
 
   function countTunnelNeighbors4(gx, gy, grid) {
     let neighbors = 0;
-    if (grid[gy - 1]?.[gx] === TILES.TUNNEL) neighbors++;
-    if (grid[gy + 1]?.[gx] === TILES.TUNNEL) neighbors++;
-    if (grid[gy]?.[gx - 1] === TILES.TUNNEL) neighbors++;
-    if (grid[gy]?.[gx + 1] === TILES.TUNNEL) neighbors++;
+    if (isOpenTile(grid[gy - 1]?.[gx])) neighbors++;
+    if (isOpenTile(grid[gy + 1]?.[gx])) neighbors++;
+    if (isOpenTile(grid[gy]?.[gx - 1])) neighbors++;
+    if (isOpenTile(grid[gy]?.[gx + 1])) neighbors++;
     return neighbors;
   }
 
@@ -228,7 +229,7 @@ const DiggingSystem = (() => {
       checks++;
       const dx = node.gx - center.gx;
       const dy = node.gy - center.gy;
-      if (dx * dx + dy * dy <= radius2 && grid[node.gy]?.[node.gx] === TILES.TUNNEL) return node;
+      if (dx * dx + dy * dy <= radius2 && isOpenTile(grid[node.gy]?.[node.gx])) return node;
 
       const neighbors = [
         [1, 0],
@@ -240,7 +241,7 @@ const DiggingSystem = (() => {
         const nx = node.gx + ox;
         const ny = node.gy + oy;
         if (nx <= 0 || nx >= width - 1 || ny <= regionSplit || ny >= height - 1) continue;
-        if (grid[ny]?.[nx] !== TILES.TUNNEL) continue;
+        if (!isOpenTile(grid[ny]?.[nx])) continue;
         const key = ny * width + nx;
         if (visited.has(key)) continue;
         visited.add(key);
@@ -362,7 +363,7 @@ const DiggingSystem = (() => {
         if (nx <= 0 || nx >= width - 1 || ny <= regionSplit || ny >= height - 1) continue;
         const tile = grid[ny]?.[nx];
         if (tile === TILES.BEDROCK) continue;
-        if (tile === TILES.TUNNEL) { cx = nx; cy = ny; advanced = true; break; }
+        if (isOpenTile(tile)) { cx = nx; cy = ny; advanced = true; break; }
         if (tile === TILES.SOIL && frontierMask[ny]?.[nx]) return { x: nx, y: ny };
         if (tile === TILES.SOIL && isFrontierCell(nx, ny, grid)) return { x: nx, y: ny };
       }
@@ -417,7 +418,6 @@ const DiggingSystem = (() => {
     const nurseryPressure = (typeof ColonyState !== "undefined" && ColonyState.getNurseryPressure)
       ? ColonyState.getNurseryPressure()
       : 0.0;
-    if (spacePressure < 0.05) return null;
 
     const queen = (typeof getQueen === "function") ? getQueen(world) : null;
     const qx = queen ? queen.x : effectiveX;
@@ -569,6 +569,11 @@ const DiggingSystem = (() => {
       }
     }
 
+    const hasPriorityObjective = !!(queenPlan || nurseryPlan || pantryPlan || prioritizeQueen);
+    if (spacePressure < 0.05 && !hasPriorityObjective) {
+      return null;
+    }
+
     const currentPlan = queenPlan;
 
     if (headingVec) {
@@ -610,7 +615,15 @@ const DiggingSystem = (() => {
     ) {
       const planned = ExcavationPlanner.requestDigTarget(ant, world, { reason: "free-dig" });
       if (planned && planned.x !== undefined) {
-        return { x: planned.x, y: planned.y, mode: "corridor", workfaceId: planned.workfaceId };
+        const neighborCount = countTunnelNeighbors4(planned.x, planned.y, world.grid);
+        const allowBranching = planned.allowBranching === true || neighborCount >= 2;
+        return {
+          x: planned.x,
+          y: planned.y,
+          mode: "corridor",
+          workfaceId: planned.workfaceId,
+          allowBranching,
+        };
       }
     }
 
@@ -792,6 +805,9 @@ const DiggingSystem = (() => {
 
     if (best && best.mode === "corridor") {
       const verifyNeighbors = countTunnelNeighbors4(best.x, best.y, world.grid);
+      if (verifyNeighbors >= 2 && best.allowBranching !== true) {
+        best.allowBranching = true;
+      }
       if (verifyNeighbors >= 2 && best.allowBranching !== true) {
         if (!chooseDigTarget.branchingMismatchWarned) {
           chooseDigTarget.branchingMismatchWarned = true;

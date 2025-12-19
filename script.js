@@ -251,6 +251,7 @@ function initEdgeCanvas() {
 }
 
 function isSolid(t) { return t === TILES.SOIL || t === TILES.BEDROCK; }
+function isOpenTile(t) { return t === TILES.TUNNEL || t === TILES.GRASS || t === TILES.AIR; }
 
 AirSystem.init(CONSTANTS);
 DiggingSystem.init(CONSTANTS);
@@ -258,7 +259,7 @@ if (typeof ExcavationPlanner !== "undefined") ExcavationPlanner.init(CONSTANTS);
 
 function drawEdgesForCell(gx, gy, grid) {
   const t = grid[gy][gx];
-  if (t !== TILES.TUNNEL && t !== TILES.GRASS) return;
+  if (!isOpenTile(t)) return;
 
   const cs = CONSTANTS.CELL_SIZE;
   const px = gx * cs;
@@ -1959,7 +1960,7 @@ function resetSimulation() {
       gridTexture[y][x] = n;
 
       if (x===0 || x===CONSTANTS.GRID_W-1 || y===CONSTANTS.GRID_H-1 || y===0) grid[y][x] = TILES.BEDROCK;
-      else if (y < CONSTANTS.REGION_SPLIT) grid[y][x] = TILES.GRASS;
+      else if (y < CONSTANTS.REGION_SPLIT) grid[y][x] = TILES.AIR;
       else grid[y][x] = TILES.SOIL;
     }
   }
@@ -2516,8 +2517,8 @@ class Ant {
       const right = base + 0.7;
       const leftTile = getTile(Math.floor((this.x + Math.cos(left) * cs) / cs), Math.floor((this.y + Math.sin(left) * cs) / cs));
       const rightTile = getTile(Math.floor((this.x + Math.cos(right) * cs) / cs), Math.floor((this.y + Math.sin(right) * cs) / cs));
-      if (leftTile === TILES.TUNNEL || leftTile === TILES.GRASS) candidate = left;
-      else if (rightTile === TILES.TUNNEL || rightTile === TILES.GRASS) candidate = right;
+      if (leftTile === TILES.TUNNEL || leftTile === TILES.GRASS || leftTile === TILES.AIR) candidate = left;
+      else if (rightTile === TILES.TUNNEL || rightTile === TILES.GRASS || rightTile === TILES.AIR) candidate = right;
     }
 
     const jitter = (Math.random() - 0.5) * 0.15;
@@ -3549,7 +3550,7 @@ function render() {
 
       const foodRow = foodGrid[y];
 
-      if (t === TILES.GRASS) {
+      if (t === TILES.GRASS || t === TILES.AIR) {
         const variation = (n - 0.5) * 0.3;
         const base = shadeHex("#567d46", variation);
         ctx.fillStyle = base;
