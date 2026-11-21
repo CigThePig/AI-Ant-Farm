@@ -12,7 +12,7 @@ export class Simulation {
   this.p=parameters(options.parameters);this.world=new World(this.options);this.time=0;this.tick=0;this.nextId=1;
   this.ants=[];this.brood=[];this.corpses=[];this.events=[];this.history=[];this.interactions=[];this.interventions=[];
   this.metrics={births:0,laid:0,fed:0,deaths:0,broodDeaths:0,dug:0,gathered:0,delivered:0,cleaned:0,discovered:0,contacts:0,depositions:0,transported:0};
-  this.outputs=pool();this.inputs=pool();this.layTimer=0;this.environmentTimer=0;this.historyTimer=0;
+  this.outputs=pool();this.outputCorrection=pool();this.inputs=pool();this.layTimer=0;this.environmentTimer=0;this.historyTimer=0;
   this.queen=this.spawnAnt('queen',this.world.chamber);
   if(this.options.scenario!=='founding')for(let i=0;i<this.options.workers;i++)this.spawnAnt('worker',this.world.chamber);
   this.inputs=this.inventory();
@@ -22,6 +22,18 @@ export class Simulation {
  livingWorkers(){return this.ants.filter(a=>a.alive&&a.type==='worker');}
  cell(a){return this.world.cell(a.x,a.y);}
  note(message){this.events.push({time:this.time,message});if(this.events.length>60)this.events.shift();}
+ metabolize(amount){
+  // Compensated summation prevents millions of tiny maintenance debits from
+  // accumulating a false mass-conservation failure in long-duration runs.
+  const corrected=amount-this.outputCorrection.c,next=this.outputs.c+corrected;
+  this.outputCorrection.c=(next-this.outputs.c)-corrected;this.outputs.c=next;
+ }
+ disposalPath(a){
+  if(!a.exitMemory.length)return [];
+  let common=a.walk.length-1;while(common>=0&&!a.exitMemory.includes(a.walk[common]))common--;
+  if(common<0)return [];
+  return [...a.walk.slice(common,-1).reverse(),...a.exitMemory.slice(a.exitMemory.indexOf(a.walk[common])+1)];
+ }
  inventory(){
   const w=this.world,items=[pool(w.food.reduce((a,b)=>a+b,0),w.protein.reduce((a,b)=>a+b,0))];
   for(const a of this.ants)if(a.alive)items.push(a.crop,a.reserve,a.body);
@@ -71,6 +83,7 @@ export class Simulation {
   const old=this.spatial.get(from);if(old)old.splice(old.indexOf(a),1);
   if(!this.spatial.has(next))this.spatial.set(next,[]);this.spatial.get(next).push(a);
   rememberStep(a,next);a.heading=next-from;
+  if(Math.floor(from/w.width)>=w.surface&&Math.floor(next/w.width)<w.surface)a.exitMemory=[...a.walk];
   if(a.carryingBrood!==null){const b=this.brood.find(b=>b.id===a.carryingBrood);if(b)b.cell=next;}
   if(a.corpse!==null){const c=this.corpses.find(c=>c.id===a.corpse);if(c)c.cell=next;}
   return true;
@@ -87,8 +100,8 @@ export class Simulation {
   this.behaviour(a,'share');
   if(a.contact?.id!==b.id)a.contact={id:b.id,seconds:0};a.contact.seconds+=dt;
   if(a.contact.seconds>=this.p.contactSeconds){
-   const moved=this.transferFood(a,b,this.p.transferPerSecond*dt);
-   if(moved){this.metrics.delivered+=moved;if(!a.contact.recorded){this.metrics.contacts++;a.contact.recorded=true;}this.interactions.push({time:this.time,donor:a.id,receiver:b.id,cell:s.cell,amount:moved});if(this.interactions.length>1000)this.interactions.shift();}
+   const before={...b.crop};const moved=this.transferFood(a,b,this.p.transferPerSecond*dt);
+   if(moved){this.metrics.delivered+=moved;if(!a.contact.recorded){this.metrics.contacts++;a.contact.recorded=true;}this.interactions.push({time:this.time,donor:a.id,receiver:b.id,cell:s.cell,amount:moved,c:b.crop.c-before.c,p:b.crop.p-before.p});if(this.interactions.length>1000)this.interactions.shift();}
   }
   return true;
  }
@@ -119,6 +132,8 @@ export class Simulation {
  }
  updateWorker(a,dt){
   const s=this.sense(a),w=this.world;
+  if(s.cell===w.chamber)a.awaySeconds=0;else a.awaySeconds+=dt;
+  if(a.contact&&!s.peers.some(b=>b.id===a.contact.id))a.contact=null;
   a.stimuli={cell:s.cell,food:s.food,trail:s.trail,encounters:s.peers.map(b=>b.id),brood:s.brood.map(b=>b.id),
    localCrowding:s.peers.length,soil:s.soil,temperatureC:s.temperatureC,moisture:s.moisture};
   // Cargo transports use the ant's own recorded trajectory; interrupted cargo stays physical.
@@ -128,8 +143,8 @@ export class Simulation {
     if(a.soil){w.depositedSoil[s.cell]+=a.soil;a.soil=0;}
     if(a.corpse!==null){const c=this.corpses.find(c=>c.id===a.corpse);if(c){c.cell=s.cell;c.carrier=null;}a.corpse=null;this.metrics.cleaned++;}
    }else if(a.moveBudget>=1){
-    const next=this.chooseMove(a,{...s,food:[]});
-    if(next!==undefined&&this.moveTo(a,next))a.moveBudget--;
+    const next=a.disposalRoute[0]??this.chooseMove(a,{...s,food:[]});
+    if(next!==undefined&&this.moveTo(a,next)){a.moveBudget--;if(a.disposalRoute[0]===next)a.disposalRoute.shift();}
    }
    return;
   }
@@ -145,7 +160,8 @@ export class Simulation {
    return;
   }
   if(a.behaviour==='return'){a.outbound=[];a.successQuality=0;this.behaviour(a,'rest');}
-  if(s.corpses.length&&Math.floor(s.cell/w.width)>=w.surface){const c=s.corpses[0];a.corpse=c.id;c.carrier=a.id;this.behaviour(a,'clean');return;}
+  if(s.corpses.length&&Math.floor(s.cell/w.width)>=w.surface){const c=s.corpses[0];a.corpse=c.id;c.carrier=a.id;a.disposalRoute=this.disposalPath(a);this.behaviour(a,'clean');return;}
+  if(a.walk.length>1&&a.awaySeconds>300+600*a.thresholds.forage){a.successQuality=0;this.startReturn(a);return;}
   const hungry=s.brood.find(b=>b.stage==='larva'&&(b.body.c<this.p.larvalTargetC||b.body.p<this.p.larvalTargetP));
   if(hungry&&w.random()<Math.max(1-hungry.body.c/this.p.larvalTargetC,1-hungry.body.p/this.p.larvalTargetP)/(a.thresholds.nurse+.01)&&this.feedBrood(a,hungry,dt))return;
   const badBrood=s.brood.find(b=>Math.abs(s.temperatureC-23)>2);
@@ -170,11 +186,11 @@ export class Simulation {
   if(s.cell===w.chamber&&this.p.memoryEnabled&&a.memory.length>1&&a.crop.c<this.p.cropC*.65)a.outbound=a.memory.slice(1);
   const ageTendency=.35+.3*Math.min(1,a.age/(60*DAY)); // provisional, reversible bias
   const foraging=(1-a.crop.c/this.p.cropC)*ageTendency;
-  if(s.soil.length&&s.cell!==w.entrance&&a.thresholds.dig<.65&&foraging<a.thresholds.forage&&Math.floor(s.cell/w.width)>=w.surface){
+  if(s.soil.length&&s.peers.length>1&&s.cell!==w.entrance&&a.thresholds.dig<.65&&foraging<a.thresholds.forage&&Math.floor(s.cell/w.width)>=w.surface){
    this.behaviour(a,'dig');const target=s.soil[Math.floor(w.random()*s.soil.length)];
    const moisture=4*s.moisture*(1-s.moisture);
    w.soilWork[target]+=dt*moisture/this.p.soilHardness;
-   if(w.soilWork[target]>=this.p.diggingSeconds&&w.dig(target)){a.soil=1;this.metrics.dug++;}
+   if(w.soilWork[target]>=this.p.diggingSeconds&&w.dig(target)){a.soil=1;a.disposalRoute=this.disposalPath(a);this.metrics.dug++;}
    return;
   }
   if(a.restUntil>this.time){this.behaviour(a,'rest');return;}
@@ -215,8 +231,8 @@ export class Simulation {
   for(const a of this.ants){
    if(!a.alive)continue;a.age+=dt;
    let need=(a.type==='queen'?p.queenMetabolismCPerDay:p.metabolismCPerDay)*dt/DAY;
-   const eaten=Math.min(a.crop.c,need);a.crop.c-=eaten;need-=eaten;this.outputs.c+=eaten;
-   const reserve=Math.min(a.reserve.c,need);a.reserve.c-=reserve;need-=reserve;this.outputs.c+=reserve;
+   const eaten=Math.min(a.crop.c,need);a.crop.c-=eaten;need-=eaten;this.metabolize(eaten);
+   const reserve=Math.min(a.reserve.c,need);a.reserve.c-=reserve;need-=reserve;this.metabolize(reserve);
    const rate=(a.type==='queen'?p.queenMetabolismCPerDay:p.metabolismCPerDay)/DAY;
    a.starved=need>1e-12?(eaten+reserve>0?0:a.starved)+need/rate:0;
    if(a.starved>2*DAY||a.age>=a.lifespan)this.kill(a);

@@ -18,44 +18,45 @@
       "runs": [
         {
           "seed": 1,
-          "gathered": 921,
+          "gathered": 965,
           "visits": 15,
           "firstHourBirths": 0
         },
         {
           "seed": 7,
-          "gathered": 996,
-          "visits": 19,
+          "gathered": 940,
+          "visits": 17,
           "firstHourBirths": 0
         },
         {
           "seed": 42,
-          "gathered": 978,
-          "visits": 19,
+          "gathered": 1004,
+          "visits": 24,
           "firstHourBirths": 0
         },
         {
           "seed": 1337,
-          "gathered": 949,
-          "visits": 22,
+          "gathered": 899.5,
+          "visits": 14,
           "firstHourBirths": 0
         },
         {
           "seed": 2026,
-          "gathered": 984.0000000000002,
-          "visits": 21,
+          "gathered": 1002.0000000000001,
+          "visits": 18,
           "firstHourBirths": 0
         }
       ],
       "summary": {
         "n": 5,
-        "mean": 965.6,
-        "sd": 30.3364467266686,
-        "min": 921,
-        "max": 996
+        "mean": 962.1,
+        "sd": 44.0545116872268,
+        "min": 899.5,
+        "max": 1004
       },
       "expected": "Positive discovery; quality response and memory/trail effects must be measured, not assumed.",
-      "empiricalFit": "not evaluated; no fabricated observational sample"
+      "empiricalFit": "not evaluated; no fabricated observational sample",
+      "assessment": "observed: local exploration collects food; one-hour brood emergence correctly absent"
     },
     {
       "id": "B",
@@ -64,93 +65,94 @@
         {
           "seed": 1,
           "quality": 1,
-          "left": 795.3333333334049,
-          "right": 688.6000000000149,
-          "depositions": 531,
-          "contacts": 128
+          "left": 785.2666666666364,
+          "right": 709.333333333343,
+          "depositions": 506,
+          "contacts": 189
         },
         {
           "seed": 1,
           "quality": 1.43,
-          "left": 672.6666666667033,
-          "right": 807.7666666667119,
-          "depositions": 523,
-          "contacts": 134
+          "left": 833.4198412697006,
+          "right": 675.833333333354,
+          "depositions": 590,
+          "contacts": 137
         },
         {
           "seed": 7,
           "quality": 1,
-          "left": 680.8333333333403,
-          "right": 785.4000000000151,
-          "depositions": 600,
-          "contacts": 147
+          "left": 798.7666666666282,
+          "right": 624.800000000042,
+          "depositions": 576,
+          "contacts": 171
         },
         {
           "seed": 7,
           "quality": 1.43,
-          "left": 923.2000000000362,
-          "right": 518.0666666666684,
-          "depositions": 549,
-          "contacts": 131
+          "left": 798.3666666666877,
+          "right": 758.4666666667244,
+          "depositions": 658,
+          "contacts": 203
         },
         {
           "seed": 42,
           "quality": 1,
-          "left": 785.0380952380301,
-          "right": 716,
-          "depositions": 526,
-          "contacts": 140
+          "left": 720.3666666666995,
+          "right": 759.5333333333401,
+          "depositions": 536,
+          "contacts": 190
         },
         {
           "seed": 42,
           "quality": 1.43,
-          "left": 795.0380952381029,
-          "right": 648,
-          "depositions": 545,
-          "contacts": 149
+          "left": 841.8666666666631,
+          "right": 777.733333333299,
+          "depositions": 611,
+          "contacts": 113
         },
         {
           "seed": 1337,
           "quality": 1,
-          "left": 677,
-          "right": 846.466666666699,
-          "depositions": 527,
-          "contacts": 142
+          "left": 756.1277777779587,
+          "right": 759.1000000000286,
+          "depositions": 565,
+          "contacts": 205
         },
         {
           "seed": 1337,
           "quality": 1.43,
-          "left": 746.0000000000255,
-          "right": 829.3333333334012,
-          "depositions": 504,
-          "contacts": 129
+          "left": 874.3460317462086,
+          "right": 659.8523809524258,
+          "depositions": 531,
+          "contacts": 246
         },
         {
           "seed": 2026,
           "quality": 1,
-          "left": 798.6666666667234,
-          "right": 674,
-          "depositions": 397,
-          "contacts": 146
+          "left": 909.9999999999336,
+          "right": 587.333333333373,
+          "depositions": 602,
+          "contacts": 199
         },
         {
           "seed": 2026,
           "quality": 1.43,
-          "left": 838.3333333333849,
-          "right": 684.833333333343,
-          "depositions": 474,
-          "contacts": 146
+          "left": 788.1999999998707,
+          "right": 640.0000000000227,
+          "depositions": 514,
+          "contacts": 136
         }
       ],
       "summary": {
         "n": 10,
-        "mean": 719.8466666666853,
-        "sd": 100.1350386993087,
-        "min": 518.0666666666684,
-        "max": 846.466666666699
+        "mean": 695.1985714285953,
+        "sd": 67.0812946427936,
+        "min": 587.333333333373,
+        "max": 777.733333333299
       },
       "expected": "Positive discovery; quality response and memory/trail effects must be measured, not assumed.",
-      "empiricalFit": "not evaluated; no fabricated observational sample"
+      "empiricalFit": "not evaluated; no fabricated observational sample",
+      "assessment": "unvalidated: quality changes marking by construction; consistent colony-level preference not established"
     },
     {
       "id": "C",
@@ -159,38 +161,38 @@
         {
           "seed": 1,
           "mode": "intact",
-          "gatheredAfter": 0,
+          "gatheredAfter": 26,
           "memoryWorkers": 11
         },
         {
           "seed": 1,
           "mode": "erased",
-          "gatheredAfter": 0,
+          "gatheredAfter": 26,
           "memoryWorkers": 11
         },
         {
           "seed": 1,
           "mode": "no-memory",
-          "gatheredAfter": 0,
+          "gatheredAfter": 26,
           "memoryWorkers": 0
         },
         {
           "seed": 1,
           "mode": "neither",
-          "gatheredAfter": 0,
+          "gatheredAfter": 26,
           "memoryWorkers": 0
         },
         {
           "seed": 7,
           "mode": "intact",
           "gatheredAfter": 0,
-          "memoryWorkers": 7
+          "memoryWorkers": 11
         },
         {
           "seed": 7,
           "mode": "erased",
           "gatheredAfter": 0,
-          "memoryWorkers": 7
+          "memoryWorkers": 11
         },
         {
           "seed": 7,
@@ -207,37 +209,37 @@
         {
           "seed": 42,
           "mode": "intact",
-          "gatheredAfter": 32,
+          "gatheredAfter": 0,
           "memoryWorkers": 11
         },
         {
           "seed": 42,
           "mode": "erased",
-          "gatheredAfter": 24,
+          "gatheredAfter": 0,
           "memoryWorkers": 11
         },
         {
           "seed": 42,
           "mode": "no-memory",
-          "gatheredAfter": 39,
+          "gatheredAfter": 0,
           "memoryWorkers": 0
         },
         {
           "seed": 42,
           "mode": "neither",
-          "gatheredAfter": 30,
+          "gatheredAfter": 0,
           "memoryWorkers": 0
         },
         {
           "seed": 1337,
           "mode": "intact",
-          "gatheredAfter": 30,
+          "gatheredAfter": 0,
           "memoryWorkers": 11
         },
         {
           "seed": 1337,
           "mode": "erased",
-          "gatheredAfter": 30,
+          "gatheredAfter": 0,
           "memoryWorkers": 11
         },
         {
@@ -255,37 +257,38 @@
         {
           "seed": 2026,
           "mode": "intact",
-          "gatheredAfter": 15,
+          "gatheredAfter": 0,
           "memoryWorkers": 11
         },
         {
           "seed": 2026,
           "mode": "erased",
-          "gatheredAfter": 15,
+          "gatheredAfter": 0,
           "memoryWorkers": 11
         },
         {
           "seed": 2026,
           "mode": "no-memory",
-          "gatheredAfter": 59,
+          "gatheredAfter": 8.708333333333258,
           "memoryWorkers": 0
         },
         {
           "seed": 2026,
           "mode": "neither",
-          "gatheredAfter": 53,
+          "gatheredAfter": 5,
           "memoryWorkers": 0
         }
       ],
       "summary": {
         "n": 20,
-        "mean": 16.35,
-        "sd": 19.4862299559134,
+        "mean": 5.8854166666666625,
+        "sd": 10.54332535837594,
         "min": 0,
-        "max": 59
+        "max": 26
       },
       "expected": "Positive discovery; quality response and memory/trail effects must be measured, not assumed.",
-      "empiricalFit": "not evaluated; no fabricated observational sample"
+      "empiricalFit": "not evaluated; no fabricated observational sample",
+      "assessment": "inconclusive: satiation limits post-disruption harvest and obscures ablation effects"
     },
     {
       "id": "D",
@@ -325,7 +328,8 @@
         "max": 1
       },
       "expected": "Nursing responds at contact, distant brood cannot be sensed.",
-      "empiricalFit": "not evaluated; no fabricated observational sample"
+      "empiricalFit": "not evaluated; no fabricated observational sample",
+      "assessment": "mechanism observed: nursing requires local brood contact; no empirical task-distribution fit"
     },
     {
       "id": "E",
@@ -333,49 +337,50 @@
       "runs": [
         {
           "seed": 1,
-          "exchanges": 56,
-          "ledgerErrorC": -1.2732925824820995e-11,
+          "exchanges": 25,
+          "ledgerErrorC": -2.000888343900442e-11,
           "ledgerErrorP": 0,
-          "observedEdges": 219
+          "observedEdges": 72
         },
         {
           "seed": 7,
-          "exchanges": 70,
-          "ledgerErrorC": -1.0913936421275139e-11,
+          "exchanges": 99,
+          "ledgerErrorC": -1.6370904631912708e-11,
           "ledgerErrorP": 0,
-          "observedEdges": 301
+          "observedEdges": 274
         },
         {
           "seed": 42,
-          "exchanges": 60,
-          "ledgerErrorC": -1.0913936421275139e-11,
+          "exchanges": 75,
+          "ledgerErrorC": -1.8189894035458565e-11,
           "ledgerErrorP": 0,
-          "observedEdges": 278
+          "observedEdges": 240
         },
         {
           "seed": 1337,
-          "exchanges": 78,
-          "ledgerErrorC": -1.2732925824820995e-11,
+          "exchanges": 43,
+          "ledgerErrorC": -1.8189894035458565e-11,
           "ledgerErrorP": 0,
-          "observedEdges": 340
+          "observedEdges": 107
         },
         {
           "seed": 2026,
-          "exchanges": 59,
-          "ledgerErrorC": -1.2732925824820995e-11,
+          "exchanges": 53,
+          "ledgerErrorC": -2.000888343900442e-11,
           "ledgerErrorP": 0,
-          "observedEdges": 248
+          "observedEdges": 155
         }
       ],
       "summary": {
         "n": 5,
-        "mean": 1.2005330063402652e-11,
-        "sd": 9.963015281849333e-13,
-        "min": 1.0913936421275139e-11,
-        "max": 1.2732925824820995e-11
+        "mean": 1.8553691916167735e-11,
+        "sd": 1.5218757226358786e-12,
+        "min": 1.6370904631912708e-11,
+        "max": 2.000888343900442e-11
       },
       "expected": "Balanced ledgers and logged contact edges; network statistics not fitted.",
-      "empiricalFit": "not evaluated; no fabricated observational sample"
+      "empiricalFit": "not evaluated; no fabricated observational sample",
+      "assessment": "mechanism observed: physical exchange edges and conservative nutrient accounting"
     },
     {
       "id": "F",
@@ -510,7 +515,8 @@
         "max": 12.605568402086506
       },
       "expected": "Cold exposure stalls the provisional development model; nursing/transport tested separately.",
-      "empiricalFit": "not evaluated; no fabricated observational sample"
+      "empiricalFit": "not evaluated; no fabricated observational sample",
+      "assessment": "encoded sensitivity observed: provisional temperature response; empirical curve not fitted"
     },
     {
       "id": "G",
@@ -519,83 +525,84 @@
         {
           "seed": 1,
           "soilHardness": 0.5,
-          "excavatedCells": 171,
-          "maxDepthMM": 26,
+          "excavatedCells": 24,
+          "maxDepthMM": 14,
           "soilError": 0
         },
         {
           "seed": 1,
           "soilHardness": 2,
-          "excavatedCells": 114,
-          "maxDepthMM": 22,
+          "excavatedCells": 27,
+          "maxDepthMM": 14,
           "soilError": 0
         },
         {
           "seed": 7,
           "soilHardness": 0.5,
-          "excavatedCells": 175,
-          "maxDepthMM": 26,
+          "excavatedCells": 27,
+          "maxDepthMM": 16,
           "soilError": 0
         },
         {
           "seed": 7,
           "soilHardness": 2,
-          "excavatedCells": 116,
-          "maxDepthMM": 22,
+          "excavatedCells": 27,
+          "maxDepthMM": 18,
           "soilError": 0
         },
         {
           "seed": 42,
           "soilHardness": 0.5,
-          "excavatedCells": 224,
-          "maxDepthMM": 28,
+          "excavatedCells": 35,
+          "maxDepthMM": 16,
           "soilError": 0
         },
         {
           "seed": 42,
           "soilHardness": 2,
-          "excavatedCells": 152,
-          "maxDepthMM": 24,
+          "excavatedCells": 40,
+          "maxDepthMM": 16,
           "soilError": 0
         },
         {
           "seed": 1337,
           "soilHardness": 0.5,
-          "excavatedCells": 203,
-          "maxDepthMM": 28,
+          "excavatedCells": 25,
+          "maxDepthMM": 14,
           "soilError": 0
         },
         {
           "seed": 1337,
           "soilHardness": 2,
-          "excavatedCells": 130,
-          "maxDepthMM": 22,
+          "excavatedCells": 30,
+          "maxDepthMM": 14,
           "soilError": 0
         },
         {
           "seed": 2026,
           "soilHardness": 0.5,
-          "excavatedCells": 208,
-          "maxDepthMM": 28,
+          "excavatedCells": 42,
+          "maxDepthMM": 16,
           "soilError": 0
         },
         {
           "seed": 2026,
           "soilHardness": 2,
-          "excavatedCells": 147,
-          "maxDepthMM": 24,
+          "excavatedCells": 39,
+          "maxDepthMM": 16,
           "soilError": 0
         }
       ],
       "summary": {
         "n": 10,
-        "mean": 164,
-        "sd": 38.90158522905376,
-        "min": 114,
-        "max": 224
+        "mean": 31.6,
+        "sd": 6.769211344183473,
+        "min": 24,
+        "max": 42
       },
       "expected": "Harder soil should reduce removal. 2D morphology is not validated against 3D nests.",
-      "empiricalFit": "not evaluated; no fabricated observational sample"
+      "empiricalFit": "not evaluated; no fabricated observational sample",
+      "assessment": "unvalidated: harder soil slows local work by construction, but colony-wide excavation is not reliably monotone"
     },
     {
       "id": "H",
@@ -604,43 +611,44 @@
         {
           "seed": 1,
           "removed": 1,
-          "newGathered": 0,
+          "newGathered": 47,
           "remaining": 11
         },
         {
           "seed": 7,
-          "removed": 0,
+          "removed": 2,
           "newGathered": 0,
-          "remaining": 12
+          "remaining": 10
         },
         {
           "seed": 42,
-          "removed": 1,
-          "newGathered": 24,
-          "remaining": 11
+          "removed": 2,
+          "newGathered": 0,
+          "remaining": 10
         },
         {
           "seed": 1337,
           "removed": 0,
-          "newGathered": 44,
+          "newGathered": 42,
           "remaining": 12
         },
         {
           "seed": 2026,
-          "removed": 2,
-          "newGathered": 15,
-          "remaining": 10
+          "removed": 3,
+          "newGathered": 0,
+          "remaining": 9
         }
       ],
       "summary": {
         "n": 5,
-        "mean": 16.6,
-        "sd": 18.4336648553672,
+        "mean": 17.8,
+        "sd": 24.437675830569486,
         "min": 0,
-        "max": 44
+        "max": 47
       },
       "expected": "Surviving workers can discover food without reassigned quotas; recovery magnitude is uncalibrated.",
-      "empiricalFit": "not evaluated; no fabricated observational sample"
+      "empiricalFit": "not evaluated; no fabricated observational sample",
+      "assessment": "unvalidated: removal and subsequent harvesting measured; no empirical recovery criterion"
     },
     {
       "id": "I",
@@ -685,7 +693,8 @@
         "max": 1909.9975000014624
       },
       "expected": "Only physically accessible added food is consumed; dead workers never revive.",
-      "empiricalFit": "not evaluated; no fabricated observational sample"
+      "empiricalFit": "not evaluated; no fabricated observational sample",
+      "assessment": "mechanism observed: accessible provisioning supports surviving agents; no resurrection"
     },
     {
       "id": "J",
@@ -810,7 +819,8 @@
         "max": 16
       },
       "expected": "Weeks-long reserve-funded development and conservative biomass inheritance; full spatial lifecycle remains unvalidated.",
-      "empiricalFit": "not evaluated; no fabricated observational sample"
+      "empiricalFit": "not evaluated; no fabricated observational sample",
+      "assessment": "subsystem only: reserve-funded development over weeks; spatial worker feeding absent"
     },
     {
       "id": "C-controlled",
@@ -905,30 +915,31 @@
         "max": 40
       },
       "expected": "Surface cues bias naive branch choice; experienced ants retain personal routes when cues are erased. Faster travel with both inputs is model-encoded, not independently validated.",
-      "empiricalFit": "not evaluated; no fabricated observational sample"
+      "empiricalFit": "not evaluated; no fabricated observational sample",
+      "assessment": "mechanism observed: naive local trail bias and retained personal routes; speed synergy is encoded, not independently predicted"
     }
   ],
   "pairedIntactMinusAblation": {
     "erased": {
       "n": 5,
-      "mean": 1.6,
-      "sd": 3.5777087639996643,
+      "mean": 0,
+      "sd": 0,
       "min": 0,
-      "max": 8
+      "max": 0
     },
     "no-memory": {
       "n": 5,
-      "mean": -4.2,
-      "sd": 26.442390209661454,
-      "min": -44,
-      "max": 30
+      "mean": -1.7416666666666516,
+      "sd": 3.8944850608121,
+      "min": -8.708333333333258,
+      "max": 0
     },
     "neither": {
       "n": 5,
-      "mean": -1.2,
-      "sd": 24.190907382733702,
-      "min": -38,
-      "max": 30
+      "mean": -1,
+      "sd": 2.23606797749979,
+      "min": -5,
+      "max": 0
     }
   },
   "status": "Exploratory mechanism tests. Descriptive means and sample SD across seeds, no fitted empirical validation.",

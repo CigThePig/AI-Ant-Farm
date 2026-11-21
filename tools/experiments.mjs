@@ -108,6 +108,20 @@ for(const [id,name] of [['A','Undiscovered food'],['B','Quality and crowding'],[
 // Paired ablation contrasts are descriptive, not significance claims.
 const c=results.find(r=>r.id==='C').runs;
 const contrasts={};for(const mode of ['erased','no-memory','neither'])contrasts[mode]=summarize(seeds.map(seed=>c.find(r=>r.seed===seed&&r.mode==='intact').gatheredAfter-c.find(r=>r.seed===seed&&r.mode===mode).gatheredAfter));
+const assessments={
+ A:'observed: local exploration collects food; one-hour brood emergence correctly absent',
+ B:'unvalidated: quality changes marking by construction; consistent colony-level preference not established',
+ C:'inconclusive: satiation limits post-disruption harvest and obscures ablation effects',
+ D:'mechanism observed: nursing requires local brood contact; no empirical task-distribution fit',
+ E:'mechanism observed: physical exchange edges and conservative nutrient accounting',
+ F:'encoded sensitivity observed: provisional temperature response; empirical curve not fitted',
+ G:'unvalidated: harder soil slows local work by construction, but colony-wide excavation is not reliably monotone',
+ H:'unvalidated: removal and subsequent harvesting measured; no empirical recovery criterion',
+ I:'mechanism observed: accessible provisioning supports surviving agents; no resurrection',
+ J:'subsystem only: reserve-funded development over weeks; spatial worker feeding absent',
+ 'C-controlled':'mechanism observed: naive local trail bias and retained personal routes; speed synergy is encoded, not independently predicted'
+};
+for(const r of results)r.assessment=assessments[r.id];
 const report={modelVersion:3,seeds,units:{time:'biological seconds',food:'µg substrate equivalent'},results,pairedIntactMinusAblation:contrasts,
  status:'Exploratory mechanism tests. Descriptive means and sample SD across seeds, no fitted empirical validation.',
  limitations:['Ablation is not an exact replication of a published assay.','J omits spatial interactions and uses an hour physiology step; it is not a 70-day whole-colony validation.']};

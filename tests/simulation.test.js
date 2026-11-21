@@ -81,3 +81,23 @@ test('larval response uses contact, not colony demand or quotas',()=>{
 test('all walked positions are open cardinal transitions',()=>{
  const s=new Simulation();for(let i=0;i<500;i++){const old=new Map(s.ants.map(a=>[a.id,s.cell(a)]));s.step();for(const a of s.ants){const from=old.get(a.id),to=s.cell(a);assert.ok(from===to||s.world.adjacent(from).includes(to));assert.equal(s.world.grid[to],OPEN);}}
 });
+test('separating a trophallactic pair resets the contact timer',()=>{
+ const s=new Simulation({workers:2,resources:false}),[a,b]=s.livingWorkers();a.crop.c=100;b.crop.c=0;s.queen.x+=3;
+ s.spatial=new Map([[s.cell(a),[a,b]]]);s.share(a,s.sense(a),5);assert.equal(a.contact.seconds,5);
+ Object.assign(b,s.world.center(s.world.entrance));s.spatial=new Map([[s.cell(a),[a]],[s.cell(b),[b]]]);s.updateWorker(a,1);assert.equal(a.contact,null);
+});
+test('corpse detection is local and delayed; disposal cancellation retains biomass',()=>{
+ const s=new Simulation(),[a,b]=s.livingWorkers();s.kill(b);s.spatial=new Map([[s.cell(a),[a]]]);
+ assert.equal(s.sense(a).corpses.length,0);s.time=s.p.corpseCueSeconds;assert.equal(s.sense(a).corpses.length,1);
+ const c=s.corpses[0];c.carrier=a.id;a.corpse=c.id;const before=s.inventory();s.cancelTask(a);assert.equal(c.carrier,null);assert.deepEqual(s.inventory(),before);
+ c.cell=s.world.index(3,3);assert.equal(s.sense(a).corpses.length,0);
+});
+test('brood relocation requires contact and carries it to a locally cooler cell',()=>{
+ const s=new Simulation({parameters:{temperatureC:40}}),a=s.livingWorkers()[0],b=s.layEgg();
+ s.spatial=new Map([[s.cell(a),[a]]]);a.moveBudget=1;const before=s.temperature(b.cell);
+ s.updateWorker(a,1);assert.equal(a.carryingBrood,b.id);assert.equal(b.carrier,a.id);assert.equal(b.cell,s.cell(a));
+ assert.ok(s.temperature(b.cell)<before);s.cancelTask(a);assert.equal(b.carrier,null);assert.deepEqual(s.inspect(),[]);
+});
+test('cold and completely dry experimental boundaries are accepted',()=>{
+ const s=new Simulation({parameters:{temperatureC:-5,soilMoisture:0}});assert.equal(s.p.soilMoisture,0);assert.equal(developmentRate(-5),0);
+});

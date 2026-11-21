@@ -38,4 +38,4 @@ This profile represents a single mated queen and worker-producing summer laborat
 | Corpse cue | 7200 s | Unfitted approximation of gradual postmortem detection; E10 does not establish a sharp threshold |
 | Lifespan | Worker base 365 days × uniform 0.7–1.3; queen base 5000 days × same | Assumptions, not measured survival curves; initially workers have uniform 0–60 day ages |
 
-Threshold distributions (uniform 0.2–0.8), rest bouts, soft congestion, initial food patches, corpse disposal walks and the nest thermal depth gradient are all explicitly uncalibrated. Future profiles can replace these parameters without renderer changes; a second species has not been implemented.
+Threshold distributions (uniform 0.2–0.8), rest bouts, exploration-return times (300 + 600×individual forage threshold seconds), local crowd-triggered excavation, soft congestion, initial food patches, corpse disposal walks and the nest thermal depth gradient are all explicitly uncalibrated. Future profiles can replace these parameters without renderer changes; a second species has not been implemented.

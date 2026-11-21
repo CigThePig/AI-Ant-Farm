@@ -13,6 +13,7 @@ npm run check
 npm test
 npm run soak -- --seconds=86400 --seeds=1,42,1337
 npm run experiment
+npm run lifecycle -- --days=70 --seed=42
 npx playwright install --with-deps chromium
 npm run test:browser
 ```

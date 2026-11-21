@@ -9,3 +9,6 @@ footer {position:fixed;bottom:max(22px,env(safe-area-inset-bottom));left:max(26p
 
 #selection { white-space: pre-wrap; max-height: 40vh; overflow:auto; max-width:min(480px,85vw); }
 #settings { overflow-y:auto; }
+/* Controls must stay above the ant inspector on short desktop viewports too. */
+#settings { z-index: 4; }
+#selection { z-index: 2; }
