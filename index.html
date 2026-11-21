@@ -2,54 +2,40 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Ant Colony v12: Control Panel</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#15251c">
+  <title>Ant Farm · A living colony</title>
   <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-  <canvas id="game"></canvas>
-
-  <div id="ui-overlay">
-    <div class="stats-box" id="stats-display">Loading...</div>
-  </div>
-
-  <button id="debug-btn">🐛 Debug</button>
-  <div id="debug-panel">
-    <div class="panel-head">
-      <div class="chip"><span class="dot"></span> Debug Layers</div>
-      <button id="debug-close" class="ghost-btn" aria-label="Close debug panel">✖</button>
-    </div>
-    <div id="debug-flags" class="debug-flags"></div>
-    <div class="panel-foot">Press <strong>D</strong> to toggle debug tools.</div>
-  </div>
-
-  <button id="settings-btn">⚙️ Settings</button>
-
-  <div id="controls-container">
-    <div class="panel-head">
-      <div class="chip"><span class="dot"></span> Sim Config</div>
-      <div class="chip">LIVE</div>
-    </div>
-
-    <div id="sliders-area"></div>
-
-    <div class="action-row">
-      <button class="action-btn danger" id="reset-btn">RESET</button>
-    </div>
-
-    <div class="panel-foot">
-      Performance pheromones are ON: blurred scent updates every 2 frames.
-    </div>
-  </div>
-
-  <script src="constants.js"></script>
-  <script src="antAnimations.js"></script>
-  <script src="airSystem.js"></script>
-  <script src="excavationPlanner.js"></script>
-  <script src="diggingSystem.js"></script>
-  <script src="colonyState.js"></script>
-  <script src="broodSystem.js"></script>
-  <script src="script.js"></script>
+  <canvas id="world" aria-label="Ant colony simulation. Drag to pan, pinch or scroll to zoom." tabindex="0"></canvas>
+  <header>
+    <div class="brand"><span class="brand-mark">✳</span><div><h1>ANT FARM</h1><p>A little world, working together.</p></div></div>
+    <div class="controls"><button id="follow" title="Center on the colony">◎ Colony</button><button id="settings-toggle" aria-expanded="false" aria-controls="settings">⚙ Controls</button></div>
+  </header>
+  <section class="colony-card" aria-label="Colony status">
+    <div class="eyebrow"><span class="live-dot"></span><span id="phase">FOUNDING</span><span id="sim-time">00:00</span></div>
+    <div class="numbers"><div><strong id="workers">12</strong><span>workers</span></div><div><strong id="brood">0</strong><span>brood</span></div><div><strong id="food">0</strong><span>food stored</span></div></div>
+    <div class="progress-label"><span id="objective-label">Preparing the queen’s chamber</span><span id="progress-text">0%</span></div>
+    <div class="progress-track"><div id="progress"></div></div>
+    <p id="status-detail">Foragers gather food while diggers make a home.</p>
+  </section>
+  <aside id="settings" hidden>
+    <div class="panel-title"><h2>Colony controls</h2><button id="settings-close" aria-label="Close controls">✕</button></div>
+    <label class="field">World seed <input id="seed" type="number" min="0" max="4294967295" step="1" value="42"></label>
+    <button id="reset" class="primary">Start a new colony</button>
+    <label class="field">Ant speed <span id="ant-speed-value">5 tiles/s</span><input id="ant-speed" type="range" min="1" max="12.5" step=".5" value="5"></label>
+    <label class="check"><input id="regrow" type="checkbox" checked> Food patches regrow</label>
+    <label class="field">View layer <select id="layer"><option value="none">Natural view</option><option value="tasks">Ant tasks & routes</option><option value="plan">Excavation plan</option><option value="food">Food scent</option><option value="home">Home scent</option><option value="air">Ventilation</option></select></label>
+    <div class="legend"><span><i style="--c:#e4b65e"></i>Forage</span><span><i style="--c:#ce8862"></i>Dig</span><span><i style="--c:#bdace6"></i>Nurse</span><span><i style="--c:#83bca9"></i>Clean</span></div>
+    <details><summary>Colony diagnostics</summary><p id="health">Checking colony…</p><pre id="jobs"></pre><button id="export">Download colony report</button><p class="hint">The report includes the seed, settings, colony state, and recent events.</p></details>
+    <p class="hint">Drag to explore · Pinch or scroll to zoom · Space to pause · D for routes</p>
+  </aside>
+  <section id="selection" hidden aria-label="Selected ant"></section>
+  <div class="event" id="event" aria-live="polite">The colony is finding its feet.</div>
+  <footer><div class="playback"><button id="pause" aria-label="Pause simulation">Ⅱ</button><button id="step" title="Advance one simulation tick" disabled>Step</button><div class="speeds" aria-label="Simulation speed"><button data-speed="1" class="active">1×</button><button data-speed="4">4×</button><button data-speed="12">12×</button></div></div><span class="footer-note">Watch a colony become a home.</span></footer>
+  <div id="fatal" hidden role="alert"></div>
+  <noscript>This ant farm needs JavaScript enabled.</noscript>
+  <script type="module" src="src/app.js"></script>
 </body>
 </html>
