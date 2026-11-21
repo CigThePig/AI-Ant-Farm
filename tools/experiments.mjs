@@ -122,6 +122,12 @@ const assessments={
  'C-controlled':'mechanism observed: naive local trail bias and retained personal routes; speed synergy is encoded, not independently predicted'
 };
 for(const r of results)r.assessment=assessments[r.id];
+const grouping={B:['quality','right'],C:['mode','gatheredAfter'],F:['temperatureC','eggProgressDays'],G:['soilHardness','excavatedCells'],'C-controlled':['marked','experiencedSeconds']};
+for(const r of results){
+ const spec=grouping[r.id];if(!spec)continue;
+ const [key,metric]=spec;r.conditionSummaries={};
+ for(const value of new Set(r.runs.map(run=>run[key])))r.conditionSummaries[String(value)]=summarize(r.runs.filter(run=>run[key]===value).map(run=>run[metric]));
+}
 const report={modelVersion:3,seeds,units:{time:'biological seconds',food:'µg substrate equivalent'},results,pairedIntactMinusAblation:contrasts,
  status:'Exploratory mechanism tests. Descriptive means and sample SD across seeds, no fitted empirical validation.',
  limitations:['Ablation is not an exact replication of a published assay.','J omits spatial interactions and uses an hour physiology step; it is not a 70-day whole-colony validation.']};

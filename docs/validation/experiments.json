@@ -152,7 +152,23 @@
       },
       "expected": "Positive discovery; quality response and memory/trail effects must be measured, not assumed.",
       "empiricalFit": "not evaluated; no fabricated observational sample",
-      "assessment": "unvalidated: quality changes marking by construction; consistent colony-level preference not established"
+      "assessment": "unvalidated: quality changes marking by construction; consistent colony-level preference not established",
+      "conditionSummaries": {
+        "1": {
+          "n": 5,
+          "mean": 688.0200000000253,
+          "sd": 78.66917227646863,
+          "min": 587.333333333373,
+          "max": 759.5333333333401
+        },
+        "1.43": {
+          "n": 5,
+          "mean": 702.3771428571652,
+          "sd": 61.70175701382007,
+          "min": 640.0000000000227,
+          "max": 777.733333333299
+        }
+      }
     },
     {
       "id": "C",
@@ -288,7 +304,37 @@
       },
       "expected": "Positive discovery; quality response and memory/trail effects must be measured, not assumed.",
       "empiricalFit": "not evaluated; no fabricated observational sample",
-      "assessment": "inconclusive: satiation limits post-disruption harvest and obscures ablation effects"
+      "assessment": "inconclusive: satiation limits post-disruption harvest and obscures ablation effects",
+      "conditionSummaries": {
+        "intact": {
+          "n": 5,
+          "mean": 5.2,
+          "sd": 11.627553482998907,
+          "min": 0,
+          "max": 26
+        },
+        "erased": {
+          "n": 5,
+          "mean": 5.2,
+          "sd": 11.627553482998907,
+          "min": 0,
+          "max": 26
+        },
+        "no-memory": {
+          "n": 5,
+          "mean": 6.941666666666651,
+          "sd": 11.301563928157119,
+          "min": 0,
+          "max": 26
+        },
+        "neither": {
+          "n": 5,
+          "mean": 6.2,
+          "sd": 11.278297743897348,
+          "min": 0,
+          "max": 26
+        }
+      }
     },
     {
       "id": "D",
@@ -516,7 +562,37 @@
       },
       "expected": "Cold exposure stalls the provisional development model; nursing/transport tested separately.",
       "empiricalFit": "not evaluated; no fabricated observational sample",
-      "assessment": "encoded sensitivity observed: provisional temperature response; empirical curve not fitted"
+      "assessment": "encoded sensitivity observed: provisional temperature response; empirical curve not fitted",
+      "conditionSummaries": {
+        "10": {
+          "n": 5,
+          "mean": 0,
+          "sd": 0,
+          "min": 0,
+          "max": 0
+        },
+        "20": {
+          "n": 5,
+          "mean": 8.045823698435118,
+          "sd": 0,
+          "min": 8.045823698435118,
+          "max": 8.045823698435118
+        },
+        "23": {
+          "n": 5,
+          "mean": 10,
+          "sd": 0,
+          "min": 10,
+          "max": 10
+        },
+        "27": {
+          "n": 5,
+          "mean": 12.605568402086506,
+          "sd": 0,
+          "min": 12.605568402086506,
+          "max": 12.605568402086506
+        }
+      }
     },
     {
       "id": "G",
@@ -602,7 +678,23 @@
       },
       "expected": "Harder soil should reduce removal. 2D morphology is not validated against 3D nests.",
       "empiricalFit": "not evaluated; no fabricated observational sample",
-      "assessment": "unvalidated: harder soil slows local work by construction, but colony-wide excavation is not reliably monotone"
+      "assessment": "unvalidated: harder soil slows local work by construction, but colony-wide excavation is not reliably monotone",
+      "conditionSummaries": {
+        "2": {
+          "n": 5,
+          "mean": 32.6,
+          "sd": 6.4265076052238514,
+          "min": 27,
+          "max": 40
+        },
+        "0.5": {
+          "n": 5,
+          "mean": 30.6,
+          "sd": 7.700649323271382,
+          "min": 24,
+          "max": 42
+        }
+      }
     },
     {
       "id": "H",
@@ -916,7 +1008,23 @@
       },
       "expected": "Surface cues bias naive branch choice; experienced ants retain personal routes when cues are erased. Faster travel with both inputs is model-encoded, not independently validated.",
       "empiricalFit": "not evaluated; no fabricated observational sample",
-      "assessment": "mechanism observed: naive local trail bias and retained personal routes; speed synergy is encoded, not independently predicted"
+      "assessment": "mechanism observed: naive local trail bias and retained personal routes; speed synergy is encoded, not independently predicted",
+      "conditionSummaries": {
+        "false": {
+          "n": 5,
+          "mean": 40,
+          "sd": 0,
+          "min": 40,
+          "max": 40
+        },
+        "true": {
+          "n": 5,
+          "mean": 33,
+          "sd": 0,
+          "min": 33,
+          "max": 33
+        }
+      }
     }
   ],
   "pairedIntactMinusAblation": {

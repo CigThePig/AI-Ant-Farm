@@ -58,6 +58,8 @@ try {
     const download = await downloadPromise;
     await download.saveAs(`${artifactDir}/report-${viewport.width}.json`);
     await page.getByRole('button',{name:'Close controls'}).click();
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(()=>document.getElementById('selection').hidden);
     // Pan with a real mouse and verify the camera changed.
     const oldX=await page.evaluate(()=>window.antFarm.renderer.camera.x);
     const y=Math.min(viewport.height*.6,viewport.height-100),x=viewport.width*.65;

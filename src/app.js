@@ -76,10 +76,10 @@ $('export').addEventListener('click',()=>{
 });
 window.addEventListener('resize',()=>renderer.resize());
 window.addEventListener('keydown',e=>{
+  if(e.key==='Escape') {setSettings(false);renderer.selected=null;updateUI();return;}
   if(['INPUT','SELECT','TEXTAREA','BUTTON','SUMMARY'].includes(document.activeElement?.tagName)) return;
   if(e.code==='Space') {e.preventDefault();setPaused(!paused);}
   if(e.key.toLowerCase()==='d') {renderer.layer=renderer.layer==='tasks'?'none':'tasks';$('layer').value=renderer.layer;}
-  if(e.key==='Escape') {setSettings(false);renderer.selected=null;}
 });
 // Pointer capture keeps a drag stable when a finger leaves the canvas. Pinch
 // transitions reset their origins so lifting one finger never jumps the camera.
