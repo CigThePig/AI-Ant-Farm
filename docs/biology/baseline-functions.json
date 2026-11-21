@@ -1,0 +1,525 @@
+{
+  "commit": "65db5f5",
+  "functions": [
+    {
+      "file": "src/app.js",
+      "line": 9,
+      "signature": "function createColony() {"
+    },
+    {
+      "file": "src/app.js",
+      "line": 22,
+      "signature": "function setPaused(value) {"
+    },
+    {
+      "file": "src/app.js",
+      "line": 28,
+      "signature": "function setSettings(open) {"
+    },
+    {
+      "file": "src/app.js",
+      "line": 32,
+      "signature": "function updateUI() {"
+    },
+    {
+      "file": "src/app.js",
+      "line": 86,
+      "signature": "if(e.code==='Space') {e.preventDefault();setPaused(!paused);}"
+    },
+    {
+      "file": "src/app.js",
+      "line": 87,
+      "signature": "if(e.key.toLowerCase()==='d') {renderer.layer=renderer.layer==='tasks'?'none':'tasks';$('layer').value=renderer.layer;}"
+    },
+    {
+      "file": "src/app.js",
+      "line": 88,
+      "signature": "if(e.key==='Escape') {setSettings(false);renderer.selected=null;}"
+    },
+    {
+      "file": "src/app.js",
+      "line": 94,
+      "signature": "function gestureState() {"
+    },
+    {
+      "file": "src/app.js",
+      "line": 110,
+      "signature": "if(gesture && current) {"
+    },
+    {
+      "file": "src/app.js",
+      "line": 118,
+      "signature": "function release(e) {"
+    },
+    {
+      "file": "src/app.js",
+      "line": 120,
+      "signature": "if(p && !p.moved && e.type==='pointerup') {"
+    },
+    {
+      "file": "src/app.js",
+      "line": 131,
+      "signature": "function fail(error) {"
+    },
+    {
+      "file": "src/app.js",
+      "line": 138,
+      "signature": "function frame(now) {"
+    },
+    {
+      "file": "src/clock.js",
+      "line": 4,
+      "signature": "constructor(step, { hz = 30, maxSteps = 240 } = {}) {"
+    },
+    {
+      "file": "src/clock.js",
+      "line": 10,
+      "signature": "advance(seconds) {"
+    },
+    {
+      "file": "src/clock.js",
+      "line": 21,
+      "signature": "reset() { this.accumulator = 0; }"
+    },
+    {
+      "file": "src/navigation.js",
+      "line": 4,
+      "signature": "export function neighbors(index, width, height) {"
+    },
+    {
+      "file": "src/navigation.js",
+      "line": 15,
+      "signature": "export function route(world, start, goals) {"
+    },
+    {
+      "file": "src/navigation.js",
+      "line": 39,
+      "signature": "export function distance(world, a, b) {"
+    },
+    {
+      "file": "src/renderer.js",
+      "line": 4,
+      "signature": "function noise(i) { const n = Math.sin(i * 127.1 + 311.7) * 43758.5453; return n - Math.floor(n); }"
+    },
+    {
+      "file": "src/renderer.js",
+      "line": 7,
+      "signature": "constructor(canvas) {"
+    },
+    {
+      "file": "src/renderer.js",
+      "line": 18,
+      "signature": "resize() {"
+    },
+    {
+      "file": "src/renderer.js",
+      "line": 25,
+      "signature": "center(sim) {"
+    },
+    {
+      "file": "src/renderer.js",
+      "line": 33,
+      "signature": "point(x, y) { return { x: (x / this.camera.zoom + this.camera.x) / TILE, y: (y / this.camera.zoom + this.camera.y) / TILE }; }"
+    },
+    {
+      "file": "src/renderer.js",
+      "line": 34,
+      "signature": "zoomAt(x, y, scale) {"
+    },
+    {
+      "file": "src/renderer.js",
+      "line": 41,
+      "signature": "rebuild(w) {"
+    },
+    {
+      "file": "src/renderer.js",
+      "line": 66,
+      "signature": "drawAnt(a, selected) {"
+    },
+    {
+      "file": "src/renderer.js",
+      "line": 93,
+      "signature": "draw(sim) {"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 9,
+      "signature": "constructor(options = {}) {"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 35,
+      "signature": "spawnAnt(type, cell) {"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 45,
+      "signature": "livingWorkers() { return this.ants.filter(a => a.alive && a.type === 'worker'); }"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 46,
+      "signature": "cell(ant) { return this.world.cell(ant.x, ant.y); }"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 47,
+      "signature": "note(message) {"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 52,
+      "signature": "pantrySlots() {"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 63,
+      "signature": "pressures() {"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 75,
+      "signature": "reserve(task, key, ant) {"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 82,
+      "signature": "assign(ant, kind, path, extra = {}, keys = []) {"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 99,
+      "signature": "cancelTask(ant, { dropCargo = false } = {}) {"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 118,
+      "signature": "kill(ant) {"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 127,
+      "signature": "changeTask(ant, kind) {"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 133,
+      "signature": "foodRoute(ant, stored = true, minimum = .001) {"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 143,
+      "signature": "assignEating(ant) {"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 152,
+      "signature": "assignForage(ant) {"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 158,
+      "signature": "assignDelivery(ant, task) {"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 171,
+      "signature": "assignDig(ant) {"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 187,
+      "signature": "assignMeal(ant, kind, target, key) {"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 194,
+      "signature": "nurseryDestination(brood) {"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 208,
+      "signature": "assignNursing(ant) {"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 226,
+      "signature": "assignCleaning(ant) {"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 238,
+      "signature": "allocate(ant) {"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 265,
+      "signature": "move(ant, task, dt) {"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 294,
+      "signature": "eat(ant, amount) {"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 302,
+      "signature": "transferEnergy(donor, receiver, amount) {"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 310,
+      "signature": "interact(ant, dt) {"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 425,
+      "signature": "updateBrood(dt) {"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 459,
+      "signature": "layEgg() {"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 467,
+      "signature": "updateQueen(dt) {"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 491,
+      "signature": "updateConstruction() {"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 517,
+      "signature": "environment(dt) {"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 539,
+      "signature": "step(dt = 1 / 30) {"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 577,
+      "signature": "snapshot() {"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 588,
+      "signature": "inspect() {"
+    },
+    {
+      "file": "src/world.js",
+      "line": 3,
+      "signature": "export function seededRandom(seed) {"
+    },
+    {
+      "file": "src/world.js",
+      "line": 12,
+      "signature": "constructor({ seed = 42, width = 96, height = 80 } = {}) {"
+    },
+    {
+      "file": "src/world.js",
+      "line": 67,
+      "signature": "index(x, y) { return y * this.width + x; }"
+    },
+    {
+      "file": "src/world.js",
+      "line": 68,
+      "signature": "cell(x, y) { return this.index(Math.floor(x), Math.floor(y)); }"
+    },
+    {
+      "file": "src/world.js",
+      "line": 69,
+      "signature": "center(i) { return { x: i % this.width + .5, y: Math.floor(i / this.width) + .5 }; }"
+    },
+    {
+      "file": "src/world.js",
+      "line": 70,
+      "signature": "adjacent(i) { return neighbors(i, this.width, this.height); }"
+    },
+    {
+      "file": "src/world.js",
+      "line": 72,
+      "signature": "addRoom(center, radius, destination = new Set()) {"
+    },
+    {
+      "file": "src/world.js",
+      "line": 88,
+      "signature": "extendBranch(center, offsetX, offsetY, radius = 3) {"
+    },
+    {
+      "file": "src/world.js",
+      "line": 102,
+      "signature": "dig(i) {"
+    },
+    {
+      "file": "src/world.js",
+      "line": 111,
+      "signature": "addStored(i, amount) {"
+    },
+    {
+      "file": "src/world.js",
+      "line": 119,
+      "signature": "takeStored(i, amount) {"
+    },
+    {
+      "file": "src/world.js",
+      "line": 126,
+      "signature": "get storedFood() { let total = 0; for (const i of this.pantries) total += this.stores[i]; return total; }"
+    },
+    {
+      "file": "src/world.js",
+      "line": 128,
+      "signature": "refreshAir() {"
+    },
+    {
+      "file": "src/world.js",
+      "line": 146,
+      "signature": "diffuse(field, dt, decay, spread) {"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 9,
+      "signature": "function addFood(sim, cell, amount, stored = true) {"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 14,
+      "signature": "function completed(options = {}) {"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 24,
+      "signature": "function clearFood(sim) {"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 28,
+      "signature": "function healthy(sim) { assert.deepEqual(sim.inspect(), []); }"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 44,
+      "signature": "test('blocked construction leaves food collection and self-preservation available', () => {"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 55,
+      "signature": "test('corridor extends through its own ancestry and can branch', () => {"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 65,
+      "signature": "test('cardinal pathfinding takes a dogleg and reports disconnected goals', () => {"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 75,
+      "signature": "test('a carrier starting beside the queen reaches storage outside her buffer', () => {"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 89,
+      "signature": "test('a cleaner can collect waste beside the queen and carry it to the midden', () => {"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 104,
+      "signature": "if(event==='death') {sim.kill(a);sim.ants=sim.ants.filter(a=>a.alive);}"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 114,
+      "signature": "test('no worker hatches without nurse meals; two real meals allow maturation', () => {"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 127,
+      "signature": "test('all stored food stays registered, spoils, and contributes to attainable pressure', () => {"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 140,
+      "signature": "test('scent diffuses into empty neighbors and respects solid soil', () => {"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 148,
+      "signature": "test('air attenuates deeply, and a disconnected chamber has zero ventilation', () => {"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 158,
+      "signature": "test('corpses cannot receive energy and do not count toward live population', () => {"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 167,
+      "signature": "test('large displacement follows path segments without entering soil', () => {"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 172,
+      "signature": "while(a.task.cursor<a.task.path.length) {sim.move(a,a.task,.1);assert.equal(w.grid[sim.cell(a)],OPEN);}"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 178,
+      "signature": "while(a.task.cursor<a.task.path.length){sim.move(a,a.task,.1);assert.equal(w.grid[sim.cell(a)],OPEN);}"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 182,
+      "signature": "test('stationary ants can eat; cancel and death return carried food without losing inventory', () => {"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 194,
+      "signature": "test('interrupted waste hauling returns its load and releases reservations', () => {"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 201,
+      "signature": "test('resource exhaustion causes honest starvation without stale locks or invalid population', () => {"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 208,
+      "signature": "test('equal simulation time at 30, 60 and 120 rendering FPS produces identical worlds', () => {"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 210,
+      "signature": "for(const fps of [30,60,120]) {"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 219,
+      "signature": "test('slow-frame catch-up retains time debt and pause/reset discards it explicitly', () => {"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 226,
+      "signature": "test('invalid step durations and world sizes fail explicitly', () => {"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 232,
+      "signature": "test('queen meals move real stored food and refill queen energy', () => {"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 242,
+      "signature": "test('low reserves retain both construction and foraging workers', () => {"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 248,
+      "signature": "test('full pantry delivery waiting cannot consume the construction workforce', () => {"
+    }
+  ]
+}

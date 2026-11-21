@@ -1,6 +1,6 @@
 import { OPEN, ROCK } from './navigation.js';
 const TILE = 16;
-const COLORS = { forage:'#e4b65e', dig:'#ce8862', feed:'#bdace6', feedQueen:'#bdace6', transport:'#bdace6', clean:'#83bca9', eat:'#d9cd94', eatLoose:'#d9cd94', idle:'#969b80', relocate:'#e3d39a' };
+const COLORS = { explore:'#e4b65e', return:'#cbb26c', share:'#83bca9', nurse:'#bdace6', soil:'#ce8862', rest:'#969b80', forage:'#e4b65e', dig:'#ce8862', feed:'#bdace6', feedQueen:'#bdace6', transport:'#bdace6', clean:'#83bca9', eat:'#d9cd94', eatLoose:'#d9cd94', idle:'#969b80', relocate:'#e3d39a' };
 function noise(i) { const n = Math.sin(i * 127.1 + 311.7) * 43758.5453; return n - Math.floor(n); }
 
 export class Renderer {
@@ -24,7 +24,7 @@ export class Renderer {
   }
   center(sim) {
     const w = sim.world;
-    const p = w.center(sim.chamberReady ? w.chamber - w.width * 5 : w.entrance + w.width * 3);
+    const p = w.center(w.chamber - w.width * 5);
     this.camera.zoom = Math.max(.5, Math.min(1.4, this.width / (w.width * TILE * .92)));
     this.camera.x = p.x * TILE - this.width / this.camera.zoom * .57;
     this.camera.y = p.y * TILE - this.height / this.camera.zoom * .51;
@@ -85,7 +85,7 @@ export class Renderer {
     c.fillStyle=queen?'#bb9253':'#8c7148';c.beginPath();c.arc(4,0,1.9,0,Math.PI*2);c.fill();
     c.strokeStyle='#352819';c.lineWidth=.7;
     for(const side of [-1,1]) {c.beginPath();c.moveTo(4.5,side);c.lineTo(7,side*2.4);c.lineTo(8.4,side*3.1);c.stroke();}
-    if (a.cargo>.01) {c.fillStyle='#ebcf85';c.beginPath();c.ellipse(8,0,2.2,1.5,.2,0,Math.PI*2);c.fill();}
+    if (a.soil>0) {c.fillStyle='#ebcf85';c.beginPath();c.ellipse(8,0,2.2,1.5,.2,0,Math.PI*2);c.fill();}
     if (a.task?.kind === 'clean' && a.task.phase === 'dump') {c.fillStyle='#88816a';c.fillRect(6,-2,3,3);}
     if (a.carryingBrood!==null) {c.fillStyle='#f0ddbc';c.beginPath();c.ellipse(8,0,2.8,1.7,0,0,Math.PI*2);c.fill();}
     c.restore();
@@ -101,23 +101,19 @@ export class Renderer {
     const top=Math.max(0,Math.floor(cam.y/TILE)),bottom=Math.min(w.height,Math.ceil((cam.y+this.height/cam.zoom)/TILE));
     for(let y=top;y<bottom;y++) for(let x=left;x<right;x++) {
       const i=w.index(x,y),px=x*TILE,py=y*TILE;
-      if(w.food[i]>.05 || w.stores[i]>.05) {
-        const amount=w.food[i]+w.stores[i];
+      if(w.food[i]>.05 || w.protein[i]>.05) {
+        const amount=(w.food[i]+w.protein[i])/50;
         for(let s=0;s<Math.min(7,Math.ceil(amount));s++) {
-          c.fillStyle=w.stores[i]>0?'#e6c883':'#cfb369';
+          c.fillStyle=w.protein[i]>0?'#ce9275':'#cfb369';
           c.beginPath();c.ellipse(px+3+noise(i+s*11)*10,py+3+noise(i+s*7)*10,1.7,1,noise(s+i)*3,0,Math.PI*2);c.fill();
         }
       }
-      if(w.waste[i]>.1) {c.fillStyle='#8d8b6d';c.fillRect(px+6,py+6,Math.min(6,w.waste[i]*3),2);}
-      const field=this.layer==='air'?w.air:this.layer==='food'?w.foodScent:this.layer==='home'?w.homeScent:null;
+      if(w.depositedSoil[i]>0) {c.fillStyle='#8d8b6d';c.fillRect(px+6,py+6,Math.min(6,w.depositedSoil[i]*3),2);}
+      const field=this.layer==='food'?w.trail:null;
       if(field && field[i]>.001 && w.grid[i]===OPEN) {
-        c.fillStyle=this.layer==='air'?`rgba(118,199,224,${field[i]*.55})`:this.layer==='food'?`rgba(230,180,77,${Math.min(.65,field[i])})`:`rgba(156,148,219,${Math.min(.65,field[i])})`;
+        c.fillStyle=`rgba(230,180,77,${Math.min(.65,field[i])})`;
         c.fillRect(px,py,TILE,TILE);
       }
-    }
-    if(this.layer==='plan') {
-      c.fillStyle='#e8c78b22';c.strokeStyle='#e8c78b77';c.lineWidth=.5;
-      for(const i of w.plan) {const p=w.center(i);c.fillRect((p.x-.5)*TILE,(p.y-.5)*TILE,TILE,TILE);c.strokeRect((p.x-.5)*TILE+2,(p.y-.5)*TILE+2,TILE-4,TILE-4);}
     }
     for(const b of sim.brood) {
       if(b.carrier!==null) continue;
@@ -134,7 +130,7 @@ export class Renderer {
     }
     c.fillStyle='#cad8ac';c.font='9px system-ui';c.letterSpacing='1px';
     const entrance=w.center(w.entrance);c.fillText('NEST ENTRANCE',entrance.x*TILE-38,(w.surface-2.7)*TILE);
-    const dump=w.center(w.dump);c.fillStyle='#b4bfa388';c.fillText('MIDDEN',dump.x*TILE-13,dump.y*TILE-12);
+    
     c.setTransform(this.dpr,0,0,this.dpr,0,0);
     const vignette=c.createRadialGradient(this.width*.55,this.height*.48,this.height*.2,this.width*.5,this.height*.5,this.width*.8);
     vignette.addColorStop(0,'#0000');vignette.addColorStop(1,'#07120c70');c.fillStyle=vignette;c.fillRect(0,0,this.width,this.height);

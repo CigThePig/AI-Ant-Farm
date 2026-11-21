@@ -1,615 +1,280 @@
 import { World } from './world.js';
-import { OPEN, SOIL, distance, route } from './navigation.js';
-
-export const TASKS = ['forage', 'dig', 'feed', 'feedQueen', 'transport', 'clean', 'eat', 'eatLoose', 'idle'];
-const DEFAULTS = Object.freeze({ workers: 12, maxWorkers: 80, workerSpeed: 5,
-  regrowFood: true, laying: true, starvation: true });
-
+import { OPEN, SOIL } from './navigation.js';
+import { DAY, parameters, developmentRate } from './species.js';
+import { pool, transfer, total } from './nutrition.js';
+import { createAnt, rememberStep, spatialIndex } from './agents.js';
+export const TASKS=['explore','forage','return','share','nurse','transport','dig','soil','clean','rest'];
 export class Simulation {
-  constructor(options = {}) {
-    this.options = { ...DEFAULTS, ...options };
-    this.world = new World(options);
-    this.time = 0;
-    this.nextId = 1;
-    this.ants = [];
-    this.brood = [];
-    this.corpses = [];
-    this.claims = new Map();
-    this.events = [];
-    this.tick = 0;
-    this.environmentTimer = 0;
-    this.layTimer = 0;
-    this.planTimer = 0;
-    this.chamberReady = false;
-    this.lastProgress = 0;
-    this.lastExcavated = 0;
-    this.expansions = 0;
-    this.metrics = { births: 0, laid: 0, fed: 0, deaths: 0, broodDeaths: 0,
-      dug: 0, gathered: 0, delivered: 0, cleaned: 0, cancelled: 0,
-      foodCreated: this.world.food.reduce((a, b) => a + b, 0), foodConsumed: 0, foodSpoiled: 0 };
-    this.queen = this.spawnAnt('queen', this.world.entrance);
-    for (let i = 0; i < this.options.workers; i++) this.spawnAnt('worker', this.world.entrance);
-    this.note('Colony founded. Workers are building and foraging.');
+ constructor(options={}) {
+  this.options={workers:12,scenario:'established',resources:true,laying:true,...options};
+  if(!Number.isInteger(this.options.workers)||this.options.workers<0||this.options.workers>10000)throw new RangeError('Invalid workers');
+  if(!['established','founding'].includes(this.options.scenario))throw new RangeError('Invalid scenario');
+  this.p=parameters(options.parameters);this.world=new World(this.options);this.time=0;this.tick=0;this.nextId=1;
+  this.ants=[];this.brood=[];this.corpses=[];this.events=[];this.history=[];this.interactions=[];this.interventions=[];
+  this.metrics={births:0,laid:0,fed:0,deaths:0,broodDeaths:0,dug:0,gathered:0,delivered:0,cleaned:0,discovered:0,contacts:0,depositions:0,transported:0};
+  this.outputs=pool();this.inputs=pool();this.layTimer=0;this.environmentTimer=0;this.historyTimer=0;
+  this.queen=this.spawnAnt('queen',this.world.chamber);
+  if(this.options.scenario!=='founding')for(let i=0;i<this.options.workers;i++)this.spawnAnt('worker',this.world.chamber);
+  this.inputs=this.inventory();
+  this.note(this.options.scenario==='founding'?'Single mated queen in a sealed cavity; reserve-funded founding.':'Young established colony; 12 workers is not the founding moment.');
+ }
+ spawnAnt(type,cell,initial=true){const a=createAnt(this.nextId++,type,cell,this.world,this.p,initial);this.ants.push(a);return a;}
+ livingWorkers(){return this.ants.filter(a=>a.alive&&a.type==='worker');}
+ cell(a){return this.world.cell(a.x,a.y);}
+ note(message){this.events.push({time:this.time,message});if(this.events.length>60)this.events.shift();}
+ inventory(){
+  const w=this.world,items=[pool(w.food.reduce((a,b)=>a+b,0),w.protein.reduce((a,b)=>a+b,0))];
+  for(const a of this.ants)if(a.alive)items.push(a.crop,a.reserve,a.body);
+  for(const b of this.brood)items.push(b.body);
+  for(const c of this.corpses)items.push(c.nutrients);
+  return total(items);
+ }
+ addFood(cell,c,p=0,quality=1){
+  if(this.world.grid[cell]!==OPEN||![c,p,quality].every(Number.isFinite)||c<0||p<0||quality<=0)throw new RangeError('Invalid resource');
+  this.world.food[cell]+=c;this.world.protein[cell]+=p;this.world.quality[cell]=quality;this.world.sources.add(cell);
+  this.inputs.c+=c;this.inputs.p+=p;this.interventions.push({time:this.time,kind:'addFood',cell,c,p,quality});
+ }
+ eraseTrails(){this.world.trail.fill(0);this.interventions.push({time:this.time,kind:'eraseTrails'});}
+ setParameter(key,value){this.p=parameters({...this.p,[key]:value});if(key==='memoryEnabled'&&!value)for(const a of this.ants){a.memory=[];a.outbound=[];}this.interventions.push({time:this.time,kind:'parameter',key,value});}
+ cancelTask(a){
+  if(a.carryingBrood!==null){const b=this.brood.find(b=>b.id===a.carryingBrood);if(b){b.carrier=null;b.cell=this.cell(a);}a.carryingBrood=null;}
+  if(a.corpse!==null){const c=this.corpses.find(c=>c.id===a.corpse);if(c){c.carrier=null;c.cell=this.cell(a);}a.corpse=null;}
+  if(a.soil){this.world.depositedSoil[this.cell(a)]+=a.soil;a.soil=0;}
+  a.task=null;a.contact=null;
+ }
+ kill(a){
+  if(!a.alive)return;this.cancelTask(a);a.alive=false;
+  this.corpses.push({id:a.id,cell:this.cell(a),died:this.time,carrier:null,nutrients:total([a.crop,a.reserve,a.body])});
+  this.ants=this.ants.filter(b=>b!==a);this.metrics.deaths++;if(a===this.queen)this.note('Queen died; surviving brood retains its own development state.');
+ }
+ // The decision boundary sees only current/adjacent cells and physical encounters.
+ sense(a){
+  const w=this.world,cell=this.cell(a),cells=[cell,...w.adjacent(cell)];
+  return {cell,cells,open:w.adjacent(cell).filter(i=>w.grid[i]===OPEN),
+   food:cells.filter(i=>w.grid[i]===OPEN&&(w.food[i]>0||w.protein[i]>0)),
+   trail:w.adjacent(cell).filter(i=>w.grid[i]===OPEN).map(i=>({cell:i,value:this.p.trailsEnabled?w.trail[i]:0})),
+   peers:(this.spatial.get(cell)||[]).filter(b=>b!==a&&b.alive),
+   brood:this.brood.filter(b=>b.carrier===null&&b.cell===cell),
+   corpses:this.corpses.filter(c=>c.carrier===null&&c.cell===cell&&this.time-c.died>=this.p.corpseCueSeconds),
+   soil:w.adjacent(cell).filter(i=>w.grid[i]===SOIL&&Math.floor(i/w.width)>=w.surface),
+   temperatureC:this.temperature(cell),moisture:this.p.soilMoisture};
+ }
+ temperature(cell){const depth=Math.max(0,Math.floor(cell/this.world.width)-this.world.surface);return 23+(this.p.temperatureC-23)*Math.exp(-depth/12);}
+ behaviour(a,kind){a.behaviour=kind;a.task={kind,path:[],cursor:0};}
+ moveTo(a,next){
+  const w=this.world,from=this.cell(a);
+  if(!w.adjacent(from).includes(next)||w.grid[next]!==OPEN)return false;
+  const peers=this.spatial.get(next)||[];
+  // Soft congestion rather than exclusive cells (several real ants fit a 2D patch).
+  if(peers.length>2&&w.random()<1-2/peers.length)return false;
+  const pos=w.center(next);a.angle=Math.atan2(pos.y-a.y,pos.x-a.x);Object.assign(a,pos);a.distance++;
+  const old=this.spatial.get(from);if(old)old.splice(old.indexOf(a),1);
+  if(!this.spatial.has(next))this.spatial.set(next,[]);this.spatial.get(next).push(a);
+  rememberStep(a,next);a.heading=next-from;
+  if(a.carryingBrood!==null){const b=this.brood.find(b=>b.id===a.carryingBrood);if(b)b.cell=next;}
+  if(a.corpse!==null){const c=this.corpses.find(c=>c.id===a.corpse);if(c)c.cell=next;}
+  return true;
+ }
+ startReturn(a){a.returnPath=a.walk.slice(0,-1).reverse();this.behaviour(a,'return');}
+ transferFood(donor,receiver,amount){
+  if(!donor.alive||!receiver.alive||donor===receiver||this.cell(donor)!==this.cell(receiver))return 0;
+  let moved=0;for(const k of ['c','p'])moved+=transfer(donor.crop,receiver.crop,k,Math.min(amount,Math.max(0,(donor.crop[k]-receiver.crop[k])/2)),k==='c'?this.p.cropC:this.p.cropP);
+  return moved;
+ }
+ share(a,s,dt){
+  const b=s.peers.find(b=>a.crop.c-b.crop.c>15||a.crop.p-b.crop.p>5);
+  if(!b){a.contact=null;return false;}
+  this.behaviour(a,'share');
+  if(a.contact?.id!==b.id)a.contact={id:b.id,seconds:0};a.contact.seconds+=dt;
+  if(a.contact.seconds>=this.p.contactSeconds){
+   const moved=this.transferFood(a,b,this.p.transferPerSecond*dt);
+   if(moved){this.metrics.delivered+=moved;if(!a.contact.recorded){this.metrics.contacts++;a.contact.recorded=true;}this.interactions.push({time:this.time,donor:a.id,receiver:b.id,cell:s.cell,amount:moved});if(this.interactions.length>1000)this.interactions.shift();}
   }
-
-  spawnAnt(type, cell) {
-    const p = this.world.center(cell);
-    const ant = { id: this.nextId++, type, alive: true, ...p,
-      age: 0, lifespan: type === 'queen' ? 100000 : 2400 + this.world.random() * 600,
-      energy: 100, task: null, cargo: 0, carryingBrood: null, angle: 0,
-      distance: 0, retryAt: 0 };
-    this.ants.push(ant);
-    return ant;
+  return true;
+ }
+ feedBrood(a,b,dt,founding=false){
+  if(b.stage!=='larva'||b.carrier!==null||b.cell!==this.cell(a))return false;
+  const from=founding?a.reserve:a.crop;let amount=0;
+  for(const k of ['c','p']) amount+=transfer(from,b.body,k,this.p.transferPerSecond*dt,k==='c'?this.p.larvalTargetC:this.p.larvalTargetP);
+  if(amount){this.metrics.fed++;b.lastFed=this.time;this.behaviour(a,'nurse');return true;}return false;
+ }
+ chooseMove(a,s){
+  const w=this.world;
+  const known=a.outbound[0];
+  if(known!==undefined){
+   if(s.open.includes(known)){a.outbound.shift();return known;}
+   a.outbound=[];a.memory=[];
   }
-
-  livingWorkers() { return this.ants.filter(a => a.alive && a.type === 'worker'); }
-  cell(ant) { return this.world.cell(ant.x, ant.y); }
-  note(message) {
-    this.events.push({ time: this.time, message });
-    if (this.events.length > 60) this.events.shift();
+  const food=s.food.filter(i=>s.open.includes(i));if(food.length)return food[0];
+  const weights=s.open.map(i=>{
+   const forward=i-s.cell===a.heading?2.5:1;
+   const back=a.walk.length>1&&i===a.walk.at(-2)? .15:1;
+   const trail=this.p.trailsEnabled?w.trail[i]:0;
+   // Saturating local response. Concentration is not a distance-to-food oracle.
+   return forward*back*(1+this.p.trailGain*trail/(1+trail));
+  });
+  let draw=w.random()*weights.reduce((a,b)=>a+b,0);
+  for(let j=0;j<s.open.length;j++){draw-=weights[j];if(draw<=0)return s.open[j];}
+  return s.open.at(-1);
+ }
+ updateWorker(a,dt){
+  const s=this.sense(a),w=this.world;
+  a.stimuli={cell:s.cell,food:s.food,trail:s.trail,encounters:s.peers.map(b=>b.id),brood:s.brood.map(b=>b.id),
+   localCrowding:s.peers.length,soil:s.soil,temperatureC:s.temperatureC,moisture:s.moisture};
+  // Cargo transports use the ant's own recorded trajectory; interrupted cargo stays physical.
+  if(a.corpse!==null||a.soil){
+   this.behaviour(a,a.soil?'soil':'clean');
+   if(Math.floor(s.cell/w.width)<w.surface){
+    if(a.soil){w.depositedSoil[s.cell]+=a.soil;a.soil=0;}
+    if(a.corpse!==null){const c=this.corpses.find(c=>c.id===a.corpse);if(c){c.cell=s.cell;c.carrier=null;}a.corpse=null;this.metrics.cleaned++;}
+   }else if(a.moveBudget>=1){
+    const next=this.chooseMove(a,{...s,food:[]});
+    if(next!==undefined&&this.moveTo(a,next))a.moveBudget--;
+   }
+   return;
   }
-
-  pantrySlots() {
-    const w = this.world, result = new Set();
-    for (let y = w.surface; y < w.height - 1; y++) {
-      for (let x = 1; x < w.width - 1; x++) {
-        const i = w.index(x, y), d = distance(w, i, w.chamber);
-        if (w.grid[i] === OPEN && d >= 3.5 && d <= 22) result.add(i);
-      }
-    }
-    return result;
+  if(a.carryingBrood!==null){this.cancelTask(a);this.metrics.transported++;return;}
+  if(a.returnPath.length){
+   this.behaviour(a,'return');
+   if(a.moveBudget>=1){
+    const next=a.returnPath[0];if(this.moveTo(a,next)){
+     a.returnPath.shift();a.moveBudget--;
+     if(this.p.trailsEnabled&&a.successQuality>0){w.trail[this.cell(a)]+=this.p.trailDeposit*a.successQuality;this.metrics.depositions++;}
+    }else if(w.grid[next]!==OPEN)a.returnPath=[];
+   }
+   return;
   }
-
-  pressures() {
-    const w = this.world, live = this.livingWorkers().length;
-    const slots = this.pantrySlots();
-    let nest = 0;
-    for (let i = w.surface * w.width; i < w.grid.length; i++) if (w.grid[i] === OPEN) nest++;
-    const capacity = slots.size * 10;
-    return { space: live * 2 / Math.max(1, nest),
-      food: Math.max(0, 1 - w.storedFood / Math.max(8, live * 1.2)),
-      pantry: capacity ? Math.max(0, (w.storedFood / capacity - .7) / .3) : 0,
-      storageCapacity: capacity, nest };
+  if(a.behaviour==='return'){a.outbound=[];a.successQuality=0;this.behaviour(a,'rest');}
+  if(s.corpses.length&&Math.floor(s.cell/w.width)>=w.surface){const c=s.corpses[0];a.corpse=c.id;c.carrier=a.id;this.behaviour(a,'clean');return;}
+  const hungry=s.brood.find(b=>b.stage==='larva'&&(b.body.c<this.p.larvalTargetC||b.body.p<this.p.larvalTargetP));
+  if(hungry&&w.random()<Math.max(1-hungry.body.c/this.p.larvalTargetC,1-hungry.body.p/this.p.larvalTargetP)/(a.thresholds.nurse+.01)&&this.feedBrood(a,hungry,dt))return;
+  const badBrood=s.brood.find(b=>Math.abs(s.temperatureC-23)>2);
+  if(badBrood){const better=s.open.find(i=>Math.abs(this.temperature(i)-23)+.01<Math.abs(s.temperatureC-23));
+   if(better!==undefined&&a.moveBudget>=1){badBrood.carrier=a.id;a.carryingBrood=badBrood.id;this.behaviour(a,'transport');if(this.moveTo(a,better))a.moveBudget--;return;}}
+  if(Math.floor(s.cell/w.width)>=w.surface&&this.share(a,s,dt))return;
+  if(w.food[s.cell]>0||w.protein[s.cell]>0){
+   this.behaviour(a,'forage');const crowd=1+s.peers.length,rate=this.p.uptakePerSecond*dt/crowd;
+   const c=Math.min(w.food[s.cell],rate,Math.max(0,this.p.cropC-a.crop.c));
+   const p=Math.min(w.protein[s.cell],rate/2,Math.max(0,this.p.cropP-a.crop.p));
+   w.food[s.cell]-=c;w.protein[s.cell]-=p;a.crop.c+=c;a.crop.p+=p;this.metrics.gathered+=c+p;
+   if(!a.atSource){a.atSource=true;this.metrics.discovered++;a.experience++;if(this.p.memoryEnabled)a.memory=[...a.walk];}
+   a.timer+=dt;
+   if(a.crop.c>=this.p.cropC*.9||a.crop.p>=this.p.cropP*.9||a.timer>60||c+p===0){
+    a.successQuality=(c+p>0?w.quality[s.cell]:0)/crowd;a.timer=0;a.atSource=false;this.startReturn(a);
+   }
+   return;
   }
-
-  reserve(task, key, ant) {
-    if (this.claims.has(key)) return false;
-    this.claims.set(key, ant.id);
-    task.claims.push(key);
-    return true;
+  // Abandon stale route memory only after personally finding its source depleted.
+  if(a.memory.at(-1)===s.cell&&!w.food[s.cell]&&!w.protein[s.cell]){a.memory=[];a.outbound=[];}
+  if(a.crop.c>this.p.cropC*.7&&Math.floor(s.cell/w.width)<w.surface){this.startReturn(a);return;}
+  if(s.cell===w.chamber&&this.p.memoryEnabled&&a.memory.length>1&&a.crop.c<this.p.cropC*.65)a.outbound=a.memory.slice(1);
+  const ageTendency=.35+.3*Math.min(1,a.age/(60*DAY)); // provisional, reversible bias
+  const foraging=(1-a.crop.c/this.p.cropC)*ageTendency;
+  if(s.soil.length&&s.cell!==w.entrance&&a.thresholds.dig<.65&&foraging<a.thresholds.forage&&Math.floor(s.cell/w.width)>=w.surface){
+   this.behaviour(a,'dig');const target=s.soil[Math.floor(w.random()*s.soil.length)];
+   const moisture=4*s.moisture*(1-s.moisture);
+   w.soilWork[target]+=dt*moisture/this.p.soilHardness;
+   if(w.soilWork[target]>=this.p.diggingSeconds&&w.dig(target)){a.soil=1;this.metrics.dug++;}
+   return;
   }
-
-  assign(ant, kind, path, extra = {}, keys = []) {
-    if (path === null) return false;
-    const center = this.world.center(this.cell(ant));
-    if (Math.hypot(ant.x - center.x, ant.y - center.y) > 1e-8 && path[0] !== this.cell(ant)) path = [this.cell(ant), ...path];
-    const task = { kind, path, cursor: 0, work: 0, phase: 'work', claims: [],
-      started: this.time, lastProgress: this.time, ...extra };
-    for (const key of keys) {
-      if (!this.reserve(task, key, ant)) {
-        for (const held of task.claims) this.claims.delete(held);
-        return false;
-      }
+  if(a.restUntil>this.time){this.behaviour(a,'rest');return;}
+  if(s.cell===w.chamber&&!a.outbound.length&&w.random()<.01&&foraging<a.thresholds.forage){a.restUntil=this.time+30+w.random()*90;this.behaviour(a,'rest');return;}
+  this.behaviour(a,a.outbound.length?'forage':'explore');
+  if(a.moveBudget>=1){const next=this.chooseMove(a,s);if(next!==undefined&&this.moveTo(a,next))a.moveBudget--;}
+ }
+ layEgg(){
+  const q=this.queen,p=this.p;if(!q.alive)return null;
+  const available=total([q.crop,q.reserve]);if(available.c<p.eggC||available.p<p.eggP)return null;
+  const b={id:this.nextId++,cell:this.cell(q),stage:'egg',age:0,stageAge:0,body:pool(),carrier:null,lastFed:this.time,stress:0};
+  for(const [k,need] of [['c',p.eggC],['p',p.eggP]]){const n=transfer(q.crop,b.body,k,need);transfer(q.reserve,b.body,k,need-n);}
+  this.brood.push(b);this.metrics.laid++;return b;
+ }
+ updateBrood(dt){
+  const p=this.p,remove=new Set();
+  for(const b of this.brood){
+   b.age+=dt;const temperature=this.temperature(b.cell),rate=developmentRate(temperature);
+   const fed=b.stage!=='larva'||(b.body.c>=p.larvalTargetC&&b.body.p>=p.larvalTargetP);
+   if(fed)b.stageAge+=dt*rate;
+   b.stress=rate===0||(!fed&&this.time-b.lastFed>3*DAY)?b.stress+dt:Math.max(0,b.stress-dt);
+   if(b.stress>7*DAY){remove.add(b.id);this.corpses.push({id:b.id,cell:b.cell,died:this.time,carrier:null,nutrients:b.body});this.metrics.broodDeaths++;continue;}
+   const days=b.stage==='egg'?p.eggDays:b.stage==='larva'?p.larvaDays:p.pupaDays;
+   if(b.stageAge>=days*DAY){
+    b.stageAge=0;
+    if(b.stage==='egg')b.stage='larva';else if(b.stage==='larva')b.stage='pupa';else{
+     const a=this.spawnAnt('worker',b.cell,false);a.body=b.body;this.metrics.births++;remove.add(b.id);
+     // Opening the existing entrance is an explicit scenario transition, not a worker assignment.
+     if(this.options.scenario==='founding'&&this.world.grid[this.world.entrance]!==OPEN){this.world.grid[this.world.entrance]=OPEN;this.world.version++;this.note('First worker emerged; founding seal opened (scenario boundary).');}
     }
-    ant.task = task;
-    return true;
+   }
   }
-
-  // Every exit (completion, interruption, invalid target, or death) has one cleanup.
-  cancelTask(ant, { dropCargo = false } = {}) {
-    const task = ant.task;
-    if (task) {
-      if (task.kind === 'clean' && task.waste > 0) this.world.waste[this.cell(ant)] += task.waste;
-      for (const key of task.claims) if (this.claims.get(key) === ant.id) this.claims.delete(key);
-      this.metrics.cancelled++;
-    }
-    if (ant.carryingBrood !== null) {
-      const b = this.brood.find(b => b.id === ant.carryingBrood);
-      if (b) { b.carrier = null; b.cell = this.cell(ant); }
-      ant.carryingBrood = null;
-    }
-    if (dropCargo && ant.cargo > 0) {
-      this.world.food[this.cell(ant)] += ant.cargo;
-      ant.cargo = 0;
-    }
-    ant.task = null;
+  for(const a of this.ants)if(remove.has(a.carryingBrood))this.cancelTask(a);
+  this.brood=this.brood.filter(b=>!remove.has(b.id));
+ }
+ physiology(dt){
+  const p=this.p;
+  for(const a of this.ants){
+   if(!a.alive)continue;a.age+=dt;
+   let need=(a.type==='queen'?p.queenMetabolismCPerDay:p.metabolismCPerDay)*dt/DAY;
+   const eaten=Math.min(a.crop.c,need);a.crop.c-=eaten;need-=eaten;this.outputs.c+=eaten;
+   const reserve=Math.min(a.reserve.c,need);a.reserve.c-=reserve;need-=reserve;this.outputs.c+=reserve;
+   const rate=(a.type==='queen'?p.queenMetabolismCPerDay:p.metabolismCPerDay)/DAY;
+   a.starved=need>1e-12?(eaten+reserve>0?0:a.starved)+need/rate:0;
+   if(a.starved>2*DAY||a.age>=a.lifespan)this.kill(a);
   }
-
-  kill(ant) {
-    if (!ant.alive) return;
-    this.cancelTask(ant, { dropCargo: true });
-    ant.alive = false;
-    this.corpses.push({ id: ant.id, cell: this.cell(ant) });
-    this.metrics.deaths++;
-    if (ant.type === 'queen') this.note('The queen has died. Existing brood can still mature.');
+  const q=this.queen;
+  if(q.alive){
+   // Queen personally nurses her first larvae using physiological reserves.
+   if(this.options.scenario==='founding'&&!this.livingWorkers().length)for(const b of this.brood)this.feedBrood(q,b,dt,true);
+   this.layTimer+=dt;
+   if(this.options.laying&&this.time>=p.foundingDelayDays*DAY&&this.layTimer>=p.eggIntervalDays*DAY){
+    if(this.layEgg())this.layTimer=0;
+   }
   }
-
-  changeTask(ant, kind) {
-    this.cancelTask(ant, { dropCargo: true });
-    ant.retryAt = this.time;
-    if (kind === 'idle') this.assign(ant, 'idle', [], { duration: 1 });
+  this.updateBrood(dt);
+ }
+ step(dt=1){
+  if(!Number.isFinite(dt)||dt<=0||dt>1)throw new RangeError('Steps must be in (0,1] biological seconds.');
+  this.time+=dt;this.tick++;this.physiology(dt);
+  this.spatial=spatialIndex(this.ants,a=>this.cell(a));
+  // Rotate iteration priority to avoid permanent low-ID access advantages.
+  const workers=this.livingWorkers(),offset=workers.length?this.tick%workers.length:0;
+  for(let j=0;j<workers.length;j++){
+   const a=workers[(j+offset)%workers.length];
+   const familiar=a.outbound.length&&this.p.trailsEnabled&&this.world.trail[this.cell(a)]>.05;
+   a.moveBudget=Math.min(2,a.moveBudget+dt*this.p.walkMMPerSecond/this.p.cellMM*(familiar?this.p.memorySynergy:1));
+   this.updateWorker(a,dt);
   }
-
-  foodRoute(ant, stored = true, minimum = .001) {
-    const w = this.world, field = stored ? w.stores : w.food;
-    const goals = new Set();
-    for (let i = 0; i < field.length; i++) {
-      if (field[i] >= minimum && w.grid[i] === OPEN && !this.claims.has(`food:${i}`)) goals.add(i);
-    }
-    const path = route(w, this.cell(ant), goals);
-    return path === null ? null : { path, target: path.at(-1) ?? this.cell(ant) };
+  this.ants=this.ants.filter(a=>a.alive);
+  this.environmentTimer+=dt;if(this.environmentTimer>=10){this.world.decay(this.environmentTimer,this.p);this.environmentTimer=0;}
+  this.historyTimer+=dt;if(this.historyTimer>=60){this.history.push(this.snapshot());if(this.history.length>1440)this.history.shift();this.historyTimer=0;}
+ }
+ snapshot(){
+  const workers=this.livingWorkers();
+  return {seed:this.world.seed,time:this.time,days:this.time/DAY,workers:workers.length,queenAlive:this.queen.alive,
+   scenario:this.options.scenario,food:this.ants.reduce((n,a)=>n+a.crop.c,0),brood:this.brood.length,corpses:this.corpses.length,
+   jobs:workers.reduce((r,a)=>{r[a.behaviour]=(r[a.behaviour]||0)+1;return r;},{}),
+   metrics:{...this.metrics},ledger:{inputs:{...this.inputs},outputs:{...this.outputs},inventory:this.inventory()},
+   architecture:{excavatedCells:this.world.excavated,maxDepthMM:this.world.grid.reduce((d,v,i)=>v===OPEN?Math.max(d,(Math.floor(i/this.world.width)-this.world.surface)*this.p.cellMM):d,0)}};
+ }
+ inspect(){
+  const errors=[],w=this.world,ids=new Set();
+  for(const a of this.ants){
+   if(ids.has(a.id))errors.push(`Duplicate ${a.id}`);ids.add(a.id);
+   if(!a.alive||![a.x,a.y,a.age,a.moveBudget].every(Number.isFinite)||w.grid[this.cell(a)]!==OPEN)errors.push(`Invalid ant ${a.id}`);
+   for(const v of [a.crop,a.reserve,a.body])if(![v.c,v.p].every(x=>Number.isFinite(x)&&x>=-1e-8))errors.push(`Invalid physiology ${a.id}`);
+   if(a.crop.c>this.p.cropC+1e-8||a.crop.p>this.p.cropP+1e-8)errors.push(`Crop capacity ${a.id}`);
+   for(const [key,list] of [['carryingBrood',this.brood],['corpse',this.corpses]])if(a[key]!==null&&!list.some(b=>b.id===a[key]&&b.carrier===a.id&&b.cell===this.cell(a)))errors.push(`Dangling cargo ${a.id}`);
   }
-
-  assignEating(ant) {
-    for (const stored of [true, false]) {
-      const found = this.foodRoute(ant, stored);
-      if (found && this.assign(ant, stored ? 'eat' : 'eatLoose', found.path,
-        { target: found.target }, [`food:${found.target}`])) return true;
-    }
-    return false;
+  for(const b of [...this.brood,...this.corpses]){
+   if(w.grid[b.cell]!==OPEN)errors.push(`Invalid item ${b.id}`);
+   if(b.carrier!==null&&!this.ants.some(a=>a.id===b.carrier&&(a.carryingBrood===b.id||a.corpse===b.id)))errors.push(`Orphan carrier ${b.id}`);
+   const v=b.body||b.nutrients;if(![v.c,v.p].every(x=>Number.isFinite(x)&&x>=-1e-8))errors.push(`Invalid biomass ${b.id}`);
   }
-
-  assignForage(ant) {
-    const found = this.foodRoute(ant, false, .5);
-    return !!found && this.assign(ant, 'forage', found.path,
-      { target: found.target, phase: 'pickup' }, [`food:${found.target}`]);
-  }
-
-  assignDelivery(ant, task) {
-    const w = this.world;
-    const available = new Set([...this.pantrySlots()].filter(i => w.stores[i] <= 10 - ant.cargo));
-    const path = route(w, this.cell(ant), available);
-    if (path === null) return false;
-    task.phase = 'deliver';
-    task.path = path;
-    task.cursor = 0;
-    task.target = path.at(-1) ?? this.cell(ant);
-    task.lastProgress = this.time;
-    return true;
-  }
-
-  assignDig(ant) {
-    const w = this.world, approaches = new Map();
-    // Finish the entry shaft before widening the chamber. Every workface has an
-    // open approach and all workers follow real paths to that approach.
-    const pendingShaft = [...w.plan].filter(i => i % w.width === w.chamber % w.width && i <= w.chamber && w.grid[i] === SOIL);
-    const candidates = pendingShaft.length ? pendingShaft : [...w.plan];
-    for (const target of candidates) {
-      if (w.grid[target] !== SOIL || this.claims.has(`dig:${target}`)) continue;
-      for (const n of w.adjacent(target)) if (w.grid[n] === OPEN) approaches.set(n, target);
-    }
-    const path = route(w, this.cell(ant), new Set(approaches.keys()));
-    if (path === null) return false;
-    const approach = path.at(-1) ?? this.cell(ant), target = approaches.get(approach);
-    return this.assign(ant, 'dig', path, { target, approach }, [`dig:${target}`]);
-  }
-
-  assignMeal(ant, kind, target, key) {
-    const found = this.foodRoute(ant, true, .4);
-    if (!found) return false;
-    return this.assign(ant, kind, found.path, { target, source: found.target, phase: 'collect' },
-      [key, `food:${found.target}`]);
-  }
-
-  nurseryDestination(brood) {
-    const w = this.world, occupied = new Map();
-    for (const b of this.brood) if (b !== brood) occupied.set(b.cell, (occupied.get(b.cell) || 0) + 1);
-    let best = null, score = Infinity;
-    for (const i of w.room) {
-      if (w.grid[i] !== OPEN || (occupied.get(i) || 0) >= 3) continue;
-      const d = distance(w, i, w.chamber);
-      if (d < 2 || d > 4.5) continue;
-      const s = (occupied.get(i) || 0) * 4 + Math.abs(d - 3);
-      if (s < score) { score = s; best = i; }
-    }
-    return best;
-  }
-
-  assignNursing(ant) {
-    if (this.queen.alive && this.queen.energy < 65 && !this.claims.has('queenMeal')) {
-      if (this.assignMeal(ant, 'feedQueen', this.queen.id, 'queenMeal')) return true;
-    }
-    for (const b of this.brood) {
-      if (b.stage !== 'larva' || b.satiation > 1 || this.claims.has(`brood:${b.id}`)) continue;
-      if (this.assignMeal(ant, 'feed', b.id, `brood:${b.id}`)) return true;
-    }
-    for (const b of this.brood) {
-      if (b.stage === 'egg' || b.carrier !== null || distance(this.world, b.cell, this.world.chamber) >= 2 || this.claims.has(`brood:${b.id}`)) continue;
-      const destination = this.nurseryDestination(b);
-      if (destination === null) continue;
-      const path = route(this.world, this.cell(ant), new Set([b.cell]));
-      if (this.assign(ant, 'transport', path, { target: b.id, destination, phase: 'pickup' }, [`brood:${b.id}`])) return true;
-    }
-    return false;
-  }
-
-  assignCleaning(ant) {
-    const w = this.world, targets = new Set();
-    for (let i = w.surface * w.width; i < w.grid.length; i++) {
-      if (w.waste[i] >= .4 && !this.claims.has(`waste:${i}`)) targets.add(i);
-    }
-    for (const corpse of this.corpses) if (!this.claims.has(`waste:${corpse.cell}`)) targets.add(corpse.cell);
-    const path = route(w, this.cell(ant), targets);
-    if (path === null) return false;
-    const target = path.at(-1) ?? this.cell(ant);
-    return this.assign(ant, 'clean', path, { target, phase: 'pickup', waste: 0 }, [`waste:${target}`]);
-  }
-
-  allocate(ant) {
-    if (ant.task || !ant.alive || ant.type !== 'worker') return;
-    if (ant.cargo > 0) {
-      this.assign(ant, 'forage', [], { phase: 'waiting' });
-      this.assignDelivery(ant, ant.task);
-      return;
-    }
-    if (ant.energy < 50 && this.assignEating(ant)) return;
-    const workers = this.livingWorkers();
-    const counts = workers.reduce((r, a) => { const kind = a.task?.kind; r[kind] = (r[kind] || 0) + 1; return r; }, {});
-    const scarcity = this.world.storedFood < Math.max(8, workers.length);
-    const forageQuota = Math.max(2, Math.ceil(workers.length * (scarcity ? .55 : .25)));
-    if ((counts.forage || 0) < forageQuota && this.assignForage(ant)) return;
-    if (this.assignNursing(ant)) return;
-    const cleaningQuota = Math.max(1, Math.ceil(workers.length * .15));
-    if ((counts.clean || 0) < cleaningQuota && this.assignCleaning(ant)) return;
-    const digQuota = Math.max(1, Math.ceil(workers.length * (this.chamberReady ? .25 : .5)));
-    if ((counts.dig || 0) < digQuota && this.assignDig(ant)) return;
-    const home = this.queen.alive ? this.cell(this.queen) : this.world.entrance;
-    if (distance(this.world, this.cell(ant), home) > 4) {
-      if (this.assign(ant, 'idle', route(this.world, this.cell(ant), new Set([home])), { duration: .5 })) return;
-    }
-    const open = this.world.adjacent(this.cell(ant)).filter(i => this.world.grid[i] === OPEN);
-    const goal = open[Math.floor(this.world.random() * open.length)];
-    this.assign(ant, 'idle', goal === undefined ? [] : [goal], { duration: .4 + this.world.random() });
-  }
-
-  move(ant, task, dt) {
-    const w = this.world;
-    let remaining = (ant.type === 'queen' ? 2.4 : this.options.workerSpeed) * dt;
-    while (remaining > 1e-10 && task.cursor < task.path.length) {
-      const next = task.path[task.cursor];
-      if (w.grid[next] !== OPEN) { this.cancelTask(ant, { dropCargo: true }); return false; }
-      const from = this.cell(ant);
-      if (next !== from && !w.adjacent(from).includes(next)) {
-        this.cancelTask(ant, { dropCargo: true }); return false;
-      }
-      const target = w.center(next), dx = target.x - ant.x, dy = target.y - ant.y;
-      const length = Math.hypot(dx, dy);
-      if (length < 1e-10) { task.cursor++; continue; }
-      const step = Math.min(length, remaining);
-      ant.x += dx / length * step;
-      ant.y += dy / length * step;
-      ant.angle = Math.atan2(dy, dx);
-      ant.distance += step;
-      remaining -= step;
-      task.lastProgress = this.time;
-      if (step >= length - 1e-10) { ant.x = target.x; ant.y = target.y; task.cursor++; }
-      if (ant.carryingBrood !== null) {
-        const b = this.brood.find(b => b.id === ant.carryingBrood);
-        if (b) b.cell = this.cell(ant);
-      }
-    }
-    return task.cursor >= task.path.length;
-  }
-
-  eat(ant, amount) {
-    const eaten = Math.max(0, Math.min(amount, (100 - ant.energy) / 40));
-    ant.energy = Math.min(100, ant.energy + eaten * 40);
-    this.metrics.foodConsumed += eaten;
-    return eaten;
-  }
-
-  // Public energy transfer rejects dead participants at the operation boundary.
-  transferEnergy(donor, receiver, amount) {
-    if (!donor.alive || !receiver.alive || donor === receiver || distance(this.world, this.cell(donor), this.cell(receiver)) > 1.5) return 0;
-    const actual = Math.max(0, Math.min(amount, donor.energy - 25, 100 - receiver.energy));
-    donor.energy -= actual;
-    receiver.energy += actual;
-    return actual;
-  }
-
-  interact(ant, dt) {
-    const t = ant.task, w = this.world;
-    if (!t || !ant.alive) return;
-    t.work += dt;
-    if (t.kind === 'idle') { if (t.work >= t.duration) this.cancelTask(ant); return; }
-    if (t.kind === 'dig') {
-      if (w.grid[t.target] !== SOIL || !w.adjacent(this.cell(ant)).includes(t.target)) { this.cancelTask(ant); return; }
-      if (t.work >= .65) {
-        if (w.dig(t.target)) {
-          this.metrics.dug++;
-          this.lastProgress = this.time;
-        }
-        this.cancelTask(ant);
-      }
-      return;
-    }
-    if (t.kind === 'eat' || t.kind === 'eatLoose') {
-      const need = (100 - ant.energy) / 40;
-      const food = t.kind === 'eat' ? w.takeStored(t.target, need) : Math.min(w.food[t.target], need);
-      if (t.kind === 'eatLoose') w.food[t.target] -= food;
-      this.eat(ant, food);
-      this.cancelTask(ant);
-      return;
-    }
-    if (t.kind === 'forage') {
-      if (t.phase === 'pickup') {
-        const amount = Math.min(1, w.food[t.target]);
-        w.food[t.target] -= amount;
-        ant.cargo += amount;
-        this.metrics.gathered += amount;
-        if (ant.cargo === 0) { this.cancelTask(ant); return; }
-        // Release the source claim as soon as the food is physically collected.
-        for (const key of t.claims) if (this.claims.get(key) === ant.id) this.claims.delete(key);
-        t.claims.length = 0;
-        t.phase = 'waiting';
-        this.assignDelivery(ant, t);
-      } else if (t.phase === 'waiting') {
-        if (ant.energy < 25) { ant.cargo -= this.eat(ant, ant.cargo); }
-        if (ant.cargo <= 1e-10) { ant.cargo = 0; this.cancelTask(ant); return; }
-        this.assignDelivery(ant, t);
-      } else {
-        const deposited = w.addStored(t.target, ant.cargo);
-        ant.cargo -= deposited;
-        this.metrics.delivered += deposited;
-        if (ant.cargo > 1e-10) { t.phase = 'waiting'; this.assignDelivery(ant, t); }
-        else { ant.cargo = 0; this.cancelTask(ant); }
-      }
-      return;
-    }
-    if (t.kind === 'feed' || t.kind === 'feedQueen') {
-      const b = t.kind === 'feed' ? this.brood.find(b => b.id === t.target) : null;
-      const target = b ? b.cell : this.cell(this.queen);
-      if ((t.kind === 'feed' && (!b || b.stage !== 'larva')) || (t.kind === 'feedQueen' && !this.queen.alive)) {
-        this.cancelTask(ant, { dropCargo: true }); return;
-      }
-      if (t.phase === 'collect') {
-        const meal = w.takeStored(t.source, .4);
-        ant.cargo += meal;
-        if (meal < .399999) { this.cancelTask(ant, { dropCargo: true }); return; }
-        const path = route(w, this.cell(ant), new Set([target]));
-        if (path === null) { this.cancelTask(ant, { dropCargo: true }); return; }
-        t.phase = 'serve'; t.path = path; t.cursor = 0;
-      } else if (this.cell(ant) !== target) {
-        const path = route(w, this.cell(ant), new Set([target]));
-        if (path === null) this.cancelTask(ant, { dropCargo: true });
-        else { t.path = path; t.cursor = 0; }
-      } else {
-        if (b) {
-          if (b.satiation < 1) {
-            b.satiation += 5;
-            b.hunger = 0;
-            b.meals++;
-            this.metrics.foodConsumed += ant.cargo;
-            ant.cargo = 0;
-            this.metrics.fed++;
-            w.waste[target] += .06;
-          }
-        } else ant.cargo -= this.eat(this.queen, ant.cargo);
-        this.cancelTask(ant, { dropCargo: true });
-      }
-      return;
-    }
-    if (t.kind === 'transport') {
-      const b = this.brood.find(b => b.id === t.target);
-      if (!b) { this.cancelTask(ant); return; }
-      if (t.phase === 'pickup') {
-        if (b.carrier !== null || b.cell !== this.cell(ant)) { this.cancelTask(ant); return; }
-        const path = route(w, b.cell, new Set([t.destination]));
-        if (path === null) { this.cancelTask(ant); return; }
-        b.carrier = ant.id;
-        ant.carryingBrood = b.id;
-        t.phase = 'carry'; t.path = path; t.cursor = 0;
-      } else {
-        b.cell = this.cell(ant);
-        this.cancelTask(ant);
-      }
-      return;
-    }
-    if (t.kind === 'clean') {
-      if (t.phase === 'pickup') {
-        const path = route(w, this.cell(ant), new Set([w.dump]));
-        if (path === null) { this.cancelTask(ant); return; }
-        const corpse = this.corpses.find(c => c.cell === t.target);
-        if (corpse) { this.corpses.splice(this.corpses.indexOf(corpse), 1); t.waste = 1; }
-        else { t.waste = Math.min(1, w.waste[t.target]); w.waste[t.target] -= t.waste; }
-        t.phase = 'dump'; t.path = path; t.cursor = 0;
-      } else {
-        // The exterior midden is disposed material, never a new cleaning target.
-        this.metrics.cleaned += t.waste;
-        t.waste = 0;
-        this.cancelTask(ant);
-      }
-    }
-  }
-
-  updateBrood(dt) {
-    const removed = new Set();
-    for (const b of this.brood) {
-      b.age += dt;
-      if (b.stage === 'egg' && b.age >= 6) {
-        b.stage = 'larva'; b.stageAge = 0;
-      } else if (b.stage === 'larva') {
-        const growing = Math.min(dt, b.satiation);
-        b.growth += growing;
-        b.satiation = Math.max(0, b.satiation - dt);
-        b.hunger += dt - growing;
-        if (b.growth >= 10 - 1e-8 && b.meals >= 2) {
-          b.stage = 'pupa'; b.stageAge = 0;
-        } else if (b.hunger > 100) {
-          removed.add(b.id);
-          this.world.waste[b.cell] += .4;
-          this.metrics.broodDeaths++;
-        }
-      } else if (b.stage === 'pupa' && b.stageAge >= 8) {
-        this.spawnAnt('worker', b.cell);
-        this.metrics.births++;
-        removed.add(b.id);
-      }
-      b.stageAge += dt;
-    }
-    if (removed.size) {
-      for (const a of this.ants) {
-        if (removed.has(a.carryingBrood) || (a.task?.kind === 'feed' && removed.has(a.task.target)) ||
-          (a.task?.kind === 'transport' && removed.has(a.task.target))) this.cancelTask(a, { dropCargo: true });
-      }
-      this.brood = this.brood.filter(b => !removed.has(b.id));
-    }
-  }
-
-  layEgg() {
-    const b = { id: this.nextId++, cell: this.cell(this.queen), stage: 'egg', age: 0,
-      stageAge: 0, satiation: 0, growth: 0, hunger: 0, meals: 0, carrier: null };
-    this.brood.push(b);
-    this.metrics.laid++;
-    return b;
-  }
-
-  updateQueen(dt) {
-    const q = this.queen;
-    if (!q.alive) return;
-    if (this.chamberReady && this.cell(q) !== this.world.chamber && !q.task) {
-      this.assign(q, 'relocate', route(this.world, this.cell(q), new Set([this.world.chamber])));
-    }
-    if (q.task && this.move(q, q.task, dt)) this.cancelTask(q);
-    this.layTimer += dt;
-    if (this.options.laying && this.chamberReady && this.cell(q) === this.world.chamber && !q.task && this.time >= 10 && this.layTimer >= 12 &&
-      q.energy > 30 && this.world.storedFood >= 3 &&
-      this.livingWorkers().length + this.brood.length < this.options.maxWorkers) {
-      // Check inventory first; eggs consume food atomically across storage tiles.
-      let remaining = .5;
-      for (const i of this.world.pantries) {
-        remaining -= this.world.takeStored(i, remaining);
-        if (remaining <= 1e-10) break;
-      }
-      this.metrics.foodConsumed += .5;
-      this.layEgg();
-      q.energy -= 1;
-      this.layTimer = 0;
-    }
-  }
-
-  updateConstruction() {
-    const w = this.world;
-    for (const i of w.plan) if (w.grid[i] !== SOIL) w.plan.delete(i);
-    const complete = [...w.room].every(i => w.grid[i] === OPEN) && route(w, w.entrance, new Set([w.chamber])) !== null;
-    if (complete && !this.chamberReady) {
-      this.chamberReady = true;
-      this.note('Queen chamber complete. The queen is moving underground.');
-    }
-    if (!this.chamberReady && this.time - this.lastProgress > 20) {
-      // An obstruction is reported and retried, without taking away foragers.
-      for (const a of this.ants) if (a.task?.kind === 'dig') this.cancelTask(a);
-      this.lastProgress = this.time;
-      this.note('Construction stalled; work assignments refreshed. Foraging continues.');
-    }
-    if (this.chamberReady && w.plan.size === 0) {
-      const p = this.pressures();
-      if (p.space > .8 || p.pantry > .5) {
-        const n = this.expansions++;
-        const side = n % 2 ? 1 : -1;
-        const depth = Math.floor(n / 2);
-        w.extendBranch(w.chamber, side * (10 + depth % 3 * 7), 5 + Math.floor(depth / 3) * 9, 3 + depth % 2);
-        this.note(p.pantry > .5 ? 'Expanding food storage.' : 'Expanding the nest for the growing colony.');
-      }
-    }
-  }
-
-  environment(dt) {
-    const w = this.world;
-    if (this.options.regrowFood) for (const i of w.sources) {
-      const add = Math.min(.018 * dt, Math.max(0, 18 - w.food[i]));
-      w.food[i] += add;
-      this.metrics.foodCreated += add;
-    }
-    for (const i of [...w.pantries]) {
-      const spoil = w.takeStored(i, w.stores[i] * (1 - Math.exp(-.0005 * dt)));
-      this.metrics.foodSpoiled += spoil;
-      w.waste[i] += spoil * .2;
-    }
-    for (const a of this.livingWorkers()) if (Math.floor(a.y) >= w.surface) w.waste[this.cell(a)] += .001 * dt;
-    w.diffuse(w.homeScent, dt, .12, .55);
-    w.diffuse(w.foodScent, dt, .18, .55);
-    w.homeScent[w.entrance] = 1;
-    if (this.queen.alive) w.homeScent[this.cell(this.queen)] = 1;
-    for (const i of w.sources) if (w.food[i] > .1) w.foodScent[i] = Math.min(1, w.foodScent[i] + .3 * dt);
-    for (const i of w.pantries) w.foodScent[i] = Math.min(1, w.foodScent[i] + .2 * dt);
-    if (w.version !== this.lastExcavated) { w.refreshAir(); this.lastExcavated = w.version; }
-  }
-
-  step(dt = 1 / 30) {
-    if (!Number.isFinite(dt) || dt <= 0 || dt > .1) throw new RangeError('Simulation steps must be in (0, 0.1] seconds. Use FixedClock for elapsed time.');
-    this.time += dt;
-    this.tick++;
-    this.updateBrood(dt);
-    // Iterate a stable snapshot: births and removals cannot skip another ant.
-    for (const a of [...this.ants]) {
-      if (!a.alive) continue;
-      a.age += dt;
-      if (this.options.starvation) a.energy = Math.max(0, a.energy - dt * (a.type === 'queen' ? .025 : .055));
-      if (a.age >= a.lifespan || a.energy <= 0) { this.kill(a); continue; }
-      if (a.type === 'queen') continue;
-      if (a.energy < 12 && a.task && !['eat', 'eatLoose'].includes(a.task.kind)) {
-        if (a.cargo > 0) a.cargo -= this.eat(a, a.cargo);
-        this.cancelTask(a, { dropCargo: true });
-      }
-      if (!a.task && this.time >= a.retryAt) {
-        this.allocate(a);
-        if (!a.task) a.retryAt = this.time + .5;
-      }
-      const t = a.task;
-      if (!t) continue;
-      if (this.time - t.lastProgress > 30 && t.phase !== 'waiting') {
-        this.cancelTask(a, { dropCargo: true }); continue;
-      }
-      if (this.move(a, t, dt) && a.task === t) {
-        this.interact(a, dt);
-        if (a.task === t) t.lastProgress = this.time;
-      }
-    }
-    this.updateQueen(dt);
-    this.ants = this.ants.filter(a => a.alive);
-    this.environmentTimer += dt;
-    this.planTimer += dt;
-    if (this.environmentTimer >= .5 - 1e-8) { this.environment(this.environmentTimer); this.environmentTimer = 0; }
-    if (this.planTimer >= 1 - 1e-8) { this.updateConstruction(); this.planTimer = 0; }
-  }
-
-  snapshot() {
-    const workers = this.livingWorkers();
-    return { seed: this.world.seed, time: Math.round(this.time * 100) / 100,
-      workers: workers.length, queenAlive: this.queen.alive,
-      queenEnergy: Math.round(this.queen.energy * 100) / 100,
-      chamberReady: this.chamberReady, food: Math.round(this.world.storedFood * 100) / 100,
-      brood: this.brood.length, corpses: this.corpses.length,
-      jobs: workers.reduce((r, a) => { const k = a.task?.kind || 'idle'; r[k] = (r[k] || 0) + 1; return r; }, {}),
-      metrics: { ...this.metrics }, pressure: this.pressures(), expansions: this.expansions };
-  }
-
-  inspect() {
-    const errors = [], w = this.world;
-    const liveIds = new Set(this.ants.filter(a => a.alive).map(a => a.id));
-    for (const a of this.ants) {
-      if (!a.alive) errors.push(`Dead ant ${a.id} retained as living.`);
-      if (!Number.isFinite(a.x + a.y + a.energy) || a.energy < 0 || a.energy > 100.00001) errors.push(`Invalid ant ${a.id}.`);
-      if (w.grid[this.cell(a)] !== OPEN) errors.push(`Ant ${a.id} inside solid terrain.`);
-      if (a.cargo < -1e-8) errors.push(`Negative cargo ${a.id}.`);
-      if (a.carryingBrood !== null && !this.brood.some(b => b.id === a.carryingBrood && b.carrier === a.id)) errors.push(`Dangling brood on ant ${a.id}.`);
-    }
-    for (const b of this.brood) {
-      if (w.grid[b.cell] !== OPEN) errors.push(`Brood ${b.id} inside solid terrain.`);
-      if (b.carrier !== null && !this.ants.some(a => a.alive && a.id === b.carrier && a.carryingBrood === b.id && a.task?.kind === 'transport')) errors.push(`Orphan carrier for brood ${b.id}.`);
-    }
-    for (const [key, id] of this.claims) {
-      if (!liveIds.has(id) || !this.ants.find(a => a.id === id)?.task?.claims.includes(key)) errors.push(`Orphan claim ${key}.`);
-    }
-    for (const i of w.pantries) if (w.stores[i] <= 0) errors.push(`Empty pantry membership ${i}.`);
-    for (let i = 0; i < w.grid.length; i++) {
-      if (w.food[i] < -1e-8 || w.stores[i] < -1e-8 || w.waste[i] < -1e-8 || w.stores[i] > 10.00001) errors.push(`Invalid inventory at ${i}.`);
-      if (w.stores[i] > 0 && !w.pantries.has(i)) errors.push(`Unregistered stored food ${i}.`);
-    }
-    const inventory = w.food.reduce((a, b) => a + b, 0) + w.storedFood + this.ants.reduce((a, b) => a + b.cargo, 0);
-    const balance = this.metrics.foodCreated - this.metrics.foodConsumed - this.metrics.foodSpoiled - inventory;
-    if (Math.abs(balance) > .0001) errors.push(`Food ledger differs by ${balance}.`);
-    return errors;
-  }
+  for(const f of [w.food,w.protein,w.trail,w.depositedSoil])for(const v of f)if(!Number.isFinite(v)||v< -1e-8){errors.push('Invalid field');break;}
+  const inventory=this.inventory();for(const k of ['c','p'])if(Math.abs(this.inputs[k]-this.outputs[k]-inventory[k])>1e-5)errors.push(`Nutrient ledger ${k}: ${this.inputs[k]-this.outputs[k]-inventory[k]}`);
+  const soil=w.depositedSoil.reduce((a,b)=>a+b,0)+this.ants.reduce((a,b)=>a+b.soil,0);
+  if(Math.abs(soil-w.excavated)>1e-8)errors.push('Soil ledger');
+  return errors;
+ }
+ report(){return {version:3,species:this.p.id,initialOptions:this.options,parameters:this.p,snapshot:this.snapshot(),checks:this.inspect(),interventions:this.interventions,history:this.history,interactions:this.interactions,events:this.events};}
 }

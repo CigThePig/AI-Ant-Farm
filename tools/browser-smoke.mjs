@@ -13,7 +13,7 @@ try {
     server.stdout.on('data', chunk => { if (String(chunk).includes('http://localhost')) resolve(); });
     server.once('error', reject); server.once('exit', code => reject(new Error(`Preview server exited: ${code}`)));
   });
-  browser = await chromium.launch({ headless: true });
+  browser = await chromium.launch({ headless: true, ...(process.env.CHROMIUM_PATH?{executablePath:process.env.CHROMIUM_PATH}:{}) });
   const results = [];
   for (const viewport of [{ width:1280,height:720 },{ width:2340,height:1080 },{ width:1024,height:768 },{ width:888,height:400 },{ width:390,height:844 }]) {
     const context = await browser.newContext({ viewport, hasTouch: true, deviceScaleFactor: 1,
@@ -32,21 +32,25 @@ try {
     const before = await page.evaluate(() => window.antFarm.snapshot().time);
     await page.getByRole('button',{name:'Step',exact:true}).click();
     assert.ok((await page.evaluate(() => window.antFarm.snapshot().time)) > before);
-    await page.getByLabel('Ant speed').press('End');
-    assert.equal(await page.evaluate(() => window.antFarm.simulation.options.workerSpeed),12.5);
-    await page.getByLabel('Ant speed').press('Home');
-    for(let i=0;i<8;i++)await page.getByLabel('Ant speed').press('ArrowRight');
-    assert.equal(await page.evaluate(() => window.antFarm.simulation.options.workerSpeed),5);
-    await page.getByLabel('Food patches regrow').uncheck();
-    assert.equal(await page.evaluate(() => window.antFarm.simulation.options.regrowFood),false);
-    await page.getByLabel('Food patches regrow').check();
+    await page.getByLabel('Locomotion sensitivity').press('End');
+    assert.equal(await page.evaluate(() => window.antFarm.simulation.p.walkMMPerSecond),2);
+    await page.getByLabel('Locomotion sensitivity').press('Home');
+    for(let i=0;i<3;i++)await page.getByLabel('Locomotion sensitivity').press('ArrowRight');
+    await page.getByLabel('Trail response and deposition').uncheck();
+    assert.equal(await page.evaluate(() => window.antFarm.simulation.p.trailsEnabled),false);
+    await page.getByLabel('Trail response and deposition').check();
     await page.getByRole('button',{name:'Start a new colony'}).click();
     // Exercise the engine in the actual browser, then observe a rendered frame.
-    await page.evaluate(() => { const sim=window.antFarm.simulation;for(let i=0;i<18000;i++)sim.step(); });
+    await page.evaluate(() => { const sim=window.antFarm.simulation;for(let i=0;i<3600;i++)sim.step(); });
     await page.waitForFunction(() => document.getElementById('phase').textContent==='ESTABLISHED');
     const snap = await page.evaluate(() => window.antFarm.snapshot());
-    assert.ok(snap.metrics.births > 0);assert.ok(snap.metrics.fed > 0);
+    assert.equal(snap.metrics.births,0);assert.ok(snap.metrics.gathered > 0);
     assert.deepEqual(await page.evaluate(() => window.antFarm.inspect()),[]);
+    await page.evaluate(()=>{window.antFarm.renderer.selected=window.antFarm.simulation.ants[1].id;});
+    await page.waitForFunction(()=>!document.getElementById('selection').hidden);
+    assert.match(await page.locator('#selection').textContent(),/Local cues/);
+    await page.getByRole('button',{name:'Erase surface trails'}).click();
+    assert.equal(await page.evaluate(()=>window.antFarm.simulation.world.trail.reduce((a,b)=>a+b,0)),0);
     await page.getByLabel('View layer').selectOption('tasks');
     await page.getByText('Colony diagnostics',{exact:true}).click();
     const downloadPromise = page.waitForEvent('download');
@@ -68,9 +72,9 @@ try {
     await page.getByRole('button',{name:'Colony',exact:false}).first().click();
     await page.screenshot({path:`${artifactDir}/colony-${viewport.width}x${viewport.height}.png`});
     await page.getByRole('button',{name:'Controls'}).click();
-    await page.getByLabel('View layer').selectOption('air');
+    await page.getByLabel('View layer').selectOption('food');
     await page.getByRole('button',{name:'Close controls'}).click();
-    await page.screenshot({path:`${artifactDir}/air-${viewport.width}x${viewport.height}.png`});
+    await page.screenshot({path:`${artifactDir}/trail-${viewport.width}x${viewport.height}.png`});
     assert.equal(await page.locator('#fatal').isVisible(),false);
     assert.deepEqual(errors,[]);
     results.push({viewport,snapshot:snap,errors});

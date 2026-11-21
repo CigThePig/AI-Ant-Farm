@@ -1,19 +1,17 @@
 import { Simulation } from './simulation.js';
 import { FixedClock } from './clock.js';
 import { Renderer } from './renderer.js';
-import { OPEN } from './navigation.js';
 const $ = id => document.getElementById(id);
 const renderer = new Renderer($('world'));
 let sim, clock, paused = false, speed = 1, last = null, uiTimer = 0, health = [];
-let firstChamber = false;
+
 function createColony() {
   const input = Number($('seed').value);
   const seed = Number.isFinite(input) ? Math.max(0, Math.min(4294967295, Math.floor(input))) : 42;
   $('seed').value = seed;
-  sim = new Simulation({ seed, workerSpeed: Number($('ant-speed').value), regrowFood: $('regrow').checked });
-  clock = new FixedClock(dt => sim.step(dt), { maxSteps: 120 });
+  sim = new Simulation({ seed, scenario:$('scenario').value, parameters:{walkMMPerSecond:Number($('ant-speed').value),temperatureC:Number($('temperature').value),trailsEnabled:$('trails').checked,memoryEnabled:$('memory').checked} });
+  clock = new FixedClock(dt => sim.step(dt), { hz:1, maxSteps: 500 });
   renderer.selected = null;
-  firstChamber = false;
   health = [];
   last = null;
   renderer.center(sim);
@@ -34,29 +32,22 @@ function updateUI() {
   $('workers').textContent = s.workers;
   $('brood').textContent = s.brood;
   $('food').textContent = Math.floor(s.food);
-  $('phase').textContent = !s.queenAlive ? 'QUEEN LOST' : s.chamberReady ? 'ESTABLISHED' : 'FOUNDING';
-  $('sim-time').textContent = `${String(Math.floor(s.time/60)).padStart(2,'0')}:${String(Math.floor(s.time%60)).padStart(2,'0')}`;
-  const ready = [...w.room].filter(i => w.grid[i] === OPEN).length;
-  const percentage = Math.round(ready / w.room.size * 100);
-  $('progress').style.width = `${percentage}%`;
-  $('progress-text').textContent = `${percentage}%`;
-  $('objective-label').textContent = s.chamberReady ? 'Queen’s chamber complete' : 'Preparing the queen’s chamber';
-  $('status-detail').textContent = !s.queenAlive ? 'The queen has died. Start a new colony to try again.' : s.chamberReady
-    ? `${s.metrics.births} new workers raised · ${s.metrics.fed} larval meals delivered.`
-    : 'Foragers gather food while diggers make a home.';
+  $('phase').textContent = !s.queenAlive ? 'QUEEN LOST' : s.scenario==='founding'&&s.workers===0 ? 'CLAUSTRAL' : 'ESTABLISHED';
+  $('sim-time').textContent = `${Math.floor(s.days)}d ${Math.floor(s.time/3600)%24}h ${Math.floor(s.time/60)%60}m`;
+  $('progress').style.width = `${Math.min(100,s.metrics.gathered/10)}%`;
+  $('progress-text').textContent = `${s.metrics.discovered} visits`;
+  $('objective-label').textContent = 'Local exploration and food discovery';
+  $('status-detail').textContent = `${s.metrics.births} emerged · ${s.metrics.contacts} food transfers · ${s.metrics.dug} soil cells excavated`;
   $('event').textContent = sim.events.at(-1)?.message || '';
   $('jobs').textContent = Object.entries(s.jobs).map(([k,v])=>`${k.padEnd(12)} ${v}`).join('\n');
   health = sim.inspect();
-  $('health').textContent = health.length ? `${health.length} issue(s): ${health[0]}` : 'Healthy · no invalid positions, orphan tasks, or inventory errors.';
+  $('health').textContent = health.length ? `${health.length} issue(s): ${health[0]}` : 'State and C/P/soil ledgers balance; this is not empirical validation.';
   if (renderer.selected !== null) {
     const a = sim.ants.find(a=>a.id===renderer.selected);
     $('selection').hidden = !a;
-    if(a) $('selection').innerHTML = `<strong>${a.type === 'queen' ? 'Queen' : 'Worker'} #${a.id}</strong><br>Task: ${a.task?.kind || 'idle'}<br>Energy: ${Math.round(a.energy)} / 100<br>Carrying: ${a.carryingBrood!==null?'brood':a.cargo>0?'food':'nothing'}`;
+    if(a) $('selection').textContent = `${a.type} #${a.id} · ${a.behaviour}\nAge ${(a.age/86400).toFixed(1)} days; crop C ${a.crop.c.toFixed(1)} / P ${a.crop.p.toFixed(1)} µg equiv.\nMemory ${a.memory.length} cells; experience ${a.experience} visits\nLocal cues: ${JSON.stringify(a.stimuli)}`;
   } else $('selection').hidden = true;
-  if (s.chamberReady && !firstChamber) {
-    firstChamber = true;
-    if (renderer.following) renderer.center(sim);
-  }
+
 }
 $('pause').addEventListener('click',()=>setPaused(!paused));
 $('step').addEventListener('click',()=>{if(paused) {sim.step();updateUI();renderer.draw(sim);}});
@@ -65,17 +56,20 @@ $('follow').addEventListener('click',()=>renderer.center(sim));
 $('settings-toggle').addEventListener('click',()=>setSettings($('settings').hidden));
 $('settings-close').addEventListener('click',()=>setSettings(false));
 $('layer').addEventListener('change',()=>{renderer.layer=$('layer').value;});
-$('regrow').addEventListener('change',()=>{sim.options.regrowFood=$('regrow').checked;});
+$('trails').addEventListener('change',()=>sim.setParameter('trailsEnabled',$('trails').checked));
+$('memory').addEventListener('change',()=>sim.setParameter('memoryEnabled',$('memory').checked));
+$('erase').addEventListener('click',()=>sim.eraseTrails());
+$('temperature').addEventListener('change',()=>sim.setParameter('temperatureC',Number($('temperature').value)));
 $('ant-speed').addEventListener('input',()=>{
-  sim.options.workerSpeed=Number($('ant-speed').value);
-  $('ant-speed-value').textContent=`${sim.options.workerSpeed} tiles/s`;
+  sim.setParameter('walkMMPerSecond',Number($('ant-speed').value));
+  $('ant-speed-value').textContent=`${sim.p.walkMMPerSecond} mm/s (assumption)`;
 });
 for(const button of document.querySelectorAll('[data-speed]')) button.addEventListener('click',()=>{
   speed=Number(button.dataset.speed);
   for(const b of document.querySelectorAll('[data-speed]')) b.classList.toggle('active',b===button);
 });
 $('export').addEventListener('click',()=>{
-  const report={version:2, options:sim.options, snapshot:sim.snapshot(), checks:sim.inspect(), events:sim.events};
+  const report=sim.report();
   const url=URL.createObjectURL(new Blob([JSON.stringify(report,null,2)],{type:'application/json'}));
   const a=document.createElement('a');a.href=url;a.download=`ant-farm-seed-${sim.world.seed}-${Math.floor(sim.time)}s.json`;a.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
