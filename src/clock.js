@@ -18,5 +18,7 @@ export class FixedClock {
     }
     return count;
   }
-  reset() { this.accumulator = 0; }
+  reset() {
+    this.accumulator = 0;
+  }
 }

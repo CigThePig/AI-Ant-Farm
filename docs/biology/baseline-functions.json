@@ -1,525 +1,1477 @@
 {
-  "commit": "65db5f5",
+  "commit": "65db5f5fd9b93bba796d027949c46f9b75c21d8e",
   "functions": [
     {
       "file": "src/app.js",
+      "line": 5,
+      "column": 10,
+      "name": "$",
+      "kind": "ArrowFunctionExpression",
+      "signature": "id =>"
+    },
+    {
+      "file": "src/app.js",
       "line": 9,
-      "signature": "function createColony() {"
+      "column": 0,
+      "name": "createColony",
+      "kind": "FunctionDeclaration",
+      "signature": "function createColony()"
+    },
+    {
+      "file": "src/app.js",
+      "line": 14,
+      "column": 25,
+      "name": "anonymous@14:25",
+      "kind": "ArrowFunctionExpression",
+      "signature": "dt =>"
     },
     {
       "file": "src/app.js",
       "line": 22,
-      "signature": "function setPaused(value) {"
+      "column": 0,
+      "name": "setPaused",
+      "kind": "FunctionDeclaration",
+      "signature": "function setPaused(value)"
     },
     {
       "file": "src/app.js",
       "line": 28,
-      "signature": "function setSettings(open) {"
+      "column": 0,
+      "name": "setSettings",
+      "kind": "FunctionDeclaration",
+      "signature": "function setSettings(open)"
     },
     {
       "file": "src/app.js",
       "line": 32,
-      "signature": "function updateUI() {"
+      "column": 0,
+      "name": "updateUI",
+      "kind": "FunctionDeclaration",
+      "signature": "function updateUI()"
     },
     {
       "file": "src/app.js",
-      "line": 86,
-      "signature": "if(e.code==='Space') {e.preventDefault();setPaused(!paused);}"
+      "line": 39,
+      "column": 35,
+      "name": "anonymous@39:35",
+      "kind": "ArrowFunctionExpression",
+      "signature": "i =>"
     },
     {
       "file": "src/app.js",
-      "line": 87,
-      "signature": "if(e.key.toLowerCase()==='d') {renderer.layer=renderer.layer==='tasks'?'none':'tasks';$('layer').value=renderer.layer;}"
+      "line": 48,
+      "column": 53,
+      "name": "anonymous@48:53",
+      "kind": "ArrowFunctionExpression",
+      "signature": "([k,v])=>"
     },
     {
       "file": "src/app.js",
-      "line": 88,
-      "signature": "if(e.key==='Escape') {setSettings(false);renderer.selected=null;}"
+      "line": 52,
+      "column": 28,
+      "name": "anonymous@52:28",
+      "kind": "ArrowFunctionExpression",
+      "signature": "a=>"
+    },
+    {
+      "file": "src/app.js",
+      "line": 61,
+      "column": 36,
+      "name": "anonymous@61:36",
+      "kind": "ArrowFunctionExpression",
+      "signature": "()=>"
+    },
+    {
+      "file": "src/app.js",
+      "line": 62,
+      "column": 35,
+      "name": "anonymous@62:35",
+      "kind": "ArrowFunctionExpression",
+      "signature": "()=>"
+    },
+    {
+      "file": "src/app.js",
+      "line": 64,
+      "column": 37,
+      "name": "anonymous@64:37",
+      "kind": "ArrowFunctionExpression",
+      "signature": "()=>"
+    },
+    {
+      "file": "src/app.js",
+      "line": 65,
+      "column": 46,
+      "name": "anonymous@65:46",
+      "kind": "ArrowFunctionExpression",
+      "signature": "()=>"
+    },
+    {
+      "file": "src/app.js",
+      "line": 66,
+      "column": 45,
+      "name": "anonymous@66:45",
+      "kind": "ArrowFunctionExpression",
+      "signature": "()=>"
+    },
+    {
+      "file": "src/app.js",
+      "line": 67,
+      "column": 37,
+      "name": "anonymous@67:37",
+      "kind": "ArrowFunctionExpression",
+      "signature": "()=>"
+    },
+    {
+      "file": "src/app.js",
+      "line": 68,
+      "column": 38,
+      "name": "anonymous@68:38",
+      "kind": "ArrowFunctionExpression",
+      "signature": "()=>"
+    },
+    {
+      "file": "src/app.js",
+      "line": 69,
+      "column": 40,
+      "name": "anonymous@69:40",
+      "kind": "ArrowFunctionExpression",
+      "signature": "()=>"
+    },
+    {
+      "file": "src/app.js",
+      "line": 73,
+      "column": 95,
+      "name": "anonymous@73:95",
+      "kind": "ArrowFunctionExpression",
+      "signature": "()=>"
+    },
+    {
+      "file": "src/app.js",
+      "line": 77,
+      "column": 37,
+      "name": "anonymous@77:37",
+      "kind": "ArrowFunctionExpression",
+      "signature": "()=>"
+    },
+    {
+      "file": "src/app.js",
+      "line": 81,
+      "column": 13,
+      "name": "anonymous@81:13",
+      "kind": "ArrowFunctionExpression",
+      "signature": "()=>"
+    },
+    {
+      "file": "src/app.js",
+      "line": 83,
+      "column": 33,
+      "name": "anonymous@83:33",
+      "kind": "ArrowFunctionExpression",
+      "signature": "()=>"
+    },
+    {
+      "file": "src/app.js",
+      "line": 84,
+      "column": 34,
+      "name": "anonymous@84:34",
+      "kind": "ArrowFunctionExpression",
+      "signature": "e=>"
     },
     {
       "file": "src/app.js",
       "line": 94,
-      "signature": "function gestureState() {"
+      "column": 0,
+      "name": "gestureState",
+      "kind": "FunctionDeclaration",
+      "signature": "function gestureState()"
     },
     {
       "file": "src/app.js",
-      "line": 110,
-      "signature": "if(gesture && current) {"
+      "line": 100,
+      "column": 38,
+      "name": "anonymous@100:38",
+      "kind": "ArrowFunctionExpression",
+      "signature": "e=>"
+    },
+    {
+      "file": "src/app.js",
+      "line": 106,
+      "column": 38,
+      "name": "anonymous@106:38",
+      "kind": "ArrowFunctionExpression",
+      "signature": "e=>"
     },
     {
       "file": "src/app.js",
       "line": 118,
-      "signature": "function release(e) {"
+      "column": 0,
+      "name": "release",
+      "kind": "FunctionDeclaration",
+      "signature": "function release(e)"
     },
     {
       "file": "src/app.js",
-      "line": 120,
-      "signature": "if(p && !p.moved && e.type==='pointerup') {"
+      "line": 129,
+      "column": 32,
+      "name": "anonymous@129:32",
+      "kind": "ArrowFunctionExpression",
+      "signature": "e=>"
+    },
+    {
+      "file": "src/app.js",
+      "line": 130,
+      "column": 45,
+      "name": "anonymous@130:45",
+      "kind": "ArrowFunctionExpression",
+      "signature": "()=>"
     },
     {
       "file": "src/app.js",
       "line": 131,
-      "signature": "function fail(error) {"
+      "column": 0,
+      "name": "fail",
+      "kind": "FunctionDeclaration",
+      "signature": "function fail(error)"
     },
     {
       "file": "src/app.js",
       "line": 138,
-      "signature": "function frame(now) {"
+      "column": 0,
+      "name": "frame",
+      "kind": "FunctionDeclaration",
+      "signature": "function frame(now)"
+    },
+    {
+      "file": "src/app.js",
+      "line": 150,
+      "column": 30,
+      "name": "simulation",
+      "kind": "FunctionExpression",
+      "signature": "()"
+    },
+    {
+      "file": "src/app.js",
+      "line": 150,
+      "column": 58,
+      "name": "renderer",
+      "kind": "FunctionExpression",
+      "signature": "()"
+    },
+    {
+      "file": "src/app.js",
+      "line": 150,
+      "column": 89,
+      "name": "paused",
+      "kind": "FunctionExpression",
+      "signature": "()"
+    },
+    {
+      "file": "src/app.js",
+      "line": 150,
+      "column": 116,
+      "name": "inspect",
+      "kind": "ArrowFunctionExpression",
+      "signature": "()=>"
+    },
+    {
+      "file": "src/app.js",
+      "line": 150,
+      "column": 143,
+      "name": "snapshot",
+      "kind": "ArrowFunctionExpression",
+      "signature": "()=>"
     },
     {
       "file": "src/clock.js",
       "line": 4,
-      "signature": "constructor(step, { hz = 30, maxSteps = 240 } = {}) {"
+      "column": 13,
+      "name": "constructor",
+      "kind": "FunctionExpression",
+      "signature": "constructor(step, { hz = 30, maxSteps = 240 } = {})"
     },
     {
       "file": "src/clock.js",
       "line": 10,
-      "signature": "advance(seconds) {"
+      "column": 9,
+      "name": "advance",
+      "kind": "FunctionExpression",
+      "signature": "advance(seconds)"
     },
     {
       "file": "src/clock.js",
       "line": 21,
-      "signature": "reset() { this.accumulator = 0; }"
+      "column": 7,
+      "name": "reset",
+      "kind": "FunctionExpression",
+      "signature": "reset()"
     },
     {
       "file": "src/navigation.js",
       "line": 4,
-      "signature": "export function neighbors(index, width, height) {"
+      "column": 7,
+      "name": "neighbors",
+      "kind": "FunctionDeclaration",
+      "signature": "function neighbors(index, width, height)"
     },
     {
       "file": "src/navigation.js",
       "line": 15,
-      "signature": "export function route(world, start, goals) {"
+      "column": 7,
+      "name": "route",
+      "kind": "FunctionDeclaration",
+      "signature": "function route(world, start, goals)"
     },
     {
       "file": "src/navigation.js",
       "line": 39,
-      "signature": "export function distance(world, a, b) {"
+      "column": 7,
+      "name": "distance",
+      "kind": "FunctionDeclaration",
+      "signature": "function distance(world, a, b)"
     },
     {
       "file": "src/renderer.js",
       "line": 4,
-      "signature": "function noise(i) { const n = Math.sin(i * 127.1 + 311.7) * 43758.5453; return n - Math.floor(n); }"
+      "column": 0,
+      "name": "noise",
+      "kind": "FunctionDeclaration",
+      "signature": "function noise(i)"
     },
     {
       "file": "src/renderer.js",
       "line": 7,
-      "signature": "constructor(canvas) {"
+      "column": 13,
+      "name": "constructor",
+      "kind": "FunctionExpression",
+      "signature": "constructor(canvas)"
     },
     {
       "file": "src/renderer.js",
       "line": 18,
-      "signature": "resize() {"
+      "column": 8,
+      "name": "resize",
+      "kind": "FunctionExpression",
+      "signature": "resize()"
     },
     {
       "file": "src/renderer.js",
       "line": 25,
-      "signature": "center(sim) {"
+      "column": 8,
+      "name": "center",
+      "kind": "FunctionExpression",
+      "signature": "center(sim)"
     },
     {
       "file": "src/renderer.js",
       "line": 33,
-      "signature": "point(x, y) { return { x: (x / this.camera.zoom + this.camera.x) / TILE, y: (y / this.camera.zoom + this.camera.y) / TILE }; }"
+      "column": 7,
+      "name": "point",
+      "kind": "FunctionExpression",
+      "signature": "point(x, y)"
     },
     {
       "file": "src/renderer.js",
       "line": 34,
-      "signature": "zoomAt(x, y, scale) {"
+      "column": 8,
+      "name": "zoomAt",
+      "kind": "FunctionExpression",
+      "signature": "zoomAt(x, y, scale)"
     },
     {
       "file": "src/renderer.js",
       "line": 41,
-      "signature": "rebuild(w) {"
+      "column": 9,
+      "name": "rebuild",
+      "kind": "FunctionExpression",
+      "signature": "rebuild(w)"
     },
     {
       "file": "src/renderer.js",
       "line": 66,
-      "signature": "drawAnt(a, selected) {"
+      "column": 9,
+      "name": "drawAnt",
+      "kind": "FunctionExpression",
+      "signature": "drawAnt(a, selected)"
     },
     {
       "file": "src/renderer.js",
       "line": 93,
-      "signature": "draw(sim) {"
+      "column": 6,
+      "name": "draw",
+      "kind": "FunctionExpression",
+      "signature": "draw(sim)"
     },
     {
       "file": "src/simulation.js",
       "line": 9,
-      "signature": "constructor(options = {}) {"
+      "column": 13,
+      "name": "constructor",
+      "kind": "FunctionExpression",
+      "signature": "constructor(options = {})"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 29,
+      "column": 42,
+      "name": "anonymous@29:42",
+      "kind": "ArrowFunctionExpression",
+      "signature": "(a, b) =>"
     },
     {
       "file": "src/simulation.js",
       "line": 35,
-      "signature": "spawnAnt(type, cell) {"
+      "column": 10,
+      "name": "spawnAnt",
+      "kind": "FunctionExpression",
+      "signature": "spawnAnt(type, cell)"
     },
     {
       "file": "src/simulation.js",
       "line": 45,
-      "signature": "livingWorkers() { return this.ants.filter(a => a.alive && a.type === 'worker'); }"
+      "column": 15,
+      "name": "livingWorkers",
+      "kind": "FunctionExpression",
+      "signature": "livingWorkers()"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 45,
+      "column": 44,
+      "name": "anonymous@45:44",
+      "kind": "ArrowFunctionExpression",
+      "signature": "a =>"
     },
     {
       "file": "src/simulation.js",
       "line": 46,
-      "signature": "cell(ant) { return this.world.cell(ant.x, ant.y); }"
+      "column": 6,
+      "name": "cell",
+      "kind": "FunctionExpression",
+      "signature": "cell(ant)"
     },
     {
       "file": "src/simulation.js",
       "line": 47,
-      "signature": "note(message) {"
+      "column": 6,
+      "name": "note",
+      "kind": "FunctionExpression",
+      "signature": "note(message)"
     },
     {
       "file": "src/simulation.js",
       "line": 52,
-      "signature": "pantrySlots() {"
+      "column": 13,
+      "name": "pantrySlots",
+      "kind": "FunctionExpression",
+      "signature": "pantrySlots()"
     },
     {
       "file": "src/simulation.js",
       "line": 63,
-      "signature": "pressures() {"
+      "column": 11,
+      "name": "pressures",
+      "kind": "FunctionExpression",
+      "signature": "pressures()"
     },
     {
       "file": "src/simulation.js",
       "line": 75,
-      "signature": "reserve(task, key, ant) {"
+      "column": 9,
+      "name": "reserve",
+      "kind": "FunctionExpression",
+      "signature": "reserve(task, key, ant)"
     },
     {
       "file": "src/simulation.js",
       "line": 82,
-      "signature": "assign(ant, kind, path, extra = {}, keys = []) {"
+      "column": 8,
+      "name": "assign",
+      "kind": "FunctionExpression",
+      "signature": "assign(ant, kind, path, extra = {}, keys = [])"
     },
     {
       "file": "src/simulation.js",
       "line": 99,
-      "signature": "cancelTask(ant, { dropCargo = false } = {}) {"
+      "column": 12,
+      "name": "cancelTask",
+      "kind": "FunctionExpression",
+      "signature": "cancelTask(ant, { dropCargo = false } = {})"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 107,
+      "column": 32,
+      "name": "anonymous@107:32",
+      "kind": "ArrowFunctionExpression",
+      "signature": "b =>"
     },
     {
       "file": "src/simulation.js",
       "line": 118,
-      "signature": "kill(ant) {"
+      "column": 6,
+      "name": "kill",
+      "kind": "FunctionExpression",
+      "signature": "kill(ant)"
     },
     {
       "file": "src/simulation.js",
       "line": 127,
-      "signature": "changeTask(ant, kind) {"
+      "column": 12,
+      "name": "changeTask",
+      "kind": "FunctionExpression",
+      "signature": "changeTask(ant, kind)"
     },
     {
       "file": "src/simulation.js",
       "line": 133,
-      "signature": "foodRoute(ant, stored = true, minimum = .001) {"
+      "column": 11,
+      "name": "foodRoute",
+      "kind": "FunctionExpression",
+      "signature": "foodRoute(ant, stored = true, minimum = .001)"
     },
     {
       "file": "src/simulation.js",
       "line": 143,
-      "signature": "assignEating(ant) {"
+      "column": 14,
+      "name": "assignEating",
+      "kind": "FunctionExpression",
+      "signature": "assignEating(ant)"
     },
     {
       "file": "src/simulation.js",
       "line": 152,
-      "signature": "assignForage(ant) {"
+      "column": 14,
+      "name": "assignForage",
+      "kind": "FunctionExpression",
+      "signature": "assignForage(ant)"
     },
     {
       "file": "src/simulation.js",
       "line": 158,
-      "signature": "assignDelivery(ant, task) {"
+      "column": 16,
+      "name": "assignDelivery",
+      "kind": "FunctionExpression",
+      "signature": "assignDelivery(ant, task)"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 160,
+      "column": 61,
+      "name": "anonymous@160:61",
+      "kind": "ArrowFunctionExpression",
+      "signature": "i =>"
     },
     {
       "file": "src/simulation.js",
       "line": 171,
-      "signature": "assignDig(ant) {"
+      "column": 11,
+      "name": "assignDig",
+      "kind": "FunctionExpression",
+      "signature": "assignDig(ant)"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 175,
+      "column": 44,
+      "name": "anonymous@175:44",
+      "kind": "ArrowFunctionExpression",
+      "signature": "i =>"
     },
     {
       "file": "src/simulation.js",
       "line": 187,
-      "signature": "assignMeal(ant, kind, target, key) {"
+      "column": 12,
+      "name": "assignMeal",
+      "kind": "FunctionExpression",
+      "signature": "assignMeal(ant, kind, target, key)"
     },
     {
       "file": "src/simulation.js",
       "line": 194,
-      "signature": "nurseryDestination(brood) {"
+      "column": 20,
+      "name": "nurseryDestination",
+      "kind": "FunctionExpression",
+      "signature": "nurseryDestination(brood)"
     },
     {
       "file": "src/simulation.js",
       "line": 208,
-      "signature": "assignNursing(ant) {"
+      "column": 15,
+      "name": "assignNursing",
+      "kind": "FunctionExpression",
+      "signature": "assignNursing(ant)"
     },
     {
       "file": "src/simulation.js",
       "line": 226,
-      "signature": "assignCleaning(ant) {"
+      "column": 16,
+      "name": "assignCleaning",
+      "kind": "FunctionExpression",
+      "signature": "assignCleaning(ant)"
     },
     {
       "file": "src/simulation.js",
       "line": 238,
-      "signature": "allocate(ant) {"
+      "column": 10,
+      "name": "allocate",
+      "kind": "FunctionExpression",
+      "signature": "allocate(ant)"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 247,
+      "column": 34,
+      "name": "anonymous@247:34",
+      "kind": "ArrowFunctionExpression",
+      "signature": "(r, a) =>"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 260,
+      "column": 60,
+      "name": "anonymous@260:60",
+      "kind": "ArrowFunctionExpression",
+      "signature": "i =>"
     },
     {
       "file": "src/simulation.js",
       "line": 265,
-      "signature": "move(ant, task, dt) {"
+      "column": 6,
+      "name": "move",
+      "kind": "FunctionExpression",
+      "signature": "move(ant, task, dt)"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 287,
+      "column": 34,
+      "name": "anonymous@287:34",
+      "kind": "ArrowFunctionExpression",
+      "signature": "b =>"
     },
     {
       "file": "src/simulation.js",
       "line": 294,
-      "signature": "eat(ant, amount) {"
+      "column": 5,
+      "name": "eat",
+      "kind": "FunctionExpression",
+      "signature": "eat(ant, amount)"
     },
     {
       "file": "src/simulation.js",
       "line": 302,
-      "signature": "transferEnergy(donor, receiver, amount) {"
+      "column": 16,
+      "name": "transferEnergy",
+      "kind": "FunctionExpression",
+      "signature": "transferEnergy(donor, receiver, amount)"
     },
     {
       "file": "src/simulation.js",
       "line": 310,
-      "signature": "interact(ant, dt) {"
+      "column": 10,
+      "name": "interact",
+      "kind": "FunctionExpression",
+      "signature": "interact(ant, dt)"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 360,
+      "column": 52,
+      "name": "anonymous@360:52",
+      "kind": "ArrowFunctionExpression",
+      "signature": "b =>"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 393,
+      "column": 32,
+      "name": "anonymous@393:32",
+      "kind": "ArrowFunctionExpression",
+      "signature": "b =>"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 412,
+      "column": 41,
+      "name": "anonymous@412:41",
+      "kind": "ArrowFunctionExpression",
+      "signature": "c =>"
     },
     {
       "file": "src/simulation.js",
       "line": 425,
-      "signature": "updateBrood(dt) {"
+      "column": 13,
+      "name": "updateBrood",
+      "kind": "FunctionExpression",
+      "signature": "updateBrood(dt)"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 455,
+      "column": 37,
+      "name": "anonymous@455:37",
+      "kind": "ArrowFunctionExpression",
+      "signature": "b =>"
     },
     {
       "file": "src/simulation.js",
       "line": 459,
-      "signature": "layEgg() {"
+      "column": 8,
+      "name": "layEgg",
+      "kind": "FunctionExpression",
+      "signature": "layEgg()"
     },
     {
       "file": "src/simulation.js",
       "line": 467,
-      "signature": "updateQueen(dt) {"
+      "column": 13,
+      "name": "updateQueen",
+      "kind": "FunctionExpression",
+      "signature": "updateQueen(dt)"
     },
     {
       "file": "src/simulation.js",
       "line": 491,
-      "signature": "updateConstruction() {"
+      "column": 20,
+      "name": "updateConstruction",
+      "kind": "FunctionExpression",
+      "signature": "updateConstruction()"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 494,
+      "column": 39,
+      "name": "anonymous@494:39",
+      "kind": "ArrowFunctionExpression",
+      "signature": "i =>"
     },
     {
       "file": "src/simulation.js",
       "line": 517,
-      "signature": "environment(dt) {"
+      "column": 13,
+      "name": "environment",
+      "kind": "FunctionExpression",
+      "signature": "environment(dt)"
     },
     {
       "file": "src/simulation.js",
       "line": 539,
-      "signature": "step(dt = 1 / 30) {"
+      "column": 6,
+      "name": "step",
+      "kind": "FunctionExpression",
+      "signature": "step(dt = 1 / 30)"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 570,
+      "column": 33,
+      "name": "anonymous@570:33",
+      "kind": "ArrowFunctionExpression",
+      "signature": "a =>"
     },
     {
       "file": "src/simulation.js",
       "line": 577,
-      "signature": "snapshot() {"
+      "column": 10,
+      "name": "snapshot",
+      "kind": "FunctionExpression",
+      "signature": "snapshot()"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 584,
+      "column": 27,
+      "name": "anonymous@584:27",
+      "kind": "ArrowFunctionExpression",
+      "signature": "(r, a) =>"
     },
     {
       "file": "src/simulation.js",
       "line": 588,
-      "signature": "inspect() {"
+      "column": 9,
+      "name": "inspect",
+      "kind": "FunctionExpression",
+      "signature": "inspect()"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 590,
+      "column": 45,
+      "name": "anonymous@590:45",
+      "kind": "ArrowFunctionExpression",
+      "signature": "a =>"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 590,
+      "column": 63,
+      "name": "anonymous@590:63",
+      "kind": "ArrowFunctionExpression",
+      "signature": "a =>"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 596,
+      "column": 55,
+      "name": "anonymous@596:55",
+      "kind": "ArrowFunctionExpression",
+      "signature": "b =>"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 600,
+      "column": 48,
+      "name": "anonymous@600:48",
+      "kind": "ArrowFunctionExpression",
+      "signature": "a =>"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 603,
+      "column": 46,
+      "name": "anonymous@603:46",
+      "kind": "ArrowFunctionExpression",
+      "signature": "a =>"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 610,
+      "column": 36,
+      "name": "anonymous@610:36",
+      "kind": "ArrowFunctionExpression",
+      "signature": "(a, b) =>"
+    },
+    {
+      "file": "src/simulation.js",
+      "line": 610,
+      "column": 90,
+      "name": "anonymous@610:90",
+      "kind": "ArrowFunctionExpression",
+      "signature": "(a, b) =>"
     },
     {
       "file": "src/world.js",
       "line": 3,
-      "signature": "export function seededRandom(seed) {"
+      "column": 7,
+      "name": "seededRandom",
+      "kind": "FunctionDeclaration",
+      "signature": "function seededRandom(seed)"
+    },
+    {
+      "file": "src/world.js",
+      "line": 5,
+      "column": 9,
+      "name": "anonymous@5:9",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
     },
     {
       "file": "src/world.js",
       "line": 12,
-      "signature": "constructor({ seed = 42, width = 96, height = 80 } = {}) {"
+      "column": 13,
+      "name": "constructor",
+      "kind": "FunctionExpression",
+      "signature": "constructor({ seed = 42, width = 96, height = 80 } = {})"
     },
     {
       "file": "src/world.js",
       "line": 67,
-      "signature": "index(x, y) { return y * this.width + x; }"
+      "column": 7,
+      "name": "index",
+      "kind": "FunctionExpression",
+      "signature": "index(x, y)"
     },
     {
       "file": "src/world.js",
       "line": 68,
-      "signature": "cell(x, y) { return this.index(Math.floor(x), Math.floor(y)); }"
+      "column": 6,
+      "name": "cell",
+      "kind": "FunctionExpression",
+      "signature": "cell(x, y)"
     },
     {
       "file": "src/world.js",
       "line": 69,
-      "signature": "center(i) { return { x: i % this.width + .5, y: Math.floor(i / this.width) + .5 }; }"
+      "column": 8,
+      "name": "center",
+      "kind": "FunctionExpression",
+      "signature": "center(i)"
     },
     {
       "file": "src/world.js",
       "line": 70,
-      "signature": "adjacent(i) { return neighbors(i, this.width, this.height); }"
+      "column": 10,
+      "name": "adjacent",
+      "kind": "FunctionExpression",
+      "signature": "adjacent(i)"
     },
     {
       "file": "src/world.js",
       "line": 72,
-      "signature": "addRoom(center, radius, destination = new Set()) {"
+      "column": 9,
+      "name": "addRoom",
+      "kind": "FunctionExpression",
+      "signature": "addRoom(center, radius, destination = new Set())"
     },
     {
       "file": "src/world.js",
       "line": 88,
-      "signature": "extendBranch(center, offsetX, offsetY, radius = 3) {"
+      "column": 14,
+      "name": "extendBranch",
+      "kind": "FunctionExpression",
+      "signature": "extendBranch(center, offsetX, offsetY, radius = 3)"
     },
     {
       "file": "src/world.js",
       "line": 102,
-      "signature": "dig(i) {"
+      "column": 5,
+      "name": "dig",
+      "kind": "FunctionExpression",
+      "signature": "dig(i)"
+    },
+    {
+      "file": "src/world.js",
+      "line": 103,
+      "column": 56,
+      "name": "anonymous@103:56",
+      "kind": "ArrowFunctionExpression",
+      "signature": "n =>"
     },
     {
       "file": "src/world.js",
       "line": 111,
-      "signature": "addStored(i, amount) {"
+      "column": 11,
+      "name": "addStored",
+      "kind": "FunctionExpression",
+      "signature": "addStored(i, amount)"
     },
     {
       "file": "src/world.js",
       "line": 119,
-      "signature": "takeStored(i, amount) {"
+      "column": 12,
+      "name": "takeStored",
+      "kind": "FunctionExpression",
+      "signature": "takeStored(i, amount)"
     },
     {
       "file": "src/world.js",
       "line": 126,
-      "signature": "get storedFood() { let total = 0; for (const i of this.pantries) total += this.stores[i]; return total; }"
+      "column": 16,
+      "name": "storedFood",
+      "kind": "FunctionExpression",
+      "signature": "get storedFood()"
     },
     {
       "file": "src/world.js",
       "line": 128,
-      "signature": "refreshAir() {"
+      "column": 12,
+      "name": "refreshAir",
+      "kind": "FunctionExpression",
+      "signature": "refreshAir()"
     },
     {
       "file": "src/world.js",
       "line": 146,
-      "signature": "diffuse(field, dt, decay, spread) {"
+      "column": 9,
+      "name": "diffuse",
+      "kind": "FunctionExpression",
+      "signature": "diffuse(field, dt, decay, spread)"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 8,
+      "column": 16,
+      "name": "advance",
+      "kind": "ArrowFunctionExpression",
+      "signature": "(sim, seconds) =>"
     },
     {
       "file": "tests/simulation.test.js",
       "line": 9,
-      "signature": "function addFood(sim, cell, amount, stored = true) {"
+      "column": 0,
+      "name": "addFood",
+      "kind": "FunctionDeclaration",
+      "signature": "function addFood(sim, cell, amount, stored = true)"
     },
     {
       "file": "tests/simulation.test.js",
       "line": 14,
-      "signature": "function completed(options = {}) {"
+      "column": 0,
+      "name": "completed",
+      "kind": "FunctionDeclaration",
+      "signature": "function completed(options = {})"
     },
     {
       "file": "tests/simulation.test.js",
       "line": 24,
-      "signature": "function clearFood(sim) {"
+      "column": 0,
+      "name": "clearFood",
+      "kind": "FunctionDeclaration",
+      "signature": "function clearFood(sim)"
     },
     {
       "file": "tests/simulation.test.js",
       "line": 28,
-      "signature": "function healthy(sim) { assert.deepEqual(sim.inspect(), []); }"
+      "column": 0,
+      "name": "healthy",
+      "kind": "FunctionDeclaration",
+      "signature": "function healthy(sim)"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 30,
+      "column": 106,
+      "name": "anonymous@30:106",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
     },
     {
       "file": "tests/simulation.test.js",
       "line": 44,
-      "signature": "test('blocked construction leaves food collection and self-preservation available', () => {"
+      "column": 84,
+      "name": "anonymous@44:84",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 50,
+      "column": 26,
+      "name": "anonymous@50:26",
+      "kind": "ArrowFunctionExpression",
+      "signature": "a =>"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 51,
+      "column": 28,
+      "name": "anonymous@51:28",
+      "kind": "ArrowFunctionExpression",
+      "signature": "e =>"
     },
     {
       "file": "tests/simulation.test.js",
       "line": 55,
-      "signature": "test('corridor extends through its own ancestry and can branch', () => {"
+      "column": 65,
+      "name": "anonymous@55:65",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 61,
+      "column": 30,
+      "name": "anonymous@61:30",
+      "kind": "ArrowFunctionExpression",
+      "signature": "i =>"
     },
     {
       "file": "tests/simulation.test.js",
       "line": 65,
-      "signature": "test('cardinal pathfinding takes a dogleg and reports disconnected goals', () => {"
+      "column": 75,
+      "name": "anonymous@65:75",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 67,
+      "column": 58,
+      "name": "anonymous@67:58",
+      "kind": "ArrowFunctionExpression",
+      "signature": "([x,y])=>"
     },
     {
       "file": "tests/simulation.test.js",
       "line": 75,
-      "signature": "test('a carrier starting beside the queen reaches storage outside her buffer', () => {"
+      "column": 79,
+      "name": "anonymous@75:79",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
     },
     {
       "file": "tests/simulation.test.js",
       "line": 89,
-      "signature": "test('a cleaner can collect waste beside the queen and carry it to the midden', () => {"
+      "column": 80,
+      "name": "anonymous@89:80",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 98,
+      "column": 113,
+      "name": "anonymous@98:113",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
     },
     {
       "file": "tests/simulation.test.js",
       "line": 104,
-      "signature": "if(event==='death') {sim.kill(a);sim.ants=sim.ants.filter(a=>a.alive);}"
+      "column": 60,
+      "name": "anonymous@104:60",
+      "kind": "ArrowFunctionExpression",
+      "signature": "a=>"
     },
     {
       "file": "tests/simulation.test.js",
       "line": 114,
-      "signature": "test('no worker hatches without nurse meals; two real meals allow maturation', () => {"
+      "column": 79,
+      "name": "anonymous@114:79",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
     },
     {
       "file": "tests/simulation.test.js",
       "line": 127,
-      "signature": "test('all stored food stays registered, spoils, and contributes to attainable pressure', () => {"
+      "column": 89,
+      "name": "anonymous@127:89",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
     },
     {
       "file": "tests/simulation.test.js",
       "line": 140,
-      "signature": "test('scent diffuses into empty neighbors and respects solid soil', () => {"
+      "column": 68,
+      "name": "anonymous@140:68",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
     },
     {
       "file": "tests/simulation.test.js",
       "line": 148,
-      "signature": "test('air attenuates deeply, and a disconnected chamber has zero ventilation', () => {"
+      "column": 79,
+      "name": "anonymous@148:79",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
     },
     {
       "file": "tests/simulation.test.js",
       "line": 158,
-      "signature": "test('corpses cannot receive energy and do not count toward live population', () => {"
+      "column": 78,
+      "name": "anonymous@158:78",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
     },
     {
       "file": "tests/simulation.test.js",
       "line": 167,
-      "signature": "test('large displacement follows path segments without entering soil', () => {"
-    },
-    {
-      "file": "tests/simulation.test.js",
-      "line": 172,
-      "signature": "while(a.task.cursor<a.task.path.length) {sim.move(a,a.task,.1);assert.equal(w.grid[sim.cell(a)],OPEN);}"
-    },
-    {
-      "file": "tests/simulation.test.js",
-      "line": 178,
-      "signature": "while(a.task.cursor<a.task.path.length){sim.move(a,a.task,.1);assert.equal(w.grid[sim.cell(a)],OPEN);}"
+      "column": 71,
+      "name": "anonymous@167:71",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
     },
     {
       "file": "tests/simulation.test.js",
       "line": 182,
-      "signature": "test('stationary ants can eat; cancel and death return carried food without losing inventory', () => {"
+      "column": 95,
+      "name": "anonymous@182:95",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 190,
+      "column": 39,
+      "name": "anonymous@190:39",
+      "kind": "ArrowFunctionExpression",
+      "signature": "a=>"
     },
     {
       "file": "tests/simulation.test.js",
       "line": 194,
-      "signature": "test('interrupted waste hauling returns its load and releases reservations', () => {"
+      "column": 77,
+      "name": "anonymous@194:77",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
     },
     {
       "file": "tests/simulation.test.js",
       "line": 201,
-      "signature": "test('resource exhaustion causes honest starvation without stale locks or invalid population', () => {"
+      "column": 95,
+      "name": "anonymous@201:95",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
     },
     {
       "file": "tests/simulation.test.js",
       "line": 208,
-      "signature": "test('equal simulation time at 30, 60 and 120 rendering FPS produces identical worlds', () => {"
+      "column": 88,
+      "name": "anonymous@208:88",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
     },
     {
       "file": "tests/simulation.test.js",
-      "line": 210,
-      "signature": "for(const fps of [30,60,120]) {"
+      "line": 211,
+      "column": 69,
+      "name": "anonymous@211:69",
+      "kind": "ArrowFunctionExpression",
+      "signature": "dt=>"
     },
     {
       "file": "tests/simulation.test.js",
       "line": 219,
-      "signature": "test('slow-frame catch-up retains time debt and pause/reset discards it explicitly', () => {"
+      "column": 85,
+      "name": "anonymous@219:85",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 220,
+      "column": 41,
+      "name": "anonymous@220:41",
+      "kind": "ArrowFunctionExpression",
+      "signature": "()=>"
     },
     {
       "file": "tests/simulation.test.js",
       "line": 226,
-      "signature": "test('invalid step durations and world sizes fail explicitly', () => {"
+      "column": 63,
+      "name": "anonymous@226:63",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 228,
+      "column": 54,
+      "name": "anonymous@228:54",
+      "kind": "ArrowFunctionExpression",
+      "signature": "()=>"
+    },
+    {
+      "file": "tests/simulation.test.js",
+      "line": 229,
+      "column": 16,
+      "name": "anonymous@229:16",
+      "kind": "ArrowFunctionExpression",
+      "signature": "()=>"
     },
     {
       "file": "tests/simulation.test.js",
       "line": 232,
-      "signature": "test('queen meals move real stored food and refill queen energy', () => {"
+      "column": 66,
+      "name": "anonymous@232:66",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
     },
     {
       "file": "tests/simulation.test.js",
       "line": 242,
-      "signature": "test('low reserves retain both construction and foraging workers', () => {"
+      "column": 67,
+      "name": "anonymous@242:67",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
     },
     {
       "file": "tests/simulation.test.js",
       "line": 248,
-      "signature": "test('full pantry delivery waiting cannot consume the construction workforce', () => {"
+      "column": 79,
+      "name": "anonymous@248:79",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
+    },
+    {
+      "file": "tools/browser-smoke.mjs",
+      "line": 12,
+      "column": 20,
+      "name": "anonymous@12:20",
+      "kind": "ArrowFunctionExpression",
+      "signature": "(resolve, reject) =>"
+    },
+    {
+      "file": "tools/browser-smoke.mjs",
+      "line": 13,
+      "column": 29,
+      "name": "anonymous@13:29",
+      "kind": "ArrowFunctionExpression",
+      "signature": "chunk =>"
+    },
+    {
+      "file": "tools/browser-smoke.mjs",
+      "line": 14,
+      "column": 54,
+      "name": "anonymous@14:54",
+      "kind": "ArrowFunctionExpression",
+      "signature": "code =>"
+    },
+    {
+      "file": "tools/browser-smoke.mjs",
+      "line": 22,
+      "column": 25,
+      "name": "anonymous@22:25",
+      "kind": "ArrowFunctionExpression",
+      "signature": "e =>"
+    },
+    {
+      "file": "tools/browser-smoke.mjs",
+      "line": 23,
+      "column": 23,
+      "name": "anonymous@23:23",
+      "kind": "ArrowFunctionExpression",
+      "signature": "message =>"
+    },
+    {
+      "file": "tools/browser-smoke.mjs",
+      "line": 25,
+      "column": 31,
+      "name": "anonymous@25:31",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
+    },
+    {
+      "file": "tools/browser-smoke.mjs",
+      "line": 27,
+      "column": 37,
+      "name": "anonymous@27:37",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
+    },
+    {
+      "file": "tools/browser-smoke.mjs",
+      "line": 31,
+      "column": 37,
+      "name": "anonymous@31:37",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
+    },
+    {
+      "file": "tools/browser-smoke.mjs",
+      "line": 32,
+      "column": 39,
+      "name": "anonymous@32:39",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
+    },
+    {
+      "file": "tools/browser-smoke.mjs",
+      "line": 34,
+      "column": 35,
+      "name": "anonymous@34:35",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
+    },
+    {
+      "file": "tools/browser-smoke.mjs",
+      "line": 36,
+      "column": 37,
+      "name": "anonymous@36:37",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
+    },
+    {
+      "file": "tools/browser-smoke.mjs",
+      "line": 39,
+      "column": 37,
+      "name": "anonymous@39:37",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
+    },
+    {
+      "file": "tools/browser-smoke.mjs",
+      "line": 41,
+      "column": 37,
+      "name": "anonymous@41:37",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
+    },
+    {
+      "file": "tools/browser-smoke.mjs",
+      "line": 45,
+      "column": 24,
+      "name": "anonymous@45:24",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
+    },
+    {
+      "file": "tools/browser-smoke.mjs",
+      "line": 46,
+      "column": 31,
+      "name": "anonymous@46:31",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
+    },
+    {
+      "file": "tools/browser-smoke.mjs",
+      "line": 47,
+      "column": 37,
+      "name": "anonymous@47:37",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
+    },
+    {
+      "file": "tools/browser-smoke.mjs",
+      "line": 49,
+      "column": 41,
+      "name": "anonymous@49:41",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
+    },
+    {
+      "file": "tools/browser-smoke.mjs",
+      "line": 58,
+      "column": 35,
+      "name": "anonymous@58:35",
+      "kind": "ArrowFunctionExpression",
+      "signature": "()=>"
+    },
+    {
+      "file": "tools/browser-smoke.mjs",
+      "line": 61,
+      "column": 40,
+      "name": "anonymous@61:40",
+      "kind": "ArrowFunctionExpression",
+      "signature": "()=>"
+    },
+    {
+      "file": "tools/browser-smoke.mjs",
+      "line": 62,
+      "column": 38,
+      "name": "anonymous@62:38",
+      "kind": "ArrowFunctionExpression",
+      "signature": "()=>"
+    },
+    {
+      "file": "tools/browser-smoke.mjs",
+      "line": 67,
+      "column": 35,
+      "name": "anonymous@67:35",
+      "kind": "ArrowFunctionExpression",
+      "signature": "()=>"
+    },
+    {
+      "file": "tools/serve.mjs",
+      "line": 7,
+      "column": 13,
+      "name": "anonymous@7:13",
+      "kind": "ArrowFunctionExpression",
+      "signature": "async (req, res) =>"
+    },
+    {
+      "file": "tools/serve.mjs",
+      "line": 17,
+      "column": 27,
+      "name": "anonymous@17:27",
+      "kind": "ArrowFunctionExpression",
+      "signature": "() =>"
+    },
+    {
+      "file": "tools/soak.mjs",
+      "line": 4,
+      "column": 33,
+      "name": "anonymous@4:33",
+      "kind": "ArrowFunctionExpression",
+      "signature": "x =>"
+    },
+    {
+      "file": "tools/soak.mjs",
+      "line": 5,
+      "column": 25,
+      "name": "anonymous@5:25",
+      "kind": "ArrowFunctionExpression",
+      "signature": "x =>"
     }
   ]
 }

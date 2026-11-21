@@ -1,8 +1,12 @@
-// All worker and queen tasks use the same cardinal, obstacle-aware navigation.
-export const SOIL = 1, OPEN = 2, ROCK = 3;
+// Cardinal lattice geometry. The global route utility is not called by biological agents.
+export const SOIL = 1,
+  OPEN = 2,
+  ROCK = 3;
 
 export function neighbors(index, width, height) {
-  const x = index % width, y = Math.floor(index / width), out = [];
+  const x = index % width,
+    y = Math.floor(index / width),
+    out = [];
   if (y > 0) out.push(index - width);
   if (x > 0) out.push(index - 1);
   if (x + 1 < width) out.push(index + 1);
@@ -17,7 +21,8 @@ export function route(world, start, goals) {
   if (goals.has(start)) return [];
   const prev = new Int32Array(world.grid.length).fill(-1);
   const queue = new Int32Array(world.grid.length);
-  let head = 0, tail = 1;
+  let head = 0,
+    tail = 1;
   queue[0] = start;
   prev[start] = start;
   while (head < tail) {
@@ -37,6 +42,8 @@ export function route(world, start, goals) {
 }
 
 export function distance(world, a, b) {
-  return Math.hypot(a % world.width - b % world.width,
-    Math.floor(a / world.width) - Math.floor(b / world.width));
+  return Math.hypot(
+    (a % world.width) - (b % world.width),
+    Math.floor(a / world.width) - Math.floor(b / world.width),
+  );
 }

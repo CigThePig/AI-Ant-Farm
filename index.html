@@ -1,46 +1,135 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#15251c">
-  <title>Ant Farm · A living colony</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <canvas id="world" aria-label="Ant colony simulation. Drag to pan, pinch or scroll to zoom." tabindex="0"></canvas>
-  <header>
-    <div class="brand"><span class="brand-mark">✳</span><div><h1>ANT FARM</h1><p>Lasius niger · a biological model</p></div></div>
-    <div class="controls"><button id="follow" title="Center on the colony">◎ Colony</button><button id="settings-toggle" aria-expanded="false" aria-controls="settings">⚙ Controls</button></div>
-  </header>
-  <section class="colony-card" aria-label="Colony status">
-    <div class="eyebrow"><span class="live-dot"></span><span id="phase">FOUNDING</span><span id="sim-time">00:00</span></div>
-    <div class="numbers"><div><strong id="workers">12</strong><span>workers</span></div><div><strong id="brood">0</strong><span>brood</span></div><div><strong id="food">0</strong><span>crop C µg equiv.</span></div></div>
-    <div class="progress-label"><span id="objective-label">Preparing the queen’s chamber</span><span id="progress-text">0%</span></div>
-    <div class="progress-track"><div id="progress"></div></div>
-    <p id="status-detail">Foragers gather food while diggers make a home.</p>
-  </section>
-  <aside id="settings" hidden>
-    <div class="panel-title"><h2>Colony controls</h2><button id="settings-close" aria-label="Close controls">✕</button></div>
-    <label class="field">World seed <input id="seed" type="number" min="0" max="4294967295" step="1" value="42"></label>
-    <label class="field">Starting scenario <select id="scenario"><option value="established">Young established · queen + 12 workers</option><option value="founding">Claustral · queen only</option></select></label>
-    <button id="reset" class="primary">Start a new colony</button>
-    <label class="field">Locomotion sensitivity <span id="ant-speed-value">1 mm/s (assumption)</span><input id="ant-speed" type="range" min=".25" max="2" step=".25" value="1"></label>
-    <label class="field">Surface temperature °C <input id="temperature" type="number" min="-50" max="60" step="1" value="23"></label>
-    <label class="check"><input id="trails" type="checkbox" checked> Trail response and deposition</label>
-    <label class="check"><input id="memory" type="checkbox" checked> Individual route memory</label>
-    <button id="erase">Erase surface trails</button>
-    <label class="field">View layer <select id="layer"><option value="none">Natural view</option><option value="tasks">Individual activity</option><option value="food">Deposited trail · relative units</option></select></label>
-    <details><summary>Scientific model and limits</summary><p>Workers sense their own cell and neighbours. Successful foragers leave substrate trails; remembered routes belong to individual ants. Crop sharing needs physical encounters.</p><p>Stage durations are in biological days. Nutritional rates, digging, mortality, and thermal responses are provisional assumptions. No fitted field-colony prediction is claimed.</p><p>Water is supplied ad libitum; seasons, disease, sexual production and realistic 3D architecture are outside this model.</p><a href="docs/biology/research.md" target="_blank">Evidence and methods</a> · <a href="docs/biology/limitations.md" target="_blank">Limitations</a></details>
-    <div class="legend"><span><i style="--c:#e4b65e"></i>Forage</span><span><i style="--c:#ce8862"></i>Dig</span><span><i style="--c:#bdace6"></i>Nurse</span><span><i style="--c:#83bca9"></i>Clean</span></div>
-    <details><summary>Colony diagnostics</summary><p id="health">Checking colony…</p><pre id="jobs"></pre><button id="export">Download colony report</button><p class="hint">The report includes the seed, settings, colony state, and recent events.</p></details>
-    <p class="hint">Drag to explore · Pinch or scroll to zoom · Space to pause · D for routes</p>
-  </aside>
-  <section id="selection" hidden aria-label="Selected ant"></section>
-  <div class="event" id="event" aria-live="polite">The colony is finding its feet.</div>
-  <footer><div class="playback"><button id="pause" aria-label="Pause simulation">Ⅱ</button><button id="step" title="Advance one simulation tick" disabled>Step</button><div class="speeds" aria-label="Simulation speed"><button data-speed="1" class="active">1×</button><button data-speed="60">60×</button><button data-speed="3600">3600×</button></div></div><span class="footer-note">Biological seconds · parameters include unfitted assumptions</span></footer>
-  <div id="fatal" hidden role="alert"></div>
-  <noscript>This ant farm needs JavaScript enabled.</noscript>
-  <script type="module" src="src/app.js"></script>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#15251c" />
+    <title>Ant Farm · A living colony</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <canvas
+      id="world"
+      aria-label="Ant colony simulation. Drag to pan, pinch or scroll to zoom."
+      tabindex="0"
+    ></canvas>
+    <header>
+      <div class="brand">
+        <span class="brand-mark">✳</span>
+        <div>
+          <h1>ANT FARM</h1>
+          <p>Lasius niger · a biological model</p>
+        </div>
+      </div>
+      <div class="controls">
+        <button id="follow" title="Center on the colony">◎ Colony</button
+        ><button id="settings-toggle" aria-expanded="false" aria-controls="settings">
+          ⚙ Controls
+        </button>
+      </div>
+    </header>
+    <section class="colony-card" aria-label="Colony status">
+      <div class="eyebrow">
+        <span class="live-dot"></span><span id="phase">FOUNDING</span
+        ><span id="sim-time">00:00</span>
+      </div>
+      <div class="numbers">
+        <div><strong id="workers">12</strong><span>workers</span></div>
+        <div><strong id="brood">0</strong><span>brood</span></div>
+        <div><strong id="food">0</strong><span>crop C µg equiv.</span></div>
+      </div>
+      <div class="progress-label">
+        <span id="objective-label">Preparing the queen’s chamber</span
+        ><span id="progress-text">0%</span>
+      </div>
+      <div class="progress-track"><div id="progress"></div></div>
+      <p id="status-detail">Foragers gather food while diggers make a home.</p>
+    </section>
+    <aside id="settings" hidden>
+      <div class="panel-title">
+        <h2>Colony controls</h2>
+        <button id="settings-close" aria-label="Close controls">✕</button>
+      </div>
+      <label class="field"
+        >World seed <input id="seed" type="number" min="0" max="4294967295" step="1" value="42"
+      /></label>
+      <label class="field"
+        >Starting scenario
+        <select id="scenario">
+          <option value="established">Young established · queen + 12 workers</option>
+          <option value="founding">Claustral · queen only</option>
+        </select></label
+      >
+      <button id="reset" class="primary">Start a new colony</button>
+      <label class="field"
+        >Locomotion sensitivity <span id="ant-speed-value">1 mm/s (assumption)</span
+        ><input id="ant-speed" type="range" min=".25" max="2" step=".25" value="1"
+      /></label>
+      <label class="field"
+        >Surface temperature °C
+        <input id="temperature" type="number" min="-50" max="60" step="1" value="23"
+      /></label>
+      <label class="check"
+        ><input id="trails" type="checkbox" checked /> Trail response and deposition</label
+      >
+      <label class="check"
+        ><input id="memory" type="checkbox" checked /> Individual route memory</label
+      >
+      <button id="erase">Erase surface trails</button>
+      <label class="field"
+        >View layer
+        <select id="layer">
+          <option value="none">Natural view</option>
+          <option value="tasks">Individual activity</option>
+          <option value="food">Deposited trail · relative units</option>
+        </select></label
+      >
+      <details>
+        <summary>Scientific model and limits</summary>
+        <p>
+          Workers sense their own cell and neighbours. Successful foragers leave substrate trails;
+          remembered routes belong to individual ants. Crop sharing needs physical encounters.
+        </p>
+        <p>
+          Stage durations are in biological days. Nutritional rates, digging, mortality, and thermal
+          responses are provisional assumptions. No fitted field-colony prediction is claimed.
+        </p>
+        <p>
+          Water is supplied ad libitum; seasons, disease, sexual production and realistic 3D
+          architecture are outside this model.
+        </p>
+        <a href="docs/biology/research.md" target="_blank">Evidence and methods</a> ·
+        <a href="docs/biology/limitations.md" target="_blank">Limitations</a>
+      </details>
+      <div class="legend">
+        <span><i style="--c: #e4b65e"></i>Forage</span><span><i style="--c: #ce8862"></i>Dig</span
+        ><span><i style="--c: #bdace6"></i>Nurse</span
+        ><span><i style="--c: #83bca9"></i>Clean</span>
+      </div>
+      <details>
+        <summary>Colony diagnostics</summary>
+        <p id="health">Checking colony…</p>
+        <pre id="jobs"></pre>
+        <button id="export">Download colony report</button>
+        <p class="hint">The report includes the seed, settings, colony state, and recent events.</p>
+      </details>
+      <p class="hint">Drag to explore · Pinch or scroll to zoom · Space to pause · D for routes</p>
+    </aside>
+    <section id="selection" hidden aria-label="Selected ant"></section>
+    <div class="event" id="event" aria-live="polite">The colony is finding its feet.</div>
+    <footer>
+      <div class="playback">
+        <button id="pause" aria-label="Pause simulation">Ⅱ</button
+        ><button id="step" title="Advance one simulation tick" disabled>Step</button>
+        <div class="speeds" aria-label="Simulation speed">
+          <button data-speed="1" class="active">1×</button><button data-speed="60">60×</button
+          ><button data-speed="3600">3600×</button>
+        </div>
+      </div>
+      <span class="footer-note">Biological seconds · parameters include unfitted assumptions</span>
+    </footer>
+    <div id="fatal" hidden role="alert"></div>
+    <noscript>This ant farm needs JavaScript enabled.</noscript>
+    <script type="module" src="src/app.js"></script>
+  </body>
 </html>

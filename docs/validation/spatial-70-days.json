@@ -2,7 +2,7 @@
   "seed": 42,
   "days": 70,
   "invariantChecks": 1680,
-  "wallMs": 104226.61017700001,
+  "wallMs": 109161.955363,
   "daily": [
     {
       "seed": 42,
@@ -28,7 +28,7 @@
         "gathered": 1198.4765625,
         "delivered": 400.74658203125,
         "cleaned": 0,
-        "discovered": 63,
+        "discovered": 64,
         "contacts": 93,
         "depositions": 2315,
         "transported": 0
@@ -76,7 +76,7 @@
         "gathered": 1453.999903678894,
         "delivered": 429.99656999111176,
         "cleaned": 0,
-        "discovered": 177,
+        "discovered": 178,
         "contacts": 118,
         "depositions": 6808,
         "transported": 0
@@ -124,7 +124,7 @@
         "gathered": 1700,
         "delivered": 459.99658203125,
         "cleaned": 0,
-        "discovered": 300,
+        "discovered": 301,
         "contacts": 148,
         "depositions": 11614,
         "transported": 0
@@ -159,8 +159,9 @@
       "brood": 2,
       "corpses": 0,
       "jobs": {
-        "explore": 7,
-        "dig": 5
+        "explore": 10,
+        "share": 1,
+        "return": 1
       },
       "metrics": {
         "births": 0,
@@ -168,13 +169,13 @@
         "fed": 0,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 188,
-        "gathered": 1947.9999999962747,
-        "delivered": 493.9965820303187,
+        "dug": 184,
+        "gathered": 1947.9999998658895,
+        "delivered": 493.99658202938735,
         "cleaned": 0,
-        "discovered": 449,
+        "discovered": 424,
         "contacts": 180,
-        "depositions": 16849,
+        "depositions": 16732,
         "transported": 0
       },
       "ledger": {
@@ -192,7 +193,7 @@
         }
       },
       "architecture": {
-        "excavatedCells": 188,
+        "excavatedCells": 184,
         "maxDepthMM": 26
       }
     },
@@ -203,12 +204,12 @@
       "workers": 12,
       "queenAlive": true,
       "scenario": "established",
-      "food": 1084.0000000031641,
+      "food": 1082.0000000031641,
       "brood": 3,
       "corpses": 0,
       "jobs": {
-        "return": 3,
-        "explore": 9
+        "explore": 11,
+        "return": 1
       },
       "metrics": {
         "births": 0,
@@ -216,13 +217,13 @@
         "fed": 0,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 197,
-        "gathered": 2197.9999999925494,
+        "dug": 196,
+        "gathered": 2195.9999999962747,
         "delivered": 527.9965820303187,
         "cleaned": 0,
-        "discovered": 642,
+        "discovered": 547,
         "contacts": 212,
-        "depositions": 22627,
+        "depositions": 21818,
         "transported": 0
       },
       "ledger": {
@@ -240,8 +241,8 @@
         }
       },
       "architecture": {
-        "excavatedCells": 197,
-        "maxDepthMM": 26
+        "excavatedCells": 196,
+        "maxDepthMM": 28
       }
     },
     {
@@ -251,12 +252,13 @@
       "workers": 12,
       "queenAlive": true,
       "scenario": "established",
-      "food": 1084.0000000037971,
+      "food": 1082.0000000037971,
       "brood": 4,
       "corpses": 0,
       "jobs": {
         "explore": 9,
-        "return": 3
+        "share": 1,
+        "return": 2
       },
       "metrics": {
         "births": 0,
@@ -264,13 +266,13 @@
         "fed": 0,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 202,
-        "gathered": 2447.999999992549,
-        "delivered": 561.9965820293874,
+        "dug": 208,
+        "gathered": 2445.9999999366696,
+        "delivered": 561.9965820303186,
         "cleaned": 0,
-        "discovered": 826,
+        "discovered": 671,
         "contacts": 244,
-        "depositions": 28774,
+        "depositions": 27119,
         "transported": 0
       },
       "ledger": {
@@ -288,7 +290,7 @@
         }
       },
       "architecture": {
-        "excavatedCells": 202,
+        "excavatedCells": 208,
         "maxDepthMM": 28
       }
     },
@@ -299,13 +301,12 @@
       "workers": 12,
       "queenAlive": true,
       "scenario": "established",
-      "food": 1084.0000000044301,
+      "food": 1082.0000000044301,
       "brood": 5,
       "corpses": 0,
       "jobs": {
-        "explore": 10,
-        "rest": 1,
-        "return": 1
+        "explore": 9,
+        "return": 3
       },
       "metrics": {
         "births": 0,
@@ -313,13 +314,13 @@
         "fed": 0,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 208,
-        "gathered": 2697.999999996274,
-        "delivered": 595.9965820303187,
+        "dug": 216,
+        "gathered": 2695.999999970197,
+        "delivered": 595.9965820237992,
         "cleaned": 0,
-        "discovered": 1020,
+        "discovered": 795,
         "contacts": 276,
-        "depositions": 34287,
+        "depositions": 32357,
         "transported": 0
       },
       "ledger": {
@@ -337,8 +338,8 @@
         }
       },
       "architecture": {
-        "excavatedCells": 208,
-        "maxDepthMM": 28
+        "excavatedCells": 216,
+        "maxDepthMM": 30
       }
     },
     {
@@ -348,12 +349,12 @@
       "workers": 12,
       "queenAlive": true,
       "scenario": "established",
-      "food": 1084.0000000050632,
+      "food": 1082.0000000050632,
       "brood": 6,
       "corpses": 0,
       "jobs": {
-        "explore": 10,
-        "return": 2
+        "explore": 9,
+        "return": 3
       },
       "metrics": {
         "births": 0,
@@ -361,13 +362,13 @@
         "fed": 0,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 211,
-        "gathered": 2947.99999988079,
-        "delivered": 628.9965820014477,
+        "dug": 220,
+        "gathered": 2945.9999997317786,
+        "delivered": 629.9965820237992,
         "cleaned": 0,
-        "discovered": 1275,
-        "contacts": 307,
-        "depositions": 40226,
+        "discovered": 919,
+        "contacts": 308,
+        "depositions": 37923,
         "transported": 0
       },
       "ledger": {
@@ -385,8 +386,8 @@
         }
       },
       "architecture": {
-        "excavatedCells": 211,
-        "maxDepthMM": 28
+        "excavatedCells": 220,
+        "maxDepthMM": 30
       }
     },
     {
@@ -400,9 +401,9 @@
       "brood": 7,
       "corpses": 0,
       "jobs": {
-        "explore": 9,
-        "share": 1,
-        "return": 2
+        "explore": 7,
+        "dig": 4,
+        "return": 1
       },
       "metrics": {
         "births": 0,
@@ -410,13 +411,13 @@
         "fed": 0,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 213,
-        "gathered": 3195.9999999776473,
-        "delivered": 663.9965820293874,
+        "dug": 223,
+        "gathered": 3195.9999999701968,
+        "delivered": 663.9965820275245,
         "cleaned": 0,
-        "discovered": 1550,
+        "discovered": 1043,
         "contacts": 340,
-        "depositions": 46548,
+        "depositions": 43274,
         "transported": 0
       },
       "ledger": {
@@ -434,8 +435,8 @@
         }
       },
       "architecture": {
-        "excavatedCells": 213,
-        "maxDepthMM": 28
+        "excavatedCells": 223,
+        "maxDepthMM": 30
       }
     },
     {
@@ -445,12 +446,12 @@
       "workers": 12,
       "queenAlive": true,
       "scenario": "established",
-      "food": 1080.0000000063292,
+      "food": 1082.0000000063292,
       "brood": 8,
       "corpses": 0,
       "jobs": {
-        "explore": 10,
-        "return": 2
+        "explore": 9,
+        "return": 3
       },
       "metrics": {
         "births": 0,
@@ -458,13 +459,13 @@
         "fed": 0,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 225,
-        "gathered": 3443.999999523162,
-        "delivered": 697.9965819120407,
+        "dug": 232,
+        "gathered": 3445.999998062848,
+        "delivered": 697.9965820237992,
         "cleaned": 0,
-        "discovered": 1831,
+        "discovered": 1167,
         "contacts": 372,
-        "depositions": 52109,
+        "depositions": 48445,
         "transported": 0
       },
       "ledger": {
@@ -482,7 +483,7 @@
         }
       },
       "architecture": {
-        "excavatedCells": 225,
+        "excavatedCells": 232,
         "maxDepthMM": 30
       }
     },
@@ -493,12 +494,12 @@
       "workers": 12,
       "queenAlive": true,
       "scenario": "established",
-      "food": 1082.0000000069622,
+      "food": 1084.0000000069622,
       "brood": 9,
       "corpses": 0,
       "jobs": {
-        "explore": 11,
-        "return": 1
+        "explore": 10,
+        "return": 2
       },
       "metrics": {
         "births": 0,
@@ -506,13 +507,13 @@
         "fed": 0,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 235,
-        "gathered": 3695.999999582766,
-        "delivered": 730.9965820014477,
+        "dug": 238,
+        "gathered": 3697.999998956918,
+        "delivered": 731.9965820237992,
         "cleaned": 0,
-        "discovered": 2153,
-        "contacts": 403,
-        "depositions": 58640,
+        "discovered": 1293,
+        "contacts": 404,
+        "depositions": 53909,
         "transported": 0
       },
       "ledger": {
@@ -530,7 +531,7 @@
         }
       },
       "architecture": {
-        "excavatedCells": 235,
+        "excavatedCells": 238,
         "maxDepthMM": 30
       }
     },
@@ -541,7 +542,7 @@
       "workers": 12,
       "queenAlive": true,
       "scenario": "established",
-      "food": 1080.0000000075952,
+      "food": 1082.0000000075952,
       "brood": 10,
       "corpses": 0,
       "jobs": {
@@ -554,13 +555,13 @@
         "fed": 0,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 240,
-        "gathered": 3943.999999990685,
-        "delivered": 764.9965820303185,
+        "dug": 245,
+        "gathered": 3945.999999903141,
+        "delivered": 765.9965820275245,
         "cleaned": 0,
-        "discovered": 2490,
-        "contacts": 435,
-        "depositions": 65295,
+        "discovered": 1416,
+        "contacts": 436,
+        "depositions": 59315,
         "transported": 0
       },
       "ledger": {
@@ -578,8 +579,8 @@
         }
       },
       "architecture": {
-        "excavatedCells": 240,
-        "maxDepthMM": 30
+        "excavatedCells": 245,
+        "maxDepthMM": 32
       }
     },
     {
@@ -589,12 +590,12 @@
       "workers": 12,
       "queenAlive": true,
       "scenario": "established",
-      "food": 1080.0000000082282,
+      "food": 1082.0000000082282,
       "brood": 11,
       "corpses": 0,
       "jobs": {
-        "return": 1,
-        "explore": 11
+        "explore": 10,
+        "return": 2
       },
       "metrics": {
         "births": 0,
@@ -602,13 +603,13 @@
         "fed": 0,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 244,
-        "gathered": 4193.999999746678,
-        "delivered": 798.9965820237992,
+        "dug": 254,
+        "gathered": 4195.999999403952,
+        "delivered": 799.9965820014475,
         "cleaned": 0,
-        "discovered": 2789,
-        "contacts": 467,
-        "depositions": 71546,
+        "discovered": 1540,
+        "contacts": 468,
+        "depositions": 65220,
         "transported": 0
       },
       "ledger": {
@@ -626,8 +627,8 @@
         }
       },
       "architecture": {
-        "excavatedCells": 244,
-        "maxDepthMM": 30
+        "excavatedCells": 254,
+        "maxDepthMM": 34
       }
     },
     {
@@ -641,8 +642,10 @@
       "brood": 12,
       "corpses": 0,
       "jobs": {
-        "explore": 11,
-        "return": 1
+        "explore": 9,
+        "return": 1,
+        "share": 1,
+        "rest": 1
       },
       "metrics": {
         "births": 0,
@@ -650,13 +653,13 @@
         "fed": 0,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 248,
-        "gathered": 4445.999999962745,
-        "delivered": 833.9965820293871,
+        "dug": 257,
+        "gathered": 4445.999999970195,
+        "delivered": 833.9965820275245,
         "cleaned": 0,
-        "discovered": 3131,
-        "contacts": 499,
-        "depositions": 78170,
+        "discovered": 1664,
+        "contacts": 500,
+        "depositions": 71339,
         "transported": 0
       },
       "ledger": {
@@ -674,8 +677,8 @@
         }
       },
       "architecture": {
-        "excavatedCells": 248,
-        "maxDepthMM": 30
+        "excavatedCells": 257,
+        "maxDepthMM": 34
       }
     },
     {
@@ -685,7 +688,7 @@
       "workers": 12,
       "queenAlive": true,
       "scenario": "established",
-      "food": 1084.0000000094942,
+      "food": 1082.0000000094942,
       "brood": 13,
       "corpses": 0,
       "jobs": {
@@ -698,13 +701,13 @@
         "fed": 0,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 253,
-        "gathered": 4697.999999977646,
-        "delivered": 867.9965820275245,
+        "dug": 261,
+        "gathered": 4695.999999977645,
+        "delivered": 867.9965820293871,
         "cleaned": 0,
-        "discovered": 3594,
-        "contacts": 531,
-        "depositions": 85447,
+        "discovered": 1788,
+        "contacts": 532,
+        "depositions": 77101,
         "transported": 0
       },
       "ledger": {
@@ -722,8 +725,8 @@
         }
       },
       "architecture": {
-        "excavatedCells": 253,
-        "maxDepthMM": 32
+        "excavatedCells": 261,
+        "maxDepthMM": 34
       }
     },
     {
@@ -733,14 +736,12 @@
       "workers": 12,
       "queenAlive": true,
       "scenario": "established",
-      "food": 1084.0000000101272,
+      "food": 1082.0000000101272,
       "brood": 14,
       "corpses": 0,
       "jobs": {
-        "explore": 8,
-        "share": 1,
-        "rest": 1,
-        "return": 2
+        "explore": 11,
+        "return": 1
       },
       "metrics": {
         "births": 0,
@@ -748,13 +749,13 @@
         "fed": 0,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 255,
-        "gathered": 4947.999999996273,
+        "dug": 262,
+        "gathered": 4945.999998085197,
         "delivered": 901.9965820293871,
         "cleaned": 0,
-        "discovered": 3933,
-        "contacts": 563,
-        "depositions": 93587,
+        "discovered": 1912,
+        "contacts": 564,
+        "depositions": 82913,
         "transported": 0
       },
       "ledger": {
@@ -772,8 +773,8 @@
         }
       },
       "architecture": {
-        "excavatedCells": 255,
-        "maxDepthMM": 32
+        "excavatedCells": 262,
+        "maxDepthMM": 34
       }
     },
     {
@@ -783,11 +784,13 @@
       "workers": 12,
       "queenAlive": true,
       "scenario": "established",
-      "food": 1078.0000000107602,
+      "food": 1082.0000000107602,
       "brood": 15,
       "corpses": 0,
       "jobs": {
-        "explore": 12
+        "return": 3,
+        "explore": 8,
+        "share": 1
       },
       "metrics": {
         "births": 0,
@@ -795,13 +798,13 @@
         "fed": 0,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 257,
-        "gathered": 5191.999999970196,
-        "delivered": 934.9965820163486,
+        "dug": 265,
+        "gathered": 5195.999999880786,
+        "delivered": 935.9965820163484,
         "cleaned": 0,
-        "discovered": 4223,
-        "contacts": 594,
-        "depositions": 100291,
+        "discovered": 2036,
+        "contacts": 596,
+        "depositions": 88823,
         "transported": 0
       },
       "ledger": {
@@ -819,8 +822,8 @@
         }
       },
       "architecture": {
-        "excavatedCells": 257,
-        "maxDepthMM": 32
+        "excavatedCells": 265,
+        "maxDepthMM": 34
       }
     },
     {
@@ -834,8 +837,7 @@
       "brood": 16,
       "corpses": 0,
       "jobs": {
-        "explore": 11,
-        "return": 1
+        "explore": 12
       },
       "metrics": {
         "births": 0,
@@ -843,13 +845,13 @@
         "fed": 0,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 259,
-        "gathered": 5443.999996125696,
-        "delivered": 969.9965820275245,
+        "dug": 265,
+        "gathered": 5443.999366759938,
+        "delivered": 969.9965815544122,
         "cleaned": 0,
-        "discovered": 4597,
-        "contacts": 626,
-        "depositions": 107510,
+        "discovered": 2159,
+        "contacts": 628,
+        "depositions": 94911,
         "transported": 0
       },
       "ledger": {
@@ -867,8 +869,8 @@
         }
       },
       "architecture": {
-        "excavatedCells": 259,
-        "maxDepthMM": 32
+        "excavatedCells": 265,
+        "maxDepthMM": 34
       }
     },
     {
@@ -878,12 +880,12 @@
       "workers": 12,
       "queenAlive": true,
       "scenario": "established",
-      "food": 1080.0000000120262,
+      "food": 1078.0000000120262,
       "brood": 17,
       "corpses": 0,
       "jobs": {
-        "explore": 7,
-        "return": 5
+        "return": 1,
+        "explore": 11
       },
       "metrics": {
         "births": 0,
@@ -891,13 +893,13 @@
         "fed": 0,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 265,
-        "gathered": 5693.999999880789,
-        "delivered": 1002.9965819716449,
+        "dug": 270,
+        "gathered": 5690.7498678564325,
+        "delivered": 1002.9956034261254,
         "cleaned": 0,
-        "discovered": 4969,
-        "contacts": 657,
-        "depositions": 114648,
+        "discovered": 2282,
+        "contacts": 659,
+        "depositions": 101865,
         "transported": 0
       },
       "ledger": {
@@ -911,12 +913,12 @@
         },
         "inventory": {
           "c": 8778.000000012027,
-          "p": 2082
+          "p": 2082.0000000000005
         }
       },
       "architecture": {
-        "excavatedCells": 265,
-        "maxDepthMM": 32
+        "excavatedCells": 270,
+        "maxDepthMM": 34
       }
     },
     {
@@ -930,8 +932,8 @@
       "brood": 18,
       "corpses": 0,
       "jobs": {
-        "return": 4,
-        "explore": 8
+        "return": 2,
+        "explore": 10
       },
       "metrics": {
         "births": 0,
@@ -939,13 +941,13 @@
         "fed": 0,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 269,
-        "gathered": 5943.99999976158,
-        "delivered": 1037.9965820014472,
+        "dug": 271,
+        "gathered": 5940.7498678564325,
+        "delivered": 1037.9853220433602,
         "cleaned": 0,
-        "discovered": 5352,
-        "contacts": 689,
-        "depositions": 121737,
+        "discovered": 2407,
+        "contacts": 692,
+        "depositions": 108855,
         "transported": 0
       },
       "ledger": {
@@ -963,8 +965,8 @@
         }
       },
       "architecture": {
-        "excavatedCells": 269,
-        "maxDepthMM": 32
+        "excavatedCells": 271,
+        "maxDepthMM": 34
       }
     },
     {
@@ -974,27 +976,26 @@
       "workers": 12,
       "queenAlive": true,
       "scenario": "established",
-      "food": 1079.0000000132923,
+      "food": 1084.0000000132923,
       "brood": 19,
       "corpses": 0,
       "jobs": {
-        "return": 2,
-        "explore": 8,
-        "nurse": 2
+        "return": 6,
+        "explore": 6
       },
       "metrics": {
         "births": 0,
         "laid": 19,
-        "fed": 13,
+        "fed": 10,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 271,
-        "gathered": 6215.999999761579,
-        "delivered": 1071.996581971645,
+        "dug": 272,
+        "gathered": 6205.7498678564325,
+        "delivered": 1076.8533307479524,
         "cleaned": 0,
-        "discovered": 5742,
-        "contacts": 721,
-        "depositions": 129784,
+        "discovered": 2523,
+        "contacts": 716,
+        "depositions": 114991,
         "transported": 0
       },
       "ledger": {
@@ -1012,8 +1013,8 @@
         }
       },
       "architecture": {
-        "excavatedCells": 271,
-        "maxDepthMM": 32
+        "excavatedCells": 272,
+        "maxDepthMM": 34
       }
     },
     {
@@ -1027,8 +1028,8 @@
       "brood": 20,
       "corpses": 0,
       "jobs": {
-        "return": 2,
-        "explore": 10
+        "explore": 9,
+        "return": 3
       },
       "metrics": {
         "births": 0,
@@ -1036,13 +1037,13 @@
         "fed": 20,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 279,
-        "gathered": 6483.999999932941,
-        "delivered": 1105.9965820275243,
+        "dug": 277,
+        "gathered": 6461.7498678564325,
+        "delivered": 1112.7750072182816,
         "cleaned": 0,
-        "discovered": 6173,
-        "contacts": 753,
-        "depositions": 137852,
+        "discovered": 2636,
+        "contacts": 740,
+        "depositions": 121480,
         "transported": 0
       },
       "ledger": {
@@ -1060,8 +1061,8 @@
         }
       },
       "architecture": {
-        "excavatedCells": 279,
-        "maxDepthMM": 32
+        "excavatedCells": 277,
+        "maxDepthMM": 34
       }
     },
     {
@@ -1071,12 +1072,12 @@
       "workers": 12,
       "queenAlive": true,
       "scenario": "established",
-      "food": 1082.0000000145583,
+      "food": 1120.0000000145583,
       "brood": 21,
       "corpses": 0,
       "jobs": {
-        "explore": 11,
-        "return": 1
+        "explore": 8,
+        "return": 4
       },
       "metrics": {
         "births": 0,
@@ -1084,13 +1085,13 @@
         "fed": 30,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 280,
-        "gathered": 6755.99975585937,
-        "delivered": 1141.9964599609366,
+        "dug": 278,
+        "gathered": 6764.7498678564325,
+        "delivered": 1168.3542994593943,
         "cleaned": 0,
-        "discovered": 6615,
-        "contacts": 776,
-        "depositions": 144993,
+        "discovered": 2726,
+        "contacts": 754,
+        "depositions": 126286,
         "transported": 0
       },
       "ledger": {
@@ -1108,8 +1109,8 @@
         }
       },
       "architecture": {
-        "excavatedCells": 280,
-        "maxDepthMM": 32
+        "excavatedCells": 278,
+        "maxDepthMM": 34
       }
     },
     {
@@ -1119,12 +1120,12 @@
       "workers": 12,
       "queenAlive": true,
       "scenario": "established",
-      "food": 1080.0000000151913,
+      "food": 1084.0000000151913,
       "brood": 22,
       "corpses": 0,
       "jobs": {
-        "explore": 9,
-        "return": 3
+        "explore": 10,
+        "return": 2
       },
       "metrics": {
         "births": 0,
@@ -1132,13 +1133,13 @@
         "fed": 40,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 286,
-        "gathered": 7023.999999880713,
-        "delivered": 1175.996582001429,
+        "dug": 281,
+        "gathered": 6998.7498678564325,
+        "delivered": 1190.0225095095361,
         "cleaned": 0,
-        "discovered": 7026,
-        "contacts": 808,
-        "depositions": 152957,
+        "discovered": 2837,
+        "contacts": 767,
+        "depositions": 132414,
         "transported": 0
       },
       "ledger": {
@@ -1156,8 +1157,8 @@
         }
       },
       "architecture": {
-        "excavatedCells": 286,
-        "maxDepthMM": 32
+        "excavatedCells": 281,
+        "maxDepthMM": 34
       }
     },
     {
@@ -1167,7 +1168,7 @@
       "workers": 12,
       "queenAlive": true,
       "scenario": "established",
-      "food": 1080.0000000158243,
+      "food": 1078.0000000158243,
       "brood": 23,
       "corpses": 0,
       "jobs": {
@@ -1180,13 +1181,13 @@
         "fed": 50,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 287,
-        "gathered": 7293.99951171873,
-        "delivered": 1211.9963378906173,
+        "dug": 282,
+        "gathered": 7259.7498678564325,
+        "delivered": 1238.583999474902,
         "cleaned": 0,
-        "discovered": 7488,
-        "contacts": 829,
-        "depositions": 160262,
+        "discovered": 2928,
+        "contacts": 791,
+        "depositions": 137640,
         "transported": 0
       },
       "ledger": {
@@ -1204,8 +1205,8 @@
         }
       },
       "architecture": {
-        "excavatedCells": 287,
-        "maxDepthMM": 32
+        "excavatedCells": 282,
+        "maxDepthMM": 34
       }
     },
     {
@@ -1215,12 +1216,12 @@
       "workers": 12,
       "queenAlive": true,
       "scenario": "established",
-      "food": 1076.0000000164573,
+      "food": 1092.0000000164573,
       "brood": 24,
       "corpses": 0,
       "jobs": {
-        "explore": 10,
-        "return": 2
+        "explore": 11,
+        "return": 1
       },
       "metrics": {
         "births": 0,
@@ -1228,13 +1229,13 @@
         "fed": 60,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 289,
-        "gathered": 7559.999999284564,
-        "delivered": 1245.9965817927728,
+        "dug": 284,
+        "gathered": 7539.7498678564325,
+        "delivered": 1283.3560697476878,
         "cleaned": 0,
-        "discovered": 8000,
-        "contacts": 861,
-        "depositions": 169184,
+        "discovered": 3029,
+        "contacts": 805,
+        "depositions": 143033,
         "transported": 0
       },
       "ledger": {
@@ -1252,8 +1253,8 @@
         }
       },
       "architecture": {
-        "excavatedCells": 289,
-        "maxDepthMM": 32
+        "excavatedCells": 284,
+        "maxDepthMM": 34
       }
     },
     {
@@ -1263,12 +1264,12 @@
       "workers": 12,
       "queenAlive": true,
       "scenario": "established",
-      "food": 1078.0000000170903,
+      "food": 1096.0000000170903,
       "brood": 25,
       "corpses": 0,
       "jobs": {
-        "return": 4,
-        "explore": 7,
+        "explore": 9,
+        "return": 2,
         "nurse": 1
       },
       "metrics": {
@@ -1277,13 +1278,13 @@
         "fed": 72,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 290,
-        "gathered": 7833.99975585934,
-        "delivered": 1281.9964599609225,
+        "dug": 285,
+        "gathered": 7811.7498678564325,
+        "delivered": 1323.874530739605,
         "cleaned": 0,
-        "discovered": 8469,
-        "contacts": 883,
-        "depositions": 176610,
+        "discovered": 3127,
+        "contacts": 819,
+        "depositions": 148181,
         "transported": 0
       },
       "ledger": {
@@ -1301,8 +1302,8 @@
         }
       },
       "architecture": {
-        "excavatedCells": 290,
-        "maxDepthMM": 32
+        "excavatedCells": 285,
+        "maxDepthMM": 34
       }
     },
     {
@@ -1312,7 +1313,7 @@
       "workers": 12,
       "queenAlive": true,
       "scenario": "established",
-      "food": 1078.0000000177233,
+      "food": 1148.0000000177233,
       "brood": 26,
       "corpses": 0,
       "jobs": {
@@ -1325,13 +1326,13 @@
         "fed": 80,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 294,
-        "gathered": 8101.995604932303,
-        "delivered": 1321.9963378608222,
+        "dug": 287,
+        "gathered": 8128.7498678564325,
+        "delivered": 1401.6257422259507,
         "cleaned": 0,
-        "discovered": 8985,
-        "contacts": 906,
-        "depositions": 184075,
+        "discovered": 3212,
+        "contacts": 846,
+        "depositions": 153224,
         "transported": 0
       },
       "ledger": {
@@ -1349,8 +1350,8 @@
         }
       },
       "architecture": {
-        "excavatedCells": 294,
-        "maxDepthMM": 32
+        "excavatedCells": 287,
+        "maxDepthMM": 34
       }
     },
     {
@@ -1360,12 +1361,11 @@
       "workers": 12,
       "queenAlive": true,
       "scenario": "established",
-      "food": 1080.0000000183563,
+      "food": 1078.0000000183563,
       "brood": 27,
       "corpses": 0,
       "jobs": {
-        "return": 2,
-        "explore": 10
+        "explore": 12
       },
       "metrics": {
         "births": 0,
@@ -1373,13 +1373,13 @@
         "fed": 90,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 295,
-        "gathered": 8373.999938949935,
-        "delivered": 1359.9965667687347,
+        "dug": 288,
+        "gathered": 8339.749829520599,
+        "delivered": 1415.4723212511037,
         "cleaned": 0,
-        "discovered": 9438,
-        "contacts": 930,
-        "depositions": 192008,
+        "discovered": 3316,
+        "contacts": 857,
+        "depositions": 159416,
         "transported": 0
       },
       "ledger": {
@@ -1397,7 +1397,7 @@
         }
       },
       "architecture": {
-        "excavatedCells": 295,
+        "excavatedCells": 288,
         "maxDepthMM": 34
       }
     },
@@ -1408,26 +1408,26 @@
       "workers": 12,
       "queenAlive": true,
       "scenario": "established",
-      "food": 1076.0000000189893,
+      "food": 1075.0000000189893,
       "brood": 28,
       "corpses": 0,
       "jobs": {
-        "explore": 10,
-        "return": 2
+        "explore": 11,
+        "nurse": 1
       },
       "metrics": {
         "births": 0,
         "laid": 28,
-        "fed": 100,
+        "fed": 101,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 296,
-        "gathered": 8639.999633787193,
-        "delivered": 1393.9963989248492,
+        "dug": 288,
+        "gathered": 8607.367351452895,
+        "delivered": 1450.574920419074,
         "cleaned": 0,
-        "discovered": 9877,
-        "contacts": 951,
-        "depositions": 199752,
+        "discovered": 3438,
+        "contacts": 878,
+        "depositions": 167103,
         "transported": 0
       },
       "ledger": {
@@ -1445,7 +1445,7 @@
         }
       },
       "architecture": {
-        "excavatedCells": 296,
+        "excavatedCells": 288,
         "maxDepthMM": 34
       }
     },
@@ -1456,12 +1456,11 @@
       "workers": 12,
       "queenAlive": true,
       "scenario": "established",
-      "food": 1080.0000000196223,
+      "food": 1082.0000000196223,
       "brood": 29,
       "corpses": 0,
       "jobs": {
-        "return": 2,
-        "explore": 10
+        "explore": 12
       },
       "metrics": {
         "births": 0,
@@ -1469,13 +1468,13 @@
         "fed": 110,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 299,
-        "gathered": 8913.999999970183,
-        "delivered": 1427.9965820237976,
+        "dug": 291,
+        "gathered": 8882.367351452895,
+        "delivered": 1484.6739462611986,
         "cleaned": 0,
-        "discovered": 10419,
-        "contacts": 983,
-        "depositions": 208386,
+        "discovered": 3575,
+        "contacts": 910,
+        "depositions": 174905,
         "transported": 0
       },
       "ledger": {
@@ -1493,8 +1492,8 @@
         }
       },
       "architecture": {
-        "excavatedCells": 299,
-        "maxDepthMM": 34
+        "excavatedCells": 291,
+        "maxDepthMM": 36
       }
     },
     {
@@ -1504,27 +1503,27 @@
       "workers": 12,
       "queenAlive": true,
       "scenario": "established",
-      "food": 1054.0000000202554,
+      "food": 1093.0000000202554,
       "brood": 30,
       "corpses": 0,
       "jobs": {
-        "explore": 10,
-        "forage": 1,
-        "nurse": 1
+        "explore": 8,
+        "return": 2,
+        "nurse": 2
       },
       "metrics": {
         "births": 0,
         "laid": 30,
-        "fed": 122,
+        "fed": 123,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 300,
-        "gathered": 9159.999999998126,
-        "delivered": 1460.9965820303178,
+        "dug": 297,
+        "gathered": 9164.367351452895,
+        "delivered": 1535.2850800316482,
         "cleaned": 0,
-        "discovered": 11637,
-        "contacts": 1014,
-        "depositions": 216125,
+        "discovered": 3661,
+        "contacts": 930,
+        "depositions": 180259,
         "transported": 0
       },
       "ledger": {
@@ -1542,8 +1541,8 @@
         }
       },
       "architecture": {
-        "excavatedCells": 300,
-        "maxDepthMM": 34
+        "excavatedCells": 297,
+        "maxDepthMM": 36
       }
     },
     {
@@ -1553,12 +1552,11 @@
       "workers": 12,
       "queenAlive": true,
       "scenario": "established",
-      "food": 1038.0000000208884,
+      "food": 1082.0000000208884,
       "brood": 31,
       "corpses": 0,
       "jobs": {
-        "explore": 9,
-        "return": 3
+        "explore": 12
       },
       "metrics": {
         "births": 0,
@@ -1566,13 +1564,13 @@
         "fed": 130,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 302,
-        "gathered": 9411.99999988078,
-        "delivered": 1494.9965819716444,
+        "dug": 297,
+        "gathered": 9422.367351452895,
+        "delivered": 1567.518942808797,
         "cleaned": 0,
-        "discovered": 12844,
-        "contacts": 1046,
-        "depositions": 224605,
+        "discovered": 3768,
+        "contacts": 949,
+        "depositions": 186761,
         "transported": 0
       },
       "ledger": {
@@ -1590,8 +1588,8 @@
         }
       },
       "architecture": {
-        "excavatedCells": 302,
-        "maxDepthMM": 34
+        "excavatedCells": 297,
+        "maxDepthMM": 36
       }
     },
     {
@@ -1601,27 +1599,26 @@
       "workers": 12,
       "queenAlive": true,
       "scenario": "established",
-      "food": 1012.0000000215214,
+      "food": 1078.0000000215214,
       "brood": 32,
       "corpses": 0,
       "jobs": {
-        "explore": 8,
-        "return": 3,
-        "nurse": 1
+        "explore": 10,
+        "return": 2
       },
       "metrics": {
         "births": 0,
         "laid": 32,
-        "fed": 142,
+        "fed": 140,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 305,
-        "gathered": 9657.999999998592,
-        "delivered": 1528.9965820305506,
+        "dug": 298,
+        "gathered": 9688.367351452895,
+        "delivered": 1601.8747879400837,
         "cleaned": 0,
-        "discovered": 14077,
-        "contacts": 1078,
-        "depositions": 233167,
+        "discovered": 3902,
+        "contacts": 981,
+        "depositions": 196061,
         "transported": 0
       },
       "ledger": {
@@ -1639,8 +1636,8 @@
         }
       },
       "architecture": {
-        "excavatedCells": 305,
-        "maxDepthMM": 34
+        "excavatedCells": 298,
+        "maxDepthMM": 36
       }
     },
     {
@@ -1650,27 +1647,27 @@
       "workers": 12,
       "queenAlive": true,
       "scenario": "established",
-      "food": 998.0000000221544,
+      "food": 1076.0000000221544,
       "brood": 33,
       "corpses": 0,
       "jobs": {
-        "explore": 8,
-        "return": 3,
-        "forage": 1
+        "explore": 9,
+        "nurse": 1,
+        "return": 2
       },
       "metrics": {
         "births": 0,
         "laid": 33,
-        "fed": 150,
+        "fed": 152,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 305,
-        "gathered": 9911.999999985088,
-        "delivered": 1573.9965820275236,
+        "dug": 299,
+        "gathered": 9958.367351452895,
+        "delivered": 1634.4381808269434,
         "cleaned": 0,
-        "discovered": 15330,
-        "contacts": 1114,
-        "depositions": 242239,
+        "discovered": 4024,
+        "contacts": 1000,
+        "depositions": 203924,
         "transported": 0
       },
       "ledger": {
@@ -1688,8 +1685,8 @@
         }
       },
       "architecture": {
-        "excavatedCells": 305,
-        "maxDepthMM": 34
+        "excavatedCells": 299,
+        "maxDepthMM": 36
       }
     },
     {
@@ -1699,28 +1696,26 @@
       "workers": 12,
       "queenAlive": true,
       "scenario": "established",
-      "food": 994.000000022198,
+      "food": 1076.0000000227874,
       "brood": 34,
       "corpses": 0,
       "jobs": {
-        "explore": 8,
-        "return": 1,
-        "nurse": 2,
-        "forage": 1
+        "return": 2,
+        "explore": 10
       },
       "metrics": {
         "births": 0,
         "laid": 34,
-        "fed": 163,
+        "fed": 160,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 305,
-        "gathered": 10165.999999970185,
-        "delivered": 1607.9965820237983,
+        "dug": 300,
+        "gathered": 10227.367351452895,
+        "delivered": 1677.6133454567946,
         "cleaned": 0,
-        "discovered": 16585,
-        "contacts": 1146,
-        "depositions": 250966,
+        "discovered": 4134,
+        "contacts": 1022,
+        "depositions": 210897,
         "transported": 0
       },
       "ledger": {
@@ -1733,13 +1728,13 @@
           "p": 0
         },
         "inventory": {
-          "c": 4596.000000022786,
-          "p": 2082.0000000000005
+          "c": 4596.000000022787,
+          "p": 2082
         }
       },
       "architecture": {
-        "excavatedCells": 305,
-        "maxDepthMM": 34
+        "excavatedCells": 300,
+        "maxDepthMM": 36
       }
     },
     {
@@ -1749,13 +1744,11 @@
       "workers": 12,
       "queenAlive": true,
       "scenario": "established",
-      "food": 975.0000000228147,
+      "food": 1084.0000000234204,
       "brood": 35,
       "corpses": 0,
       "jobs": {
-        "explore": 8,
-        "return": 2,
-        "forage": 2
+        "explore": 12
       },
       "metrics": {
         "births": 0,
@@ -1763,13 +1756,13 @@
         "fed": 170,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 306,
-        "gathered": 10395.999999821173,
-        "delivered": 1643.9965820163475,
+        "dug": 302,
+        "gathered": 10504.367351452895,
+        "delivered": 1718.680539876467,
         "cleaned": 0,
-        "discovered": 18080,
-        "contacts": 1179,
-        "depositions": 259248,
+        "discovered": 4246,
+        "contacts": 1042,
+        "depositions": 218718,
         "transported": 0
       },
       "ledger": {
@@ -1778,17 +1771,17 @@
           "p": 2082
         },
         "outputs": {
-          "c": 9087.00000000059,
+          "c": 9102,
           "p": 0
         },
         "inventory": {
-          "c": 4365.000000022815,
+          "c": 4350.00000002342,
           "p": 2082
         }
       },
       "architecture": {
-        "excavatedCells": 306,
-        "maxDepthMM": 34
+        "excavatedCells": 302,
+        "maxDepthMM": 36
       }
     },
     {
@@ -1798,13 +1791,12 @@
       "workers": 12,
       "queenAlive": true,
       "scenario": "established",
-      "food": 916.0000000234313,
+      "food": 1082.0000000240534,
       "brood": 36,
       "corpses": 0,
       "jobs": {
-        "explore": 8,
-        "return": 3,
-        "forage": 1
+        "return": 2,
+        "explore": 10
       },
       "metrics": {
         "births": 0,
@@ -1812,13 +1804,13 @@
         "fed": 180,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 306,
-        "gathered": 10589.999938964831,
-        "delivered": 1680.996520996091,
+        "dug": 302,
+        "gathered": 10772.367351452895,
+        "delivered": 1752.768170872656,
         "cleaned": 0,
-        "discovered": 20670,
-        "contacts": 1203,
-        "depositions": 265537,
+        "discovered": 4378,
+        "contacts": 1074,
+        "depositions": 228025,
         "transported": 0
       },
       "ledger": {
@@ -1827,17 +1819,17 @@
           "p": 2082
         },
         "outputs": {
-          "c": 9316.00000000059,
+          "c": 9348,
           "p": 0
         },
         "inventory": {
-          "c": 4136.000000023431,
+          "c": 4104.000000024053,
           "p": 2082
         }
       },
       "architecture": {
-        "excavatedCells": 306,
-        "maxDepthMM": 34
+        "excavatedCells": 302,
+        "maxDepthMM": 36
       }
     },
     {
@@ -1847,26 +1839,26 @@
       "workers": 12,
       "queenAlive": true,
       "scenario": "established",
-      "food": 758.0000000240037,
+      "food": 1078.0000000246864,
       "brood": 37,
       "corpses": 0,
       "jobs": {
-        "forage": 7,
-        "return": 5
+        "explore": 9,
+        "return": 3
       },
       "metrics": {
         "births": 0,
         "laid": 37,
-        "fed": 200,
+        "fed": 190,
         "deaths": 0,
         "broodDeaths": 0,
-        "dug": 306,
-        "gathered": 10683.999999523121,
-        "delivered": 1708.9965815543821,
+        "dug": 303,
+        "gathered": 11037.367351452895,
+        "delivered": 1785.6288540071673,
         "cleaned": 0,
-        "discovered": 26140,
-        "contacts": 1229,
-        "depositions": 269491,
+        "discovered": 4511,
+        "contacts": 1105,
+        "depositions": 237509,
         "transported": 0
       },
       "ledger": {
@@ -1875,47 +1867,46 @@
           "p": 2082
         },
         "outputs": {
-          "c": 9544.00000000059,
+          "c": 9594,
           "p": 0
         },
         "inventory": {
-          "c": 3908.000000024004,
-          "p": 2082.0000000000005
+          "c": 3858.0000000246864,
+          "p": 2082
         }
       },
       "architecture": {
-        "excavatedCells": 306,
-        "maxDepthMM": 34
+        "excavatedCells": 303,
+        "maxDepthMM": 36
       }
     },
     {
       "seed": 42,
       "time": 3456000,
       "days": 40,
-      "workers": 11,
+      "workers": 12,
       "queenAlive": true,
       "scenario": "established",
-      "food": 518.0000000240065,
+      "food": 1068.0000000253194,
       "brood": 38,
-      "corpses": 1,
+      "corpses": 0,
       "jobs": {
-        "return": 5,
-        "forage": 5,
-        "share": 1
+        "explore": 9,
+        "return": 3
       },
       "metrics": {
         "births": 0,
         "laid": 38,
-        "fed": 210,
-        "deaths": 1,
+        "fed": 200,
+        "deaths": 0,
         "broodDeaths": 0,
-        "dug": 306,
-        "gathered": 10695.99218749626,
-        "delivered": 1718.988769527523,
+        "dug": 305,
+        "gathered": 11296.367351452895,
+        "delivered": 1819.396109515144,
         "cleaned": 0,
-        "discovered": 33155,
-        "contacts": 1237,
-        "depositions": 270130,
+        "discovered": 4638,
+        "contacts": 1137,
+        "depositions": 246776,
         "transported": 0
       },
       "ledger": {
@@ -1924,46 +1915,46 @@
           "p": 2082
         },
         "outputs": {
-          "c": 9772.00000000059,
+          "c": 9840,
           "p": 0
         },
         "inventory": {
-          "c": 3680.0000000240066,
-          "p": 2082.0000000000005
+          "c": 3612.0000000253194,
+          "p": 2082
         }
       },
       "architecture": {
-        "excavatedCells": 306,
-        "maxDepthMM": 34
+        "excavatedCells": 305,
+        "maxDepthMM": 36
       }
     },
     {
       "seed": 42,
       "time": 3542400,
       "days": 41,
-      "workers": 11,
+      "workers": 12,
       "queenAlive": true,
       "scenario": "established",
-      "food": 283.0000000235426,
+      "food": 906.000000025932,
       "brood": 39,
-      "corpses": 1,
+      "corpses": 0,
       "jobs": {
-        "return": 7,
-        "forage": 4
+        "return": 3,
+        "explore": 9
       },
       "metrics": {
         "births": 0,
         "laid": 39,
-        "fed": 220,
-        "deaths": 1,
+        "fed": 210,
+        "deaths": 0,
         "broodDeaths": 0,
-        "dug": 306,
-        "gathered": 10707.999015808087,
-        "delivered": 1731.99559783935,
+        "dug": 305,
+        "gathered": 11404.367351452895,
+        "delivered": 1849.4372412545931,
         "cleaned": 0,
-        "discovered": 40465,
-        "contacts": 1248,
-        "depositions": 270800,
+        "discovered": 4666,
+        "contacts": 1147,
+        "depositions": 248527,
         "transported": 0
       },
       "ledger": {
@@ -1972,46 +1963,46 @@
           "p": 2082
         },
         "outputs": {
-          "c": 10000.00000000059,
+          "c": 10086,
           "p": 0
         },
         "inventory": {
-          "c": 3452.000000024212,
-          "p": 2082.0000000000005
+          "c": 3366.000000025932,
+          "p": 2082
         }
       },
       "architecture": {
-        "excavatedCells": 306,
-        "maxDepthMM": 34
+        "excavatedCells": 305,
+        "maxDepthMM": 36
       }
     },
     {
       "seed": 42,
       "time": 3628800,
       "days": 42,
-      "workers": 11,
+      "workers": 12,
       "queenAlive": true,
       "scenario": "established",
-      "food": 85.00000000550062,
+      "food": 648.0000000259511,
       "brood": 40,
-      "corpses": 1,
+      "corpses": 0,
       "jobs": {
-        "forage": 2,
-        "return": 9
+        "explore": 9,
+        "return": 3
       },
       "metrics": {
         "births": 0,
         "laid": 40,
-        "fed": 230,
-        "deaths": 1,
+        "fed": 220,
+        "deaths": 0,
         "broodDeaths": 0,
-        "dug": 306,
-        "gathered": 10719.99902247636,
-        "delivered": 1744.9956045076233,
+        "dug": 305,
+        "gathered": 11417.367351452895,
+        "delivered": 1861.5550323309747,
         "cleaned": 0,
-        "discovered": 47796,
-        "contacts": 1259,
-        "depositions": 271626,
+        "discovered": 4671,
+        "contacts": 1156,
+        "depositions": 248795,
         "transported": 0
       },
       "ledger": {
@@ -2020,46 +2011,46 @@
           "p": 2082
         },
         "outputs": {
-          "c": 10223.000000001268,
+          "c": 10332,
           "p": 0
         },
         "inventory": {
-          "c": 3229.000000023751,
-          "p": 2082.0000000000005
+          "c": 3120.000000025951,
+          "p": 2082
         }
       },
       "architecture": {
-        "excavatedCells": 306,
-        "maxDepthMM": 34
+        "excavatedCells": 305,
+        "maxDepthMM": 36
       }
     },
     {
       "seed": 42,
       "time": 3715200,
       "days": 43,
-      "workers": 11,
+      "workers": 12,
       "queenAlive": true,
       "scenario": "established",
-      "food": 0,
+      "food": 390.00000002616474,
       "brood": 41,
-      "corpses": 1,
+      "corpses": 0,
       "jobs": {
-        "return": 8,
-        "forage": 3
+        "explore": 9,
+        "return": 3
       },
       "metrics": {
         "births": 0,
         "laid": 41,
-        "fed": 241,
-        "deaths": 1,
+        "fed": 230,
+        "deaths": 0,
         "broodDeaths": 0,
-        "dug": 306,
-        "gathered": 10729.99902247636,
-        "delivered": 1744.9956045076233,
+        "dug": 305,
+        "gathered": 11429.367351452895,
+        "delivered": 1874.5367039846178,
         "cleaned": 0,
-        "discovered": 55016,
-        "contacts": 1259,
-        "depositions": 271994,
+        "discovered": 4675,
+        "contacts": 1167,
+        "depositions": 248968,
         "transported": 0
       },
       "ledger": {
@@ -2068,46 +2059,46 @@
           "p": 2082
         },
         "outputs": {
-          "c": 10414.00000000265,
+          "c": 10578,
           "p": 0
         },
         "inventory": {
-          "c": 3038.000000022932,
-          "p": 2082.0000000000005
+          "c": 2874.000000026165,
+          "p": 2082
         }
       },
       "architecture": {
-        "excavatedCells": 306,
-        "maxDepthMM": 34
+        "excavatedCells": 305,
+        "maxDepthMM": 36
       }
     },
     {
       "seed": 42,
       "time": 3801600,
       "days": 44,
-      "workers": 10,
+      "workers": 12,
       "queenAlive": true,
       "scenario": "established",
-      "food": 0,
+      "food": 137.00000000864384,
       "brood": 42,
-      "corpses": 2,
+      "corpses": 0,
       "jobs": {
-        "return": 5,
-        "forage": 5
+        "explore": 10,
+        "return": 2
       },
       "metrics": {
         "births": 0,
         "laid": 42,
-        "fed": 251,
-        "deaths": 2,
+        "fed": 240,
+        "deaths": 0,
         "broodDeaths": 0,
-        "dug": 306,
-        "gathered": 10739.99902247636,
-        "delivered": 1744.9956045076233,
-        "cleaned": 1,
-        "discovered": 62046,
-        "contacts": 1259,
-        "depositions": 272110,
+        "dug": 305,
+        "gathered": 11442.367351452895,
+        "delivered": 1886.6998065876828,
+        "cleaned": 0,
+        "discovered": 4683,
+        "contacts": 1177,
+        "depositions": 249184,
         "transported": 0
       },
       "ledger": {
@@ -2116,46 +2107,45 @@
           "p": 2082
         },
         "outputs": {
-          "c": 10519.00000000832,
+          "c": 10824,
           "p": 0
         },
         "inventory": {
-          "c": 2933.000000017752,
-          "p": 2082.0000000000005
+          "c": 2628.00000002641,
+          "p": 2082
         }
       },
       "architecture": {
-        "excavatedCells": 306,
-        "maxDepthMM": 34
+        "excavatedCells": 305,
+        "maxDepthMM": 36
       }
     },
     {
       "seed": 42,
       "time": 3888000,
       "days": 45,
-      "workers": 8,
+      "workers": 12,
       "queenAlive": true,
       "scenario": "established",
       "food": 0,
       "brood": 43,
-      "corpses": 4,
+      "corpses": 0,
       "jobs": {
-        "return": 5,
-        "forage": 3
+        "explore": 12
       },
       "metrics": {
         "births": 0,
         "laid": 43,
-        "fed": 251,
-        "deaths": 4,
+        "fed": 250,
+        "deaths": 0,
         "broodDeaths": 0,
-        "dug": 306,
-        "gathered": 10741.99902247636,
-        "delivered": 1746.9956045076233,
-        "cleaned": 2,
-        "discovered": 67485,
-        "contacts": 1261,
-        "depositions": 272156,
+        "dug": 305,
+        "gathered": 11452.367351452895,
+        "delivered": 1886.6998065876828,
+        "cleaned": 0,
+        "discovered": 4687,
+        "contacts": 1177,
+        "depositions": 249318,
         "transported": 0
       },
       "ledger": {
@@ -2164,43 +2154,46 @@
           "p": 2082
         },
         "outputs": {
-          "c": 10549.00000000832,
+          "c": 11070,
           "p": 0
         },
         "inventory": {
-          "c": 2903.0000000181885,
-          "p": 2082.0000000000005
+          "c": 2382.0000000270184,
+          "p": 2082
         }
       },
       "architecture": {
-        "excavatedCells": 306,
-        "maxDepthMM": 34
+        "excavatedCells": 305,
+        "maxDepthMM": 36
       }
     },
     {
       "seed": 42,
       "time": 3974400,
       "days": 46,
-      "workers": 0,
+      "workers": 12,
       "queenAlive": true,
       "scenario": "established",
       "food": 0,
       "brood": 44,
-      "corpses": 12,
-      "jobs": {},
+      "corpses": 0,
+      "jobs": {
+        "explore": 10,
+        "return": 2
+      },
       "metrics": {
         "births": 0,
         "laid": 44,
-        "fed": 251,
-        "deaths": 12,
+        "fed": 260,
+        "deaths": 0,
         "broodDeaths": 0,
-        "dug": 306,
-        "gathered": 10742.99902247636,
-        "delivered": 1748.9956045076233,
-        "cleaned": 3,
-        "discovered": 69778,
-        "contacts": 1263,
-        "depositions": 272185,
+        "dug": 305,
+        "gathered": 11462.367351452895,
+        "delivered": 1886.6998065876828,
+        "cleaned": 0,
+        "discovered": 4688,
+        "contacts": 1177,
+        "depositions": 249345,
         "transported": 0
       },
       "ledger": {
@@ -2209,43 +2202,46 @@
           "p": 2082
         },
         "outputs": {
-          "c": 10579.00000000832,
+          "c": 11227.000000008908,
           "p": 0
         },
         "inventory": {
-          "c": 2873.000000018625,
-          "p": 2082.0000000000005
+          "c": 2225.000000018639,
+          "p": 2082
         }
       },
       "architecture": {
-        "excavatedCells": 306,
-        "maxDepthMM": 34
+        "excavatedCells": 305,
+        "maxDepthMM": 36
       }
     },
     {
       "seed": 42,
       "time": 4060800,
       "days": 47,
-      "workers": 0,
+      "workers": 12,
       "queenAlive": true,
       "scenario": "established",
       "food": 0,
       "brood": 45,
-      "corpses": 12,
-      "jobs": {},
+      "corpses": 0,
+      "jobs": {
+        "explore": 9,
+        "return": 3
+      },
       "metrics": {
         "births": 0,
         "laid": 45,
-        "fed": 251,
-        "deaths": 12,
+        "fed": 260,
+        "deaths": 0,
         "broodDeaths": 0,
-        "dug": 306,
-        "gathered": 10742.99902247636,
-        "delivered": 1748.9956045076233,
-        "cleaned": 3,
-        "discovered": 69778,
-        "contacts": 1263,
-        "depositions": 272185,
+        "dug": 305,
+        "gathered": 11464.458224466389,
+        "delivered": 1888.6998065876828,
+        "cleaned": 0,
+        "discovered": 4691,
+        "contacts": 1179,
+        "depositions": 249447,
         "transported": 0
       },
       "ledger": {
@@ -2254,17 +2250,17 @@
           "p": 2082
         },
         "outputs": {
-          "c": 10609.00000000832,
+          "c": 11257.000000008908,
           "p": 0
         },
         "inventory": {
-          "c": 2843.0000000190616,
-          "p": 2082.0000000000005
+          "c": 2195.0000000190757,
+          "p": 2082
         }
       },
       "architecture": {
-        "excavatedCells": 306,
-        "maxDepthMM": 34
+        "excavatedCells": 305,
+        "maxDepthMM": 36
       }
     },
     {
@@ -2281,16 +2277,16 @@
       "metrics": {
         "births": 0,
         "laid": 46,
-        "fed": 251,
+        "fed": 260,
         "deaths": 12,
         "broodDeaths": 0,
-        "dug": 306,
-        "gathered": 10742.99902247636,
-        "delivered": 1748.9956045076233,
-        "cleaned": 3,
-        "discovered": 69778,
-        "contacts": 1263,
-        "depositions": 272185,
+        "dug": 305,
+        "gathered": 11466.458224466389,
+        "delivered": 1890.6998065876828,
+        "cleaned": 4,
+        "discovered": 4693,
+        "contacts": 1181,
+        "depositions": 249493,
         "transported": 0
       },
       "ledger": {
@@ -2299,17 +2295,17 @@
           "p": 2082
         },
         "outputs": {
-          "c": 10639.00000000832,
+          "c": 11287.000000008908,
           "p": 0
         },
         "inventory": {
-          "c": 2813.000000019498,
-          "p": 2082.0000000000005
+          "c": 2165.0000000195123,
+          "p": 2082
         }
       },
       "architecture": {
-        "excavatedCells": 306,
-        "maxDepthMM": 34
+        "excavatedCells": 305,
+        "maxDepthMM": 36
       }
     },
     {
@@ -2326,16 +2322,16 @@
       "metrics": {
         "births": 0,
         "laid": 47,
-        "fed": 251,
+        "fed": 260,
         "deaths": 12,
         "broodDeaths": 0,
-        "dug": 306,
-        "gathered": 10742.99902247636,
-        "delivered": 1748.9956045076233,
-        "cleaned": 3,
-        "discovered": 69778,
-        "contacts": 1263,
-        "depositions": 272185,
+        "dug": 305,
+        "gathered": 11466.458224466389,
+        "delivered": 1890.6998065876828,
+        "cleaned": 4,
+        "discovered": 4693,
+        "contacts": 1181,
+        "depositions": 249493,
         "transported": 0
       },
       "ledger": {
@@ -2344,17 +2340,17 @@
           "p": 2082
         },
         "outputs": {
-          "c": 10669.00000000832,
+          "c": 11317.000000008908,
           "p": 0
         },
         "inventory": {
-          "c": 2783.0000000199348,
-          "p": 2082.0000000000005
+          "c": 2135.000000019949,
+          "p": 2082
         }
       },
       "architecture": {
-        "excavatedCells": 306,
-        "maxDepthMM": 34
+        "excavatedCells": 305,
+        "maxDepthMM": 36
       }
     },
     {
@@ -2371,16 +2367,16 @@
       "metrics": {
         "births": 0,
         "laid": 48,
-        "fed": 251,
+        "fed": 260,
         "deaths": 12,
         "broodDeaths": 0,
-        "dug": 306,
-        "gathered": 10742.99902247636,
-        "delivered": 1748.9956045076233,
-        "cleaned": 3,
-        "discovered": 69778,
-        "contacts": 1263,
-        "depositions": 272185,
+        "dug": 305,
+        "gathered": 11466.458224466389,
+        "delivered": 1890.6998065876828,
+        "cleaned": 4,
+        "discovered": 4693,
+        "contacts": 1181,
+        "depositions": 249493,
         "transported": 0
       },
       "ledger": {
@@ -2389,17 +2385,17 @@
           "p": 2082
         },
         "outputs": {
-          "c": 10699.00000000832,
+          "c": 11347.000000008908,
           "p": 0
         },
         "inventory": {
-          "c": 2753.0000000203713,
-          "p": 2082.0000000000005
+          "c": 2105.0000000203854,
+          "p": 2082
         }
       },
       "architecture": {
-        "excavatedCells": 306,
-        "maxDepthMM": 34
+        "excavatedCells": 305,
+        "maxDepthMM": 36
       }
     },
     {
@@ -2410,22 +2406,22 @@
       "queenAlive": true,
       "scenario": "established",
       "food": 0,
-      "brood": 48,
-      "corpses": 13,
+      "brood": 49,
+      "corpses": 12,
       "jobs": {},
       "metrics": {
         "births": 0,
         "laid": 49,
-        "fed": 251,
+        "fed": 260,
         "deaths": 12,
-        "broodDeaths": 1,
-        "dug": 306,
-        "gathered": 10742.99902247636,
-        "delivered": 1748.9956045076233,
-        "cleaned": 3,
-        "discovered": 69778,
-        "contacts": 1263,
-        "depositions": 272185,
+        "broodDeaths": 0,
+        "dug": 305,
+        "gathered": 11466.458224466389,
+        "delivered": 1890.6998065876828,
+        "cleaned": 4,
+        "discovered": 4693,
+        "contacts": 1181,
+        "depositions": 249493,
         "transported": 0
       },
       "ledger": {
@@ -2434,17 +2430,17 @@
           "p": 2082
         },
         "outputs": {
-          "c": 10729.00000000832,
+          "c": 11377.000000008908,
           "p": 0
         },
         "inventory": {
-          "c": 2723.000000020808,
-          "p": 2082.0000000000005
+          "c": 2075.000000020822,
+          "p": 2082
         }
       },
       "architecture": {
-        "excavatedCells": 306,
-        "maxDepthMM": 34
+        "excavatedCells": 305,
+        "maxDepthMM": 36
       }
     },
     {
@@ -2455,22 +2451,22 @@
       "queenAlive": true,
       "scenario": "established",
       "food": 0,
-      "brood": 48,
-      "corpses": 14,
+      "brood": 50,
+      "corpses": 12,
       "jobs": {},
       "metrics": {
         "births": 0,
         "laid": 50,
-        "fed": 251,
+        "fed": 260,
         "deaths": 12,
-        "broodDeaths": 2,
-        "dug": 306,
-        "gathered": 10742.99902247636,
-        "delivered": 1748.9956045076233,
-        "cleaned": 3,
-        "discovered": 69778,
-        "contacts": 1263,
-        "depositions": 272185,
+        "broodDeaths": 0,
+        "dug": 305,
+        "gathered": 11466.458224466389,
+        "delivered": 1890.6998065876828,
+        "cleaned": 4,
+        "discovered": 4693,
+        "contacts": 1181,
+        "depositions": 249493,
         "transported": 0
       },
       "ledger": {
@@ -2479,17 +2475,17 @@
           "p": 2082
         },
         "outputs": {
-          "c": 10759.00000000832,
+          "c": 11407.000000008908,
           "p": 0
         },
         "inventory": {
-          "c": 2693.0000000212444,
-          "p": 2082.0000000000005
+          "c": 2045.0000000212583,
+          "p": 2082
         }
       },
       "architecture": {
-        "excavatedCells": 306,
-        "maxDepthMM": 34
+        "excavatedCells": 305,
+        "maxDepthMM": 36
       }
     },
     {
@@ -2500,22 +2496,22 @@
       "queenAlive": true,
       "scenario": "established",
       "food": 0,
-      "brood": 48,
-      "corpses": 15,
+      "brood": 50,
+      "corpses": 13,
       "jobs": {},
       "metrics": {
         "births": 0,
         "laid": 51,
-        "fed": 251,
+        "fed": 260,
         "deaths": 12,
-        "broodDeaths": 3,
-        "dug": 306,
-        "gathered": 10742.99902247636,
-        "delivered": 1748.9956045076233,
-        "cleaned": 3,
-        "discovered": 69778,
-        "contacts": 1263,
-        "depositions": 272185,
+        "broodDeaths": 1,
+        "dug": 305,
+        "gathered": 11466.458224466389,
+        "delivered": 1890.6998065876828,
+        "cleaned": 4,
+        "discovered": 4693,
+        "contacts": 1181,
+        "depositions": 249493,
         "transported": 0
       },
       "ledger": {
@@ -2524,17 +2520,17 @@
           "p": 2082
         },
         "outputs": {
-          "c": 10789.00000000832,
+          "c": 11437.000000008908,
           "p": 0
         },
         "inventory": {
-          "c": 2663.000000021681,
-          "p": 2082.0000000000005
+          "c": 2015.0000000216949,
+          "p": 2082
         }
       },
       "architecture": {
-        "excavatedCells": 306,
-        "maxDepthMM": 34
+        "excavatedCells": 305,
+        "maxDepthMM": 36
       }
     },
     {
@@ -2545,22 +2541,22 @@
       "queenAlive": true,
       "scenario": "established",
       "food": 0,
-      "brood": 47,
-      "corpses": 17,
+      "brood": 50,
+      "corpses": 14,
       "jobs": {},
       "metrics": {
         "births": 0,
         "laid": 52,
-        "fed": 251,
+        "fed": 260,
         "deaths": 12,
-        "broodDeaths": 5,
-        "dug": 306,
-        "gathered": 10742.99902247636,
-        "delivered": 1748.9956045076233,
-        "cleaned": 3,
-        "discovered": 69778,
-        "contacts": 1263,
-        "depositions": 272185,
+        "broodDeaths": 2,
+        "dug": 305,
+        "gathered": 11466.458224466389,
+        "delivered": 1890.6998065876828,
+        "cleaned": 4,
+        "discovered": 4693,
+        "contacts": 1181,
+        "depositions": 249493,
         "transported": 0
       },
       "ledger": {
@@ -2569,17 +2565,17 @@
           "p": 2082
         },
         "outputs": {
-          "c": 10819.00000000832,
+          "c": 11467.000000008908,
           "p": 0
         },
         "inventory": {
-          "c": 2633.0000000221175,
-          "p": 2082.0000000000005
+          "c": 1985.0000000221314,
+          "p": 2082
         }
       },
       "architecture": {
-        "excavatedCells": 306,
-        "maxDepthMM": 34
+        "excavatedCells": 305,
+        "maxDepthMM": 36
       }
     },
     {
@@ -2590,22 +2586,22 @@
       "queenAlive": true,
       "scenario": "established",
       "food": 0,
-      "brood": 47,
-      "corpses": 18,
+      "brood": 50,
+      "corpses": 15,
       "jobs": {},
       "metrics": {
         "births": 0,
         "laid": 53,
-        "fed": 251,
+        "fed": 260,
         "deaths": 12,
-        "broodDeaths": 6,
-        "dug": 306,
-        "gathered": 10742.99902247636,
-        "delivered": 1748.9956045076233,
-        "cleaned": 3,
-        "discovered": 69778,
-        "contacts": 1263,
-        "depositions": 272185,
+        "broodDeaths": 3,
+        "dug": 305,
+        "gathered": 11466.458224466389,
+        "delivered": 1890.6998065876828,
+        "cleaned": 4,
+        "discovered": 4693,
+        "contacts": 1181,
+        "depositions": 249493,
         "transported": 0
       },
       "ledger": {
@@ -2614,17 +2610,17 @@
           "p": 2082
         },
         "outputs": {
-          "c": 10849.00000000832,
+          "c": 11497.000000008908,
           "p": 0
         },
         "inventory": {
-          "c": 2603.000000022554,
-          "p": 2082.0000000000005
+          "c": 1955.000000022568,
+          "p": 2082
         }
       },
       "architecture": {
-        "excavatedCells": 306,
-        "maxDepthMM": 34
+        "excavatedCells": 305,
+        "maxDepthMM": 36
       }
     },
     {
@@ -2635,24 +2631,24 @@
       "queenAlive": true,
       "scenario": "established",
       "food": 0,
-      "brood": 47,
-      "corpses": 18,
+      "brood": 49,
+      "corpses": 16,
       "jobs": {
-        "forage": 1
+        "return": 1
       },
       "metrics": {
         "births": 1,
         "laid": 54,
-        "fed": 311,
+        "fed": 270,
         "deaths": 12,
-        "broodDeaths": 6,
-        "dug": 306,
-        "gathered": 10914.99902247636,
-        "delivered": 1777.9956045076233,
+        "broodDeaths": 4,
+        "dug": 305,
+        "gathered": 11518.985764760164,
+        "delivered": 1905.6998065876828,
         "cleaned": 11,
-        "discovered": 70373,
-        "contacts": 1272,
-        "depositions": 272724,
+        "discovered": 4700,
+        "contacts": 1186,
+        "depositions": 249635,
         "transported": 0
       },
       "ledger": {
@@ -2661,17 +2657,17 @@
           "p": 2082
         },
         "outputs": {
-          "c": 10879.297916674986,
+          "c": 11527.000000008908,
           "p": 0
         },
         "inventory": {
-          "c": 2572.70208335619,
-          "p": 2082.0000000000005
+          "c": 1925.0000000230045,
+          "p": 2082
         }
       },
       "architecture": {
-        "excavatedCells": 306,
-        "maxDepthMM": 34
+        "excavatedCells": 305,
+        "maxDepthMM": 36
       }
     },
     {
@@ -2681,25 +2677,26 @@
       "workers": 2,
       "queenAlive": true,
       "scenario": "established",
-      "food": 63.429999999933585,
-      "brood": 47,
-      "corpses": 18,
+      "food": 0,
+      "brood": 48,
+      "corpses": 17,
       "jobs": {
-        "forage": 2
+        "explore": 1,
+        "return": 1
       },
       "metrics": {
         "births": 2,
         "laid": 55,
-        "fed": 353,
+        "fed": 270,
         "deaths": 12,
-        "broodDeaths": 6,
-        "dug": 306,
-        "gathered": 11110.999999999869,
-        "delivered": 1838.9965820311318,
+        "broodDeaths": 5,
+        "dug": 305,
+        "gathered": 11547.985764760164,
+        "delivered": 1907.6998065876828,
         "cleaned": 11,
-        "discovered": 71490,
-        "contacts": 1313,
-        "depositions": 275206,
+        "discovered": 4703,
+        "contacts": 1188,
+        "depositions": 249749,
         "transported": 0
       },
       "ledger": {
@@ -2708,17 +2705,17 @@
           "p": 2082
         },
         "outputs": {
-          "c": 10927.040833341653,
+          "c": 11557.000000008908,
           "p": 0
         },
         "inventory": {
-          "c": 2524.959166689464,
-          "p": 2082.0000000000005
+          "c": 1895.000000023441,
+          "p": 2082
         }
       },
       "architecture": {
-        "excavatedCells": 306,
-        "maxDepthMM": 34
+        "excavatedCells": 305,
+        "maxDepthMM": 36
       }
     },
     {
@@ -2728,25 +2725,25 @@
       "workers": 2,
       "queenAlive": true,
       "scenario": "established",
-      "food": 10.959166666699446,
+      "food": 0,
       "brood": 47,
       "corpses": 19,
       "jobs": {
-        "forage": 2
+        "explore": 2
       },
       "metrics": {
         "births": 3,
         "laid": 56,
-        "fed": 373,
+        "fed": 270,
         "deaths": 13,
         "broodDeaths": 6,
-        "dug": 306,
-        "gathered": 11151.999999999869,
-        "delivered": 1840.9965820311318,
+        "dug": 305,
+        "gathered": 11576.985764760164,
+        "delivered": 1909.6998065876828,
         "cleaned": 13,
-        "discovered": 72903,
-        "contacts": 1314,
-        "depositions": 275550,
+        "discovered": 4706,
+        "contacts": 1190,
+        "depositions": 249947,
         "transported": 0
       },
       "ledger": {
@@ -2755,46 +2752,45 @@
           "p": 2082
         },
         "outputs": {
-          "c": 10975.040833341653,
+          "c": 11587.000000008908,
           "p": 0
         },
         "inventory": {
-          "c": 2476.9591666895844,
-          "p": 2082.0000000000005
+          "c": 1865.0000000238776,
+          "p": 2082
         }
       },
       "architecture": {
-        "excavatedCells": 306,
-        "maxDepthMM": 34
+        "excavatedCells": 305,
+        "maxDepthMM": 36
       }
     },
     {
       "seed": 42,
       "time": 5097600,
       "days": 59,
-      "workers": 3,
+      "workers": 2,
       "queenAlive": true,
       "scenario": "established",
       "food": 0,
-      "brood": 47,
-      "corpses": 19,
+      "brood": 46,
+      "corpses": 21,
       "jobs": {
-        "forage": 1,
-        "return": 2
+        "explore": 2
       },
       "metrics": {
         "births": 4,
         "laid": 57,
-        "fed": 393,
-        "deaths": 13,
-        "broodDeaths": 6,
-        "dug": 306,
-        "gathered": 11191.999999999869,
-        "delivered": 1852.9965820311318,
-        "cleaned": 13,
-        "discovered": 75043,
-        "contacts": 1315,
-        "depositions": 275818,
+        "fed": 270,
+        "deaths": 14,
+        "broodDeaths": 7,
+        "dug": 305,
+        "gathered": 11605.985764760164,
+        "delivered": 1911.6998065876828,
+        "cleaned": 15,
+        "discovered": 4709,
+        "contacts": 1192,
+        "depositions": 250117,
         "transported": 0
       },
       "ledger": {
@@ -2803,46 +2799,45 @@
           "p": 2082
         },
         "outputs": {
-          "c": 11006.000000008353,
+          "c": 11617.000000008908,
           "p": 0
         },
         "inventory": {
-          "c": 2446.0000000233213,
-          "p": 2082.0000000000005
+          "c": 1835.0000000243142,
+          "p": 2082
         }
       },
       "architecture": {
-        "excavatedCells": 306,
-        "maxDepthMM": 34
+        "excavatedCells": 305,
+        "maxDepthMM": 36
       }
     },
     {
       "seed": 42,
       "time": 5184000,
       "days": 60,
-      "workers": 3,
+      "workers": 2,
       "queenAlive": true,
       "scenario": "established",
       "food": 0,
-      "brood": 47,
-      "corpses": 20,
+      "brood": 45,
+      "corpses": 23,
       "jobs": {
-        "return": 1,
-        "forage": 2
+        "explore": 2
       },
       "metrics": {
         "births": 5,
         "laid": 58,
-        "fed": 403,
-        "deaths": 14,
-        "broodDeaths": 6,
-        "dug": 306,
-        "gathered": 11229.999999999869,
-        "delivered": 1853.9965820311318,
-        "cleaned": 13,
-        "discovered": 77223,
-        "contacts": 1316,
-        "depositions": 276025,
+        "fed": 270,
+        "deaths": 15,
+        "broodDeaths": 8,
+        "dug": 305,
+        "gathered": 11635.969774364885,
+        "delivered": 1914.6998065876828,
+        "cleaned": 17,
+        "discovered": 4713,
+        "contacts": 1195,
+        "depositions": 250256,
         "transported": 0
       },
       "ledger": {
@@ -2851,17 +2846,17 @@
           "p": 2082
         },
         "outputs": {
-          "c": 11036.000000008353,
+          "c": 11647.000000008908,
           "p": 0
         },
         "inventory": {
-          "c": 2416.000000023758,
-          "p": 2082.0000000000005
+          "c": 1805.0000000247508,
+          "p": 2082
         }
       },
       "architecture": {
-        "excavatedCells": 306,
-        "maxDepthMM": 34
+        "excavatedCells": 305,
+        "maxDepthMM": 36
       }
     },
     {
@@ -2872,24 +2867,25 @@
       "queenAlive": true,
       "scenario": "established",
       "food": 0,
-      "brood": 47,
-      "corpses": 22,
+      "brood": 44,
+      "corpses": 25,
       "jobs": {
-        "return": 2
+        "return": 1,
+        "explore": 1
       },
       "metrics": {
         "births": 6,
         "laid": 59,
-        "fed": 403,
+        "fed": 270,
         "deaths": 16,
-        "broodDeaths": 6,
-        "dug": 306,
-        "gathered": 11261.999999999869,
-        "delivered": 1855.9965820311318,
-        "cleaned": 13,
-        "discovered": 78869,
-        "contacts": 1318,
-        "depositions": 276250,
+        "broodDeaths": 9,
+        "dug": 305,
+        "gathered": 11664.969774364885,
+        "delivered": 1916.6998065876828,
+        "cleaned": 19,
+        "discovered": 4716,
+        "contacts": 1197,
+        "depositions": 250525,
         "transported": 0
       },
       "ledger": {
@@ -2898,17 +2894,17 @@
           "p": 2082
         },
         "outputs": {
-          "c": 11066.000000008353,
+          "c": 11677.000000008908,
           "p": 0
         },
         "inventory": {
-          "c": 2386.0000000241944,
-          "p": 2082.0000000000005
+          "c": 1775.0000000251873,
+          "p": 2082
         }
       },
       "architecture": {
-        "excavatedCells": 306,
-        "maxDepthMM": 34
+        "excavatedCells": 305,
+        "maxDepthMM": 36
       }
     },
     {
@@ -2919,25 +2915,25 @@
       "queenAlive": true,
       "scenario": "established",
       "food": 0,
-      "brood": 47,
-      "corpses": 23,
+      "brood": 43,
+      "corpses": 27,
       "jobs": {
-        "forage": 1,
+        "explore": 1,
         "return": 1
       },
       "metrics": {
         "births": 7,
         "laid": 60,
-        "fed": 403,
+        "fed": 270,
         "deaths": 17,
-        "broodDeaths": 6,
-        "dug": 306,
-        "gathered": 11293.999999999869,
-        "delivered": 1857.9965820311318,
-        "cleaned": 15,
-        "discovered": 80166,
-        "contacts": 1320,
-        "depositions": 276475,
+        "broodDeaths": 10,
+        "dug": 305,
+        "gathered": 11692.67093803443,
+        "delivered": 1917.6998065876828,
+        "cleaned": 21,
+        "discovered": 4718,
+        "contacts": 1198,
+        "depositions": 250581,
         "transported": 0
       },
       "ledger": {
@@ -2946,17 +2942,17 @@
           "p": 2082
         },
         "outputs": {
-          "c": 11096.000000008353,
+          "c": 11707.000000008908,
           "p": 0
         },
         "inventory": {
-          "c": 2356.000000024631,
-          "p": 2082.0000000000005
+          "c": 1745.0000000256239,
+          "p": 2082
         }
       },
       "architecture": {
-        "excavatedCells": 306,
-        "maxDepthMM": 34
+        "excavatedCells": 305,
+        "maxDepthMM": 36
       }
     },
     {
@@ -2967,25 +2963,24 @@
       "queenAlive": true,
       "scenario": "established",
       "food": 0,
-      "brood": 47,
-      "corpses": 24,
+      "brood": 42,
+      "corpses": 29,
       "jobs": {
-        "return": 1,
-        "forage": 1
+        "explore": 2
       },
       "metrics": {
         "births": 8,
         "laid": 61,
-        "fed": 403,
+        "fed": 280,
         "deaths": 18,
-        "broodDeaths": 6,
-        "dug": 306,
-        "gathered": 11325.999999999869,
-        "delivered": 1859.9965820311318,
-        "cleaned": 15,
-        "discovered": 81440,
-        "contacts": 1322,
-        "depositions": 276683,
+        "broodDeaths": 11,
+        "dug": 305,
+        "gathered": 11731.52416407423,
+        "delivered": 1919.6998065876828,
+        "cleaned": 23,
+        "discovered": 4723,
+        "contacts": 1200,
+        "depositions": 250828,
         "transported": 0
       },
       "ledger": {
@@ -2994,17 +2989,17 @@
           "p": 2082
         },
         "outputs": {
-          "c": 11126.000000008353,
+          "c": 11737.000000008908,
           "p": 0
         },
         "inventory": {
-          "c": 2326.0000000250675,
-          "p": 2082.0000000000005
+          "c": 1715.0000000260604,
+          "p": 2082
         }
       },
       "architecture": {
-        "excavatedCells": 306,
-        "maxDepthMM": 34
+        "excavatedCells": 305,
+        "maxDepthMM": 36
       }
     },
     {
@@ -3015,25 +3010,24 @@
       "queenAlive": true,
       "scenario": "established",
       "food": 0,
-      "brood": 47,
-      "corpses": 25,
+      "brood": 41,
+      "corpses": 31,
       "jobs": {
-        "forage": 1,
-        "return": 1
+        "explore": 2
       },
       "metrics": {
         "births": 9,
         "laid": 62,
-        "fed": 403,
+        "fed": 280,
         "deaths": 19,
-        "broodDeaths": 6,
-        "dug": 306,
-        "gathered": 11357.999999999869,
-        "delivered": 1861.9965820311318,
-        "cleaned": 15,
-        "discovered": 82317,
-        "contacts": 1324,
-        "depositions": 277059,
+        "broodDeaths": 12,
+        "dug": 305,
+        "gathered": 11760.800543330291,
+        "delivered": 1921.6998065876828,
+        "cleaned": 23,
+        "discovered": 4727,
+        "contacts": 1202,
+        "depositions": 251079,
         "transported": 0
       },
       "ledger": {
@@ -3042,17 +3036,17 @@
           "p": 2082
         },
         "outputs": {
-          "c": 11156.000000008353,
+          "c": 11767.000000008908,
           "p": 0
         },
         "inventory": {
-          "c": 2296.000000025504,
-          "p": 2082.0000000000005
+          "c": 1685.000000026497,
+          "p": 2082
         }
       },
       "architecture": {
-        "excavatedCells": 306,
-        "maxDepthMM": 34
+        "excavatedCells": 305,
+        "maxDepthMM": 36
       }
     },
     {
@@ -3063,25 +3057,24 @@
       "queenAlive": true,
       "scenario": "established",
       "food": 0,
-      "brood": 47,
-      "corpses": 26,
+      "brood": 40,
+      "corpses": 33,
       "jobs": {
-        "return": 1,
-        "forage": 1
+        "explore": 2
       },
       "metrics": {
         "births": 10,
         "laid": 63,
-        "fed": 403,
+        "fed": 280,
         "deaths": 20,
-        "broodDeaths": 6,
-        "dug": 306,
-        "gathered": 11389.999999999869,
-        "delivered": 1863.9965820311318,
-        "cleaned": 16,
-        "discovered": 83249,
-        "contacts": 1326,
-        "depositions": 277351,
+        "broodDeaths": 13,
+        "dug": 305,
+        "gathered": 11789.800543330291,
+        "delivered": 1923.6998065876828,
+        "cleaned": 24,
+        "discovered": 4730,
+        "contacts": 1204,
+        "depositions": 251208,
         "transported": 0
       },
       "ledger": {
@@ -3090,17 +3083,17 @@
           "p": 2082
         },
         "outputs": {
-          "c": 11186.000000008353,
+          "c": 11797.000000008908,
           "p": 0
         },
         "inventory": {
-          "c": 2266.0000000259406,
-          "p": 2082.0000000000005
+          "c": 1655.0000000269335,
+          "p": 2082
         }
       },
       "architecture": {
-        "excavatedCells": 306,
-        "maxDepthMM": 34
+        "excavatedCells": 305,
+        "maxDepthMM": 36
       }
     },
     {
@@ -3111,24 +3104,24 @@
       "queenAlive": true,
       "scenario": "established",
       "food": 0,
-      "brood": 47,
-      "corpses": 27,
+      "brood": 39,
+      "corpses": 35,
       "jobs": {
-        "forage": 2
+        "explore": 2
       },
       "metrics": {
         "births": 11,
         "laid": 64,
-        "fed": 403,
+        "fed": 280,
         "deaths": 21,
-        "broodDeaths": 6,
-        "dug": 306,
-        "gathered": 11420.999999999869,
-        "delivered": 1865.9965820311318,
-        "cleaned": 16,
-        "discovered": 84857,
-        "contacts": 1328,
-        "depositions": 277476,
+        "broodDeaths": 14,
+        "dug": 305,
+        "gathered": 11818.800543330291,
+        "delivered": 1925.6998065876828,
+        "cleaned": 26,
+        "discovered": 4733,
+        "contacts": 1206,
+        "depositions": 251358,
         "transported": 0
       },
       "ledger": {
@@ -3137,17 +3130,17 @@
           "p": 2082
         },
         "outputs": {
-          "c": 11216.000000008353,
+          "c": 11827.000000008908,
           "p": 0
         },
         "inventory": {
-          "c": 2236.000000026377,
-          "p": 2082.0000000000005
+          "c": 1625.00000002737,
+          "p": 2082
         }
       },
       "architecture": {
-        "excavatedCells": 306,
-        "maxDepthMM": 34
+        "excavatedCells": 305,
+        "maxDepthMM": 36
       }
     },
     {
@@ -3157,25 +3150,26 @@
       "workers": 2,
       "queenAlive": true,
       "scenario": "established",
-      "food": 57.088888888993544,
-      "brood": 47,
-      "corpses": 28,
+      "food": 0,
+      "brood": 38,
+      "corpses": 37,
       "jobs": {
-        "forage": 2
+        "explore": 1,
+        "return": 1
       },
       "metrics": {
         "births": 12,
         "laid": 65,
-        "fed": 505,
+        "fed": 280,
         "deaths": 22,
-        "broodDeaths": 6,
-        "dug": 306,
-        "gathered": 11725.99999999987,
-        "delivered": 1910.9965820311318,
-        "cleaned": 16,
-        "discovered": 86163,
-        "contacts": 1367,
-        "depositions": 283045,
+        "broodDeaths": 15,
+        "dug": 305,
+        "gathered": 11847.800543330291,
+        "delivered": 1927.6998065876828,
+        "cleaned": 28,
+        "discovered": 4736,
+        "contacts": 1208,
+        "depositions": 251433,
         "transported": 0
       },
       "ledger": {
@@ -3184,46 +3178,45 @@
           "p": 2082
         },
         "outputs": {
-          "c": 11278.659375008352,
+          "c": 11857.000000008908,
           "p": 0
         },
         "inventory": {
-          "c": 2173.340625026508,
-          "p": 2082.0000000000005
+          "c": 1595.0000000278067,
+          "p": 2082
         }
       },
       "architecture": {
-        "excavatedCells": 306,
-        "maxDepthMM": 34
+        "excavatedCells": 305,
+        "maxDepthMM": 36
       }
     },
     {
       "seed": 42,
       "time": 5875200,
       "days": 68,
-      "workers": 3,
+      "workers": 2,
       "queenAlive": true,
       "scenario": "established",
-      "food": 3.3483333333655594,
-      "brood": 47,
-      "corpses": 28,
+      "food": 0,
+      "brood": 37,
+      "corpses": 39,
       "jobs": {
-        "forage": 1,
-        "return": 2
+        "explore": 2
       },
       "metrics": {
         "births": 13,
         "laid": 66,
-        "fed": 515,
-        "deaths": 22,
-        "broodDeaths": 6,
-        "dug": 306,
-        "gathered": 11767.499999999929,
-        "delivered": 1914.49658203119,
-        "cleaned": 16,
-        "discovered": 88359,
-        "contacts": 1369,
-        "depositions": 283436,
+        "fed": 280,
+        "deaths": 23,
+        "broodDeaths": 16,
+        "dug": 305,
+        "gathered": 11876.800543330291,
+        "delivered": 1929.6998065876828,
+        "cleaned": 30,
+        "discovered": 4739,
+        "contacts": 1210,
+        "depositions": 251494,
         "transported": 0
       },
       "ledger": {
@@ -3232,46 +3225,45 @@
           "p": 2082
         },
         "outputs": {
-          "c": 11341.651666675045,
+          "c": 11887.000000008908,
           "p": 0
         },
         "inventory": {
-          "c": 2110.34833336012,
-          "p": 2082.0000000000005
+          "c": 1565.0000000282432,
+          "p": 2082
         }
       },
       "architecture": {
-        "excavatedCells": 306,
-        "maxDepthMM": 34
+        "excavatedCells": 305,
+        "maxDepthMM": 36
       }
     },
     {
       "seed": 42,
       "time": 5961600,
       "days": 69,
-      "workers": 4,
+      "workers": 2,
       "queenAlive": true,
       "scenario": "established",
       "food": 0,
-      "brood": 47,
-      "corpses": 28,
+      "brood": 36,
+      "corpses": 41,
       "jobs": {
-        "forage": 2,
-        "return": 2
+        "explore": 2
       },
       "metrics": {
         "births": 14,
         "laid": 67,
-        "fed": 529,
-        "deaths": 22,
-        "broodDeaths": 6,
-        "dug": 306,
-        "gathered": 11807.499999999929,
-        "delivered": 1914.49658203119,
-        "cleaned": 16,
-        "discovered": 90913,
-        "contacts": 1369,
-        "depositions": 283698,
+        "fed": 280,
+        "deaths": 24,
+        "broodDeaths": 17,
+        "dug": 305,
+        "gathered": 11906.101060750972,
+        "delivered": 1931.6998065876828,
+        "cleaned": 31,
+        "discovered": 4743,
+        "contacts": 1212,
+        "depositions": 251749,
         "transported": 0
       },
       "ledger": {
@@ -3280,46 +3272,46 @@
           "p": 2082
         },
         "outputs": {
-          "c": 11371.742916675044,
+          "c": 11917.000000008908,
           "p": 0
         },
         "inventory": {
-          "c": 2080.257083360556,
-          "p": 2082.0000000000005
+          "c": 1535.0000000286798,
+          "p": 2082
         }
       },
       "architecture": {
-        "excavatedCells": 306,
-        "maxDepthMM": 34
+        "excavatedCells": 305,
+        "maxDepthMM": 36
       }
     },
     {
       "seed": 42,
       "time": 6048000,
       "days": 70,
-      "workers": 4,
+      "workers": 2,
       "queenAlive": true,
       "scenario": "established",
-      "food": 101.78701388877116,
-      "brood": 47,
-      "corpses": 29,
+      "food": 0,
+      "brood": 35,
+      "corpses": 43,
       "jobs": {
-        "return": 2,
-        "forage": 2
+        "share": 1,
+        "explore": 1
       },
       "metrics": {
         "births": 15,
         "laid": 68,
-        "fed": 554,
-        "deaths": 23,
-        "broodDeaths": 6,
-        "dug": 306,
-        "gathered": 12041.781249999984,
-        "delivered": 2045.7778320312445,
-        "cleaned": 17,
-        "discovered": 92304,
-        "contacts": 1388,
-        "depositions": 286871,
+        "fed": 290,
+        "deaths": 25,
+        "broodDeaths": 18,
+        "dug": 305,
+        "gathered": 11945.101060750972,
+        "delivered": 1933.6998065876828,
+        "cleaned": 33,
+        "discovered": 4747,
+        "contacts": 1214,
+        "depositions": 251909,
         "transported": 0
       },
       "ledger": {
@@ -3328,17 +3320,17 @@
           "p": 2082
         },
         "outputs": {
-          "c": 11442.195625008393,
+          "c": 11947.000000008908,
           "p": 0
         },
         "inventory": {
-          "c": 2009.804375027087,
-          "p": 2082.0000000000005
+          "c": 1505.0000000291163,
+          "p": 2082
         }
       },
       "architecture": {
-        "excavatedCells": 306,
-        "maxDepthMM": 34
+        "excavatedCells": 305,
+        "maxDepthMM": 36
       }
     }
   ]

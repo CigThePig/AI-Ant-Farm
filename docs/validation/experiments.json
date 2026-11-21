@@ -19,7 +19,7 @@
         {
           "seed": 1,
           "gathered": 965,
-          "visits": 15,
+          "visits": 16,
           "firstHourBirths": 0
         },
         {
@@ -43,7 +43,7 @@
         {
           "seed": 2026,
           "gathered": 1002.0000000000001,
-          "visits": 18,
+          "visits": 19,
           "firstHourBirths": 0
         }
       ],
@@ -178,13 +178,13 @@
           "seed": 1,
           "mode": "intact",
           "gatheredAfter": 26,
-          "memoryWorkers": 11
+          "memoryWorkers": 12
         },
         {
           "seed": 1,
           "mode": "erased",
           "gatheredAfter": 26,
-          "memoryWorkers": 11
+          "memoryWorkers": 12
         },
         {
           "seed": 1,
@@ -274,13 +274,13 @@
           "seed": 2026,
           "mode": "intact",
           "gatheredAfter": 0,
-          "memoryWorkers": 11
+          "memoryWorkers": 12
         },
         {
           "seed": 2026,
           "mode": "erased",
           "gatheredAfter": 0,
-          "memoryWorkers": 11
+          "memoryWorkers": 12
         },
         {
           "seed": 2026,
@@ -750,39 +750,39 @@
           "seed": 1,
           "survivorsBefore": 12,
           "survivorsAfter": 12,
-          "gathered": 1909.9975000014624
+          "gathered": 1754.4615384618116
         },
         {
           "seed": 7,
           "survivorsBefore": 12,
           "survivorsAfter": 12,
-          "gathered": 1909.9975000014624
+          "gathered": 1754.4615384618116
         },
         {
           "seed": 42,
           "survivorsBefore": 12,
           "survivorsAfter": 12,
-          "gathered": 1909.9975000014624
+          "gathered": 1754.4615384618116
         },
         {
           "seed": 1337,
           "survivorsBefore": 12,
           "survivorsAfter": 12,
-          "gathered": 1909.9975000014624
+          "gathered": 1754.4615384618116
         },
         {
           "seed": 2026,
           "survivorsBefore": 12,
           "survivorsAfter": 12,
-          "gathered": 1909.9975000014624
+          "gathered": 1754.4615384618116
         }
       ],
       "summary": {
         "n": 5,
-        "mean": 1909.9975000014624,
-        "sd": 0,
-        "min": 1909.9975000014624,
-        "max": 1909.9975000014624
+        "mean": 1754.4615384618114,
+        "sd": 2.5421149729252077e-13,
+        "min": 1754.4615384618116,
+        "max": 1754.4615384618116
       },
       "expected": "Only physically accessible added food is consumed; dead workers never revive.",
       "empiricalFit": "not evaluated; no fabricated observational sample",

@@ -2,7 +2,7 @@
 
 Baseline `65db5f5` was fetched from main before edits. All source, test, browser, soak, check, server, HTML, styles, package and workflow files were inspected. Historical branches were not treated as current biology.
 
-[Function inventory](baseline-functions.json) records baseline source locations and named callable declarations. [Per-function audit](audit.csv) maps each inventoried function to purpose, species, evidence, deficiency, disposition, replacement and validation. Anonymous event handlers are covered at the UI-system level; lexical snippets are not independent biological mechanisms.
+[Function inventory](baseline-functions.json) records all 184 parsed functions, including methods and anonymous callbacks, with their baseline source locations. [Per-function audit](audit.csv) maps each inventoried function to purpose, species, evidence, deficiency, disposition, replacement and validation. Anonymous event handlers have their own inventory rows and are classified at the UI-system level. The inventory is generated with Acorn by `npm run audit:baseline`; it excludes control statements and requires the historical baseline commit in the local Git object database.
 
 ## System dispositions
 
