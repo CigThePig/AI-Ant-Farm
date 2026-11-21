@@ -1,0 +1,118 @@
+{
+  "cellMM": {
+    "value": 2,
+    "status": "unfitted model assumption"
+  },
+  "stepSeconds": {
+    "value": 1,
+    "status": "unfitted model assumption"
+  },
+  "walkMMPerSecond": {
+    "value": 1,
+    "status": "unfitted model assumption"
+  },
+  "cropC": {
+    "value": 120,
+    "status": "unfitted model assumption"
+  },
+  "cropP": {
+    "value": 30,
+    "status": "unfitted model assumption"
+  },
+  "uptakePerSecond": {
+    "value": 2,
+    "status": "unfitted model assumption"
+  },
+  "transferPerSecond": {
+    "value": 1,
+    "status": "unfitted model assumption"
+  },
+  "contactSeconds": {
+    "value": 6,
+    "status": "unfitted model assumption"
+  },
+  "metabolismCPerDay": {
+    "value": 18,
+    "status": "unfitted model assumption"
+  },
+  "queenMetabolismCPerDay": {
+    "value": 30,
+    "status": "unfitted model assumption"
+  },
+  "eggDays": {
+    "value": 17,
+    "status": "unfitted model assumption"
+  },
+  "larvaDays": {
+    "value": 14,
+    "status": "unfitted model assumption"
+  },
+  "pupaDays": {
+    "value": 21,
+    "status": "unfitted model assumption"
+  },
+  "eggC": {
+    "value": 2,
+    "status": "unfitted model assumption"
+  },
+  "eggP": {
+    "value": 2,
+    "status": "unfitted model assumption"
+  },
+  "larvalTargetC": {
+    "value": 12,
+    "status": "unfitted model assumption"
+  },
+  "larvalTargetP": {
+    "value": 12,
+    "status": "unfitted model assumption"
+  },
+  "eggIntervalDays": {
+    "value": 1,
+    "status": "unfitted model assumption"
+  },
+  "foundingDelayDays": {
+    "value": 3,
+    "status": "unfitted model assumption"
+  },
+  "workerLifeDays": {
+    "value": 365,
+    "status": "unfitted model assumption"
+  },
+  "trailHalfLifeSeconds": {
+    "value": 1954.6750491790458,
+    "status": "laboratory estimate converted from exponential mean lifetime E11"
+  },
+  "trailDeposit": {
+    "value": 0.5,
+    "status": "unfitted model assumption"
+  },
+  "trailGain": {
+    "value": 4,
+    "status": "unfitted model assumption"
+  },
+  "memorySynergy": {
+    "value": 1.25,
+    "status": "effect encoded from E1; not independently validated"
+  },
+  "temperatureC": {
+    "value": 23,
+    "status": "unfitted model assumption"
+  },
+  "soilMoisture": {
+    "value": 0.6,
+    "status": "unfitted model assumption"
+  },
+  "soilHardness": {
+    "value": 1,
+    "status": "unfitted model assumption"
+  },
+  "diggingSeconds": {
+    "value": 600,
+    "status": "unfitted model assumption"
+  },
+  "corpseCueSeconds": {
+    "value": 7200,
+    "status": "unfitted model assumption"
+  }
+}

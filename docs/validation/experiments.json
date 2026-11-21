@@ -1,0 +1,1058 @@
+{
+  "modelVersion": 3,
+  "seeds": [
+    1,
+    7,
+    42,
+    1337,
+    2026
+  ],
+  "units": {
+    "time": "biological seconds",
+    "food": "µg substrate equivalent"
+  },
+  "results": [
+    {
+      "id": "A",
+      "name": "Undiscovered food",
+      "runs": [
+        {
+          "seed": 1,
+          "gathered": 965,
+          "visits": 16,
+          "firstHourBirths": 0
+        },
+        {
+          "seed": 7,
+          "gathered": 940,
+          "visits": 17,
+          "firstHourBirths": 0
+        },
+        {
+          "seed": 42,
+          "gathered": 1004,
+          "visits": 24,
+          "firstHourBirths": 0
+        },
+        {
+          "seed": 1337,
+          "gathered": 899.5,
+          "visits": 14,
+          "firstHourBirths": 0
+        },
+        {
+          "seed": 2026,
+          "gathered": 1002.0000000000001,
+          "visits": 19,
+          "firstHourBirths": 0
+        }
+      ],
+      "summary": {
+        "n": 5,
+        "mean": 962.1,
+        "sd": 44.0545116872268,
+        "min": 899.5,
+        "max": 1004
+      },
+      "expected": "Positive discovery; quality response and memory/trail effects must be measured, not assumed.",
+      "empiricalFit": "not evaluated; no fabricated observational sample",
+      "assessment": "observed: local exploration collects food; one-hour brood emergence correctly absent"
+    },
+    {
+      "id": "B",
+      "name": "Quality and crowding",
+      "runs": [
+        {
+          "seed": 1,
+          "quality": 1,
+          "left": 785.2666666666364,
+          "right": 709.333333333343,
+          "depositions": 506,
+          "contacts": 189
+        },
+        {
+          "seed": 1,
+          "quality": 1.43,
+          "left": 833.4198412697006,
+          "right": 675.833333333354,
+          "depositions": 590,
+          "contacts": 137
+        },
+        {
+          "seed": 7,
+          "quality": 1,
+          "left": 798.7666666666282,
+          "right": 624.800000000042,
+          "depositions": 576,
+          "contacts": 171
+        },
+        {
+          "seed": 7,
+          "quality": 1.43,
+          "left": 798.3666666666877,
+          "right": 758.4666666667244,
+          "depositions": 658,
+          "contacts": 203
+        },
+        {
+          "seed": 42,
+          "quality": 1,
+          "left": 720.3666666666995,
+          "right": 759.5333333333401,
+          "depositions": 536,
+          "contacts": 190
+        },
+        {
+          "seed": 42,
+          "quality": 1.43,
+          "left": 841.8666666666631,
+          "right": 777.733333333299,
+          "depositions": 611,
+          "contacts": 113
+        },
+        {
+          "seed": 1337,
+          "quality": 1,
+          "left": 756.1277777779587,
+          "right": 759.1000000000286,
+          "depositions": 565,
+          "contacts": 205
+        },
+        {
+          "seed": 1337,
+          "quality": 1.43,
+          "left": 874.3460317462086,
+          "right": 659.8523809524258,
+          "depositions": 531,
+          "contacts": 246
+        },
+        {
+          "seed": 2026,
+          "quality": 1,
+          "left": 909.9999999999336,
+          "right": 587.333333333373,
+          "depositions": 602,
+          "contacts": 199
+        },
+        {
+          "seed": 2026,
+          "quality": 1.43,
+          "left": 788.1999999998707,
+          "right": 640.0000000000227,
+          "depositions": 514,
+          "contacts": 136
+        }
+      ],
+      "summary": {
+        "n": 10,
+        "mean": 695.1985714285953,
+        "sd": 67.0812946427936,
+        "min": 587.333333333373,
+        "max": 777.733333333299
+      },
+      "expected": "Positive discovery; quality response and memory/trail effects must be measured, not assumed.",
+      "empiricalFit": "not evaluated; no fabricated observational sample",
+      "assessment": "unvalidated: quality changes marking by construction; consistent colony-level preference not established",
+      "conditionSummaries": {
+        "1": {
+          "n": 5,
+          "mean": 688.0200000000253,
+          "sd": 78.66917227646863,
+          "min": 587.333333333373,
+          "max": 759.5333333333401
+        },
+        "1.43": {
+          "n": 5,
+          "mean": 702.3771428571652,
+          "sd": 61.70175701382007,
+          "min": 640.0000000000227,
+          "max": 777.733333333299
+        }
+      }
+    },
+    {
+      "id": "C",
+      "name": "Trail and memory ablation",
+      "runs": [
+        {
+          "seed": 1,
+          "mode": "intact",
+          "gatheredAfter": 26,
+          "memoryWorkers": 12
+        },
+        {
+          "seed": 1,
+          "mode": "erased",
+          "gatheredAfter": 26,
+          "memoryWorkers": 12
+        },
+        {
+          "seed": 1,
+          "mode": "no-memory",
+          "gatheredAfter": 26,
+          "memoryWorkers": 0
+        },
+        {
+          "seed": 1,
+          "mode": "neither",
+          "gatheredAfter": 26,
+          "memoryWorkers": 0
+        },
+        {
+          "seed": 7,
+          "mode": "intact",
+          "gatheredAfter": 0,
+          "memoryWorkers": 11
+        },
+        {
+          "seed": 7,
+          "mode": "erased",
+          "gatheredAfter": 0,
+          "memoryWorkers": 11
+        },
+        {
+          "seed": 7,
+          "mode": "no-memory",
+          "gatheredAfter": 0,
+          "memoryWorkers": 0
+        },
+        {
+          "seed": 7,
+          "mode": "neither",
+          "gatheredAfter": 0,
+          "memoryWorkers": 0
+        },
+        {
+          "seed": 42,
+          "mode": "intact",
+          "gatheredAfter": 0,
+          "memoryWorkers": 11
+        },
+        {
+          "seed": 42,
+          "mode": "erased",
+          "gatheredAfter": 0,
+          "memoryWorkers": 11
+        },
+        {
+          "seed": 42,
+          "mode": "no-memory",
+          "gatheredAfter": 0,
+          "memoryWorkers": 0
+        },
+        {
+          "seed": 42,
+          "mode": "neither",
+          "gatheredAfter": 0,
+          "memoryWorkers": 0
+        },
+        {
+          "seed": 1337,
+          "mode": "intact",
+          "gatheredAfter": 0,
+          "memoryWorkers": 11
+        },
+        {
+          "seed": 1337,
+          "mode": "erased",
+          "gatheredAfter": 0,
+          "memoryWorkers": 11
+        },
+        {
+          "seed": 1337,
+          "mode": "no-memory",
+          "gatheredAfter": 0,
+          "memoryWorkers": 0
+        },
+        {
+          "seed": 1337,
+          "mode": "neither",
+          "gatheredAfter": 0,
+          "memoryWorkers": 0
+        },
+        {
+          "seed": 2026,
+          "mode": "intact",
+          "gatheredAfter": 0,
+          "memoryWorkers": 12
+        },
+        {
+          "seed": 2026,
+          "mode": "erased",
+          "gatheredAfter": 0,
+          "memoryWorkers": 12
+        },
+        {
+          "seed": 2026,
+          "mode": "no-memory",
+          "gatheredAfter": 8.708333333333258,
+          "memoryWorkers": 0
+        },
+        {
+          "seed": 2026,
+          "mode": "neither",
+          "gatheredAfter": 5,
+          "memoryWorkers": 0
+        }
+      ],
+      "summary": {
+        "n": 20,
+        "mean": 5.8854166666666625,
+        "sd": 10.54332535837594,
+        "min": 0,
+        "max": 26
+      },
+      "expected": "Positive discovery; quality response and memory/trail effects must be measured, not assumed.",
+      "empiricalFit": "not evaluated; no fabricated observational sample",
+      "assessment": "inconclusive: satiation limits post-disruption harvest and obscures ablation effects",
+      "conditionSummaries": {
+        "intact": {
+          "n": 5,
+          "mean": 5.2,
+          "sd": 11.627553482998907,
+          "min": 0,
+          "max": 26
+        },
+        "erased": {
+          "n": 5,
+          "mean": 5.2,
+          "sd": 11.627553482998907,
+          "min": 0,
+          "max": 26
+        },
+        "no-memory": {
+          "n": 5,
+          "mean": 6.941666666666651,
+          "sd": 11.301563928157119,
+          "min": 0,
+          "max": 26
+        },
+        "neither": {
+          "n": 5,
+          "mean": 6.2,
+          "sd": 11.278297743897348,
+          "min": 0,
+          "max": 26
+        }
+      }
+    },
+    {
+      "id": "D",
+      "name": "Local brood demand",
+      "runs": [
+        {
+          "seed": 1,
+          "contactNursing": 1,
+          "distantBroodSensed": 0
+        },
+        {
+          "seed": 7,
+          "contactNursing": 1,
+          "distantBroodSensed": 0
+        },
+        {
+          "seed": 42,
+          "contactNursing": 1,
+          "distantBroodSensed": 0
+        },
+        {
+          "seed": 1337,
+          "contactNursing": 1,
+          "distantBroodSensed": 0
+        },
+        {
+          "seed": 2026,
+          "contactNursing": 1,
+          "distantBroodSensed": 0
+        }
+      ],
+      "summary": {
+        "n": 5,
+        "mean": 1,
+        "sd": 0,
+        "min": 1,
+        "max": 1
+      },
+      "expected": "Nursing responds at contact, distant brood cannot be sensed.",
+      "empiricalFit": "not evaluated; no fabricated observational sample",
+      "assessment": "mechanism observed: nursing requires local brood contact; no empirical task-distribution fit"
+    },
+    {
+      "id": "E",
+      "name": "Spatial food distribution",
+      "runs": [
+        {
+          "seed": 1,
+          "exchanges": 25,
+          "ledgerErrorC": -2.000888343900442e-11,
+          "ledgerErrorP": 0,
+          "observedEdges": 72
+        },
+        {
+          "seed": 7,
+          "exchanges": 99,
+          "ledgerErrorC": -1.6370904631912708e-11,
+          "ledgerErrorP": 0,
+          "observedEdges": 274
+        },
+        {
+          "seed": 42,
+          "exchanges": 75,
+          "ledgerErrorC": -1.8189894035458565e-11,
+          "ledgerErrorP": 0,
+          "observedEdges": 240
+        },
+        {
+          "seed": 1337,
+          "exchanges": 43,
+          "ledgerErrorC": -1.8189894035458565e-11,
+          "ledgerErrorP": 0,
+          "observedEdges": 107
+        },
+        {
+          "seed": 2026,
+          "exchanges": 53,
+          "ledgerErrorC": -2.000888343900442e-11,
+          "ledgerErrorP": 0,
+          "observedEdges": 155
+        }
+      ],
+      "summary": {
+        "n": 5,
+        "mean": 1.8553691916167735e-11,
+        "sd": 1.5218757226358786e-12,
+        "min": 1.6370904631912708e-11,
+        "max": 2.000888343900442e-11
+      },
+      "expected": "Balanced ledgers and logged contact edges; network statistics not fitted.",
+      "empiricalFit": "not evaluated; no fabricated observational sample",
+      "assessment": "mechanism observed: physical exchange edges and conservative nutrient accounting"
+    },
+    {
+      "id": "F",
+      "name": "Brood thermal sensitivity",
+      "runs": [
+        {
+          "seed": 1,
+          "temperatureC": 10,
+          "eggProgressDays": 0,
+          "stage": "egg"
+        },
+        {
+          "seed": 7,
+          "temperatureC": 10,
+          "eggProgressDays": 0,
+          "stage": "egg"
+        },
+        {
+          "seed": 42,
+          "temperatureC": 10,
+          "eggProgressDays": 0,
+          "stage": "egg"
+        },
+        {
+          "seed": 1337,
+          "temperatureC": 10,
+          "eggProgressDays": 0,
+          "stage": "egg"
+        },
+        {
+          "seed": 2026,
+          "temperatureC": 10,
+          "eggProgressDays": 0,
+          "stage": "egg"
+        },
+        {
+          "seed": 1,
+          "temperatureC": 20,
+          "eggProgressDays": 8.045823698435118,
+          "stage": "egg"
+        },
+        {
+          "seed": 7,
+          "temperatureC": 20,
+          "eggProgressDays": 8.045823698435118,
+          "stage": "egg"
+        },
+        {
+          "seed": 42,
+          "temperatureC": 20,
+          "eggProgressDays": 8.045823698435118,
+          "stage": "egg"
+        },
+        {
+          "seed": 1337,
+          "temperatureC": 20,
+          "eggProgressDays": 8.045823698435118,
+          "stage": "egg"
+        },
+        {
+          "seed": 2026,
+          "temperatureC": 20,
+          "eggProgressDays": 8.045823698435118,
+          "stage": "egg"
+        },
+        {
+          "seed": 1,
+          "temperatureC": 23,
+          "eggProgressDays": 10,
+          "stage": "egg"
+        },
+        {
+          "seed": 7,
+          "temperatureC": 23,
+          "eggProgressDays": 10,
+          "stage": "egg"
+        },
+        {
+          "seed": 42,
+          "temperatureC": 23,
+          "eggProgressDays": 10,
+          "stage": "egg"
+        },
+        {
+          "seed": 1337,
+          "temperatureC": 23,
+          "eggProgressDays": 10,
+          "stage": "egg"
+        },
+        {
+          "seed": 2026,
+          "temperatureC": 23,
+          "eggProgressDays": 10,
+          "stage": "egg"
+        },
+        {
+          "seed": 1,
+          "temperatureC": 27,
+          "eggProgressDays": 12.605568402086506,
+          "stage": "egg"
+        },
+        {
+          "seed": 7,
+          "temperatureC": 27,
+          "eggProgressDays": 12.605568402086506,
+          "stage": "egg"
+        },
+        {
+          "seed": 42,
+          "temperatureC": 27,
+          "eggProgressDays": 12.605568402086506,
+          "stage": "egg"
+        },
+        {
+          "seed": 1337,
+          "temperatureC": 27,
+          "eggProgressDays": 12.605568402086506,
+          "stage": "egg"
+        },
+        {
+          "seed": 2026,
+          "temperatureC": 27,
+          "eggProgressDays": 12.605568402086506,
+          "stage": "egg"
+        }
+      ],
+      "summary": {
+        "n": 20,
+        "mean": 7.662848025130406,
+        "sd": 4.832964501078479,
+        "min": 0,
+        "max": 12.605568402086506
+      },
+      "expected": "Cold exposure stalls the provisional development model; nursing/transport tested separately.",
+      "empiricalFit": "not evaluated; no fabricated observational sample",
+      "assessment": "encoded sensitivity observed: provisional temperature response; empirical curve not fitted",
+      "conditionSummaries": {
+        "10": {
+          "n": 5,
+          "mean": 0,
+          "sd": 0,
+          "min": 0,
+          "max": 0
+        },
+        "20": {
+          "n": 5,
+          "mean": 8.045823698435118,
+          "sd": 0,
+          "min": 8.045823698435118,
+          "max": 8.045823698435118
+        },
+        "23": {
+          "n": 5,
+          "mean": 10,
+          "sd": 0,
+          "min": 10,
+          "max": 10
+        },
+        "27": {
+          "n": 5,
+          "mean": 12.605568402086506,
+          "sd": 0,
+          "min": 12.605568402086506,
+          "max": 12.605568402086506
+        }
+      }
+    },
+    {
+      "id": "G",
+      "name": "Local excavation sensitivity",
+      "runs": [
+        {
+          "seed": 1,
+          "soilHardness": 0.5,
+          "excavatedCells": 24,
+          "maxDepthMM": 14,
+          "soilError": 0
+        },
+        {
+          "seed": 1,
+          "soilHardness": 2,
+          "excavatedCells": 27,
+          "maxDepthMM": 14,
+          "soilError": 0
+        },
+        {
+          "seed": 7,
+          "soilHardness": 0.5,
+          "excavatedCells": 27,
+          "maxDepthMM": 16,
+          "soilError": 0
+        },
+        {
+          "seed": 7,
+          "soilHardness": 2,
+          "excavatedCells": 27,
+          "maxDepthMM": 18,
+          "soilError": 0
+        },
+        {
+          "seed": 42,
+          "soilHardness": 0.5,
+          "excavatedCells": 35,
+          "maxDepthMM": 16,
+          "soilError": 0
+        },
+        {
+          "seed": 42,
+          "soilHardness": 2,
+          "excavatedCells": 40,
+          "maxDepthMM": 16,
+          "soilError": 0
+        },
+        {
+          "seed": 1337,
+          "soilHardness": 0.5,
+          "excavatedCells": 25,
+          "maxDepthMM": 14,
+          "soilError": 0
+        },
+        {
+          "seed": 1337,
+          "soilHardness": 2,
+          "excavatedCells": 30,
+          "maxDepthMM": 14,
+          "soilError": 0
+        },
+        {
+          "seed": 2026,
+          "soilHardness": 0.5,
+          "excavatedCells": 42,
+          "maxDepthMM": 16,
+          "soilError": 0
+        },
+        {
+          "seed": 2026,
+          "soilHardness": 2,
+          "excavatedCells": 39,
+          "maxDepthMM": 16,
+          "soilError": 0
+        }
+      ],
+      "summary": {
+        "n": 10,
+        "mean": 31.6,
+        "sd": 6.769211344183473,
+        "min": 24,
+        "max": 42
+      },
+      "expected": "Harder soil should reduce removal. 2D morphology is not validated against 3D nests.",
+      "empiricalFit": "not evaluated; no fabricated observational sample",
+      "assessment": "unvalidated: harder soil slows local work by construction, but colony-wide excavation is not reliably monotone",
+      "conditionSummaries": {
+        "2": {
+          "n": 5,
+          "mean": 32.6,
+          "sd": 6.4265076052238514,
+          "min": 27,
+          "max": 40
+        },
+        "0.5": {
+          "n": 5,
+          "mean": 30.6,
+          "sd": 7.700649323271382,
+          "min": 24,
+          "max": 42
+        }
+      }
+    },
+    {
+      "id": "H",
+      "name": "Forager removal",
+      "runs": [
+        {
+          "seed": 1,
+          "removed": 1,
+          "newGathered": 47,
+          "remaining": 11
+        },
+        {
+          "seed": 7,
+          "removed": 2,
+          "newGathered": 0,
+          "remaining": 10
+        },
+        {
+          "seed": 42,
+          "removed": 2,
+          "newGathered": 0,
+          "remaining": 10
+        },
+        {
+          "seed": 1337,
+          "removed": 0,
+          "newGathered": 42,
+          "remaining": 12
+        },
+        {
+          "seed": 2026,
+          "removed": 3,
+          "newGathered": 0,
+          "remaining": 9
+        }
+      ],
+      "summary": {
+        "n": 5,
+        "mean": 17.8,
+        "sd": 24.437675830569486,
+        "min": 0,
+        "max": 47
+      },
+      "expected": "Surviving workers can discover food without reassigned quotas; recovery magnitude is uncalibrated.",
+      "empiricalFit": "not evaluated; no fabricated observational sample",
+      "assessment": "unvalidated: removal and subsequent harvesting measured; no empirical recovery criterion"
+    },
+    {
+      "id": "I",
+      "name": "Starvation and refeeding",
+      "runs": [
+        {
+          "seed": 1,
+          "survivorsBefore": 12,
+          "survivorsAfter": 12,
+          "gathered": 1754.4615384618116
+        },
+        {
+          "seed": 7,
+          "survivorsBefore": 12,
+          "survivorsAfter": 12,
+          "gathered": 1754.4615384618116
+        },
+        {
+          "seed": 42,
+          "survivorsBefore": 12,
+          "survivorsAfter": 12,
+          "gathered": 1754.4615384618116
+        },
+        {
+          "seed": 1337,
+          "survivorsBefore": 12,
+          "survivorsAfter": 12,
+          "gathered": 1754.4615384618116
+        },
+        {
+          "seed": 2026,
+          "survivorsBefore": 12,
+          "survivorsAfter": 12,
+          "gathered": 1754.4615384618116
+        }
+      ],
+      "summary": {
+        "n": 5,
+        "mean": 1754.4615384618114,
+        "sd": 2.5421149729252077e-13,
+        "min": 1754.4615384618116,
+        "max": 1754.4615384618116
+      },
+      "expected": "Only physically accessible added food is consumed; dead workers never revive.",
+      "empiricalFit": "not evaluated; no fabricated observational sample",
+      "assessment": "mechanism observed: accessible provisioning supports surviving agents; no resurrection"
+    },
+    {
+      "id": "J",
+      "name": "Extended lifecycle subsystem",
+      "runs": [
+        {
+          "seed": 1,
+          "days": 70,
+          "births": 16,
+          "workers": 2,
+          "queenAlive": false,
+          "ledger": {
+            "inputs": {
+              "c": 1872,
+              "p": 474
+            },
+            "outputs": {
+              "c": 1470,
+              "p": 0
+            },
+            "inventory": {
+              "c": 402,
+              "p": 474
+            }
+          },
+          "scope": "physiology-only founding; no worker foraging or contacts after emergence"
+        },
+        {
+          "seed": 7,
+          "days": 70,
+          "births": 16,
+          "workers": 2,
+          "queenAlive": false,
+          "ledger": {
+            "inputs": {
+              "c": 1872,
+              "p": 474
+            },
+            "outputs": {
+              "c": 1470,
+              "p": 0
+            },
+            "inventory": {
+              "c": 402,
+              "p": 474
+            }
+          },
+          "scope": "physiology-only founding; no worker foraging or contacts after emergence"
+        },
+        {
+          "seed": 42,
+          "days": 70,
+          "births": 16,
+          "workers": 2,
+          "queenAlive": false,
+          "ledger": {
+            "inputs": {
+              "c": 1872,
+              "p": 474
+            },
+            "outputs": {
+              "c": 1470,
+              "p": 0
+            },
+            "inventory": {
+              "c": 402,
+              "p": 474
+            }
+          },
+          "scope": "physiology-only founding; no worker foraging or contacts after emergence"
+        },
+        {
+          "seed": 1337,
+          "days": 70,
+          "births": 16,
+          "workers": 2,
+          "queenAlive": false,
+          "ledger": {
+            "inputs": {
+              "c": 1872,
+              "p": 474
+            },
+            "outputs": {
+              "c": 1470,
+              "p": 0
+            },
+            "inventory": {
+              "c": 402,
+              "p": 474
+            }
+          },
+          "scope": "physiology-only founding; no worker foraging or contacts after emergence"
+        },
+        {
+          "seed": 2026,
+          "days": 70,
+          "births": 16,
+          "workers": 2,
+          "queenAlive": false,
+          "ledger": {
+            "inputs": {
+              "c": 1872,
+              "p": 474
+            },
+            "outputs": {
+              "c": 1470,
+              "p": 0
+            },
+            "inventory": {
+              "c": 402,
+              "p": 474
+            }
+          },
+          "scope": "physiology-only founding; no worker foraging or contacts after emergence"
+        }
+      ],
+      "summary": {
+        "n": 5,
+        "mean": 16,
+        "sd": 0,
+        "min": 16,
+        "max": 16
+      },
+      "expected": "Weeks-long reserve-funded development and conservative biomass inheritance; full spatial lifecycle remains unvalidated.",
+      "empiricalFit": "not evaluated; no fabricated observational sample",
+      "assessment": "subsystem only: reserve-funded development over weeks; spatial worker feeding absent"
+    },
+    {
+      "id": "C-controlled",
+      "name": "Naive branch choice and experienced route latency",
+      "runs": [
+        {
+          "seed": 1,
+          "marked": false,
+          "naiveMarkedBranchChoices": 513,
+          "trials": 1000,
+          "experiencedSeconds": 40,
+          "reached": true
+        },
+        {
+          "seed": 1,
+          "marked": true,
+          "naiveMarkedBranchChoices": 727,
+          "trials": 1000,
+          "experiencedSeconds": 33,
+          "reached": true
+        },
+        {
+          "seed": 7,
+          "marked": false,
+          "naiveMarkedBranchChoices": 480,
+          "trials": 1000,
+          "experiencedSeconds": 40,
+          "reached": true
+        },
+        {
+          "seed": 7,
+          "marked": true,
+          "naiveMarkedBranchChoices": 681,
+          "trials": 1000,
+          "experiencedSeconds": 33,
+          "reached": true
+        },
+        {
+          "seed": 42,
+          "marked": false,
+          "naiveMarkedBranchChoices": 513,
+          "trials": 1000,
+          "experiencedSeconds": 40,
+          "reached": true
+        },
+        {
+          "seed": 42,
+          "marked": true,
+          "naiveMarkedBranchChoices": 714,
+          "trials": 1000,
+          "experiencedSeconds": 33,
+          "reached": true
+        },
+        {
+          "seed": 1337,
+          "marked": false,
+          "naiveMarkedBranchChoices": 483,
+          "trials": 1000,
+          "experiencedSeconds": 40,
+          "reached": true
+        },
+        {
+          "seed": 1337,
+          "marked": true,
+          "naiveMarkedBranchChoices": 702,
+          "trials": 1000,
+          "experiencedSeconds": 33,
+          "reached": true
+        },
+        {
+          "seed": 2026,
+          "marked": false,
+          "naiveMarkedBranchChoices": 497,
+          "trials": 1000,
+          "experiencedSeconds": 40,
+          "reached": true
+        },
+        {
+          "seed": 2026,
+          "marked": true,
+          "naiveMarkedBranchChoices": 694,
+          "trials": 1000,
+          "experiencedSeconds": 33,
+          "reached": true
+        }
+      ],
+      "summary": {
+        "n": 10,
+        "mean": 36.5,
+        "sd": 3.689323936863109,
+        "min": 33,
+        "max": 40
+      },
+      "expected": "Surface cues bias naive branch choice; experienced ants retain personal routes when cues are erased. Faster travel with both inputs is model-encoded, not independently validated.",
+      "empiricalFit": "not evaluated; no fabricated observational sample",
+      "assessment": "mechanism observed: naive local trail bias and retained personal routes; speed synergy is encoded, not independently predicted",
+      "conditionSummaries": {
+        "false": {
+          "n": 5,
+          "mean": 40,
+          "sd": 0,
+          "min": 40,
+          "max": 40
+        },
+        "true": {
+          "n": 5,
+          "mean": 33,
+          "sd": 0,
+          "min": 33,
+          "max": 33
+        }
+      }
+    }
+  ],
+  "pairedIntactMinusAblation": {
+    "erased": {
+      "n": 5,
+      "mean": 0,
+      "sd": 0,
+      "min": 0,
+      "max": 0
+    },
+    "no-memory": {
+      "n": 5,
+      "mean": -1.7416666666666516,
+      "sd": 3.8944850608121,
+      "min": -8.708333333333258,
+      "max": 0
+    },
+    "neither": {
+      "n": 5,
+      "mean": -1,
+      "sd": 2.23606797749979,
+      "min": -5,
+      "max": 0
+    }
+  },
+  "status": "Exploratory mechanism tests. Descriptive means and sample SD across seeds, no fitted empirical validation.",
+  "limitations": [
+    "Ablation is not an exact replication of a published assay.",
+    "J omits spatial interactions and uses an hour physiology step; it is not a 70-day whole-colony validation."
+  ]
+}

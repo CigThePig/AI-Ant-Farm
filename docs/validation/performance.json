@@ -1,0 +1,34 @@
+{
+  "runtime": "v24.22.3",
+  "platform": "linux",
+  "status": "Short execution-host profile, without rendering. Synthetic larger initial cohorts are performance tests, not validated mature colonies.",
+  "results": [
+    {
+      "workers": 12,
+      "biologicalSeconds": 900,
+      "wallMs": 59.79480600000001,
+      "p50StepMs": 0.03598300000000165,
+      "p95StepMs": 0.18372100000000557,
+      "p99StepMs": 0.40383700000001,
+      "checks": []
+    },
+    {
+      "workers": 100,
+      "biologicalSeconds": 900,
+      "wallMs": 227.264144,
+      "p50StepMs": 0.18900899999999865,
+      "p95StepMs": 0.5249169999999879,
+      "p99StepMs": 1.4910560000000146,
+      "checks": []
+    },
+    {
+      "workers": 500,
+      "biologicalSeconds": 900,
+      "wallMs": 1022.5642399999999,
+      "p50StepMs": 0.9496250000000828,
+      "p95StepMs": 1.6168409999999653,
+      "p99StepMs": 5.028799000000049,
+      "checks": []
+    }
+  ]
+}

@@ -15,12 +15,15 @@ jobs:
           node-version: '22'
       - run: npm run check
       - run: npm test
-      - run: mkdir -p test-artifacts && npm run soak -- --seconds=3600 > test-artifacts/hour-soak.jsonl
+      - run: mkdir -p test-artifacts && npm run soak -- --seconds=86400 > test-artifacts/day-soak.jsonl
+      - run: npm run experiment
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: colony-simulation-results
-          path: test-artifacts/
+          path: |
+            test-artifacts/
+            docs/validation/
   browser:
     runs-on: ubuntu-latest
     timeout-minutes: 10

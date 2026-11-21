@@ -1,6 +1,6 @@
 {
   "name": "ai-ant-farm",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,12 +8,19 @@
     "test": "node --test tests/*.test.js",
     "soak": "node tools/soak.mjs",
     "check": "node tools/check.mjs",
-    "test:browser": "node tools/browser-smoke.mjs"
+    "test:browser": "node tools/browser-smoke.mjs",
+    "experiment": "node tools/experiments.mjs",
+    "lifecycle": "node tools/lifecycle.mjs",
+    "audit:baseline": "node tools/audit-baseline.mjs",
+    "format": "prettier --single-quote --print-width 100 --write src tools tests index.html style.css",
+    "benchmark": "node tools/benchmark.mjs"
   },
   "engines": {
     "node": ">=22"
   },
   "devDependencies": {
-    "playwright": "1.62.1"
+    "acorn": "8.15.0",
+    "playwright": "1.62.1",
+    "prettier": "3.6.2"
   }
 }
