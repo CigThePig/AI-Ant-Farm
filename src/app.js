@@ -1,6 +1,7 @@
 import { Simulation } from './simulation.js';
 import { FixedClock } from './clock.js';
 import { Renderer } from './renderer.js';
+import { OPEN } from './navigation.js';
 const $ = (id) => document.getElementById(id);
 const renderer = new Renderer($('world'));
 let sim,
@@ -45,6 +46,7 @@ function setSettings(open) {
 function updateUI() {
   const s = sim.snapshot(),
     w = sim.world;
+  $('provision').disabled = w.grid[w.entrance] !== OPEN;
   $('workers').textContent = s.workers;
   $('brood').textContent = s.brood;
   $('food').textContent = Math.floor(s.food);
@@ -97,6 +99,15 @@ $('trails').addEventListener('change', () =>
 $('memory').addEventListener('change', () =>
   sim.setParameter('memoryEnabled', $('memory').checked),
 );
+$('provision').addEventListener('click', () => {
+  const c = Number($('feeder-c').value),
+    p = Number($('feeder-p').value);
+  if (![c, p].every((value) => Number.isFinite(value) && value >= 0 && value <= 100000)) return;
+  if (sim.world.grid[sim.world.entrance] !== OPEN) return;
+  sim.addFood(sim.world.entrance, c, p);
+  sim.note(`Experimental feeder provisioned: C ${c}, P ${p} µg equivalent.`);
+  updateUI();
+});
 $('erase').addEventListener('click', () => sim.eraseTrails());
 $('temperature').addEventListener('change', () =>
   sim.setParameter('temperatureC', Number($('temperature').value)),

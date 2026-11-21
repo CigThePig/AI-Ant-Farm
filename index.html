@@ -101,6 +101,23 @@
         <a href="docs/biology/research.md" target="_blank">Evidence and methods</a> ·
         <a href="docs/biology/limitations.md" target="_blank">Limitations</a>
       </details>
+      <details>
+        <summary>Experimental feeder</summary>
+        <p>Provision a finite food source at the entrance. Workers must discover and collect it.</p>
+        <label class="field"
+          >Carbohydrate µg equivalent
+          <input id="feeder-c" type="number" min="0" max="100000" value="1000"
+        /></label>
+        <label class="field"
+          >Processed protein µg equivalent
+          <input id="feeder-p" type="number" min="0" max="100000" value="200"
+        /></label>
+        <button id="provision">Provision entrance feeder</button>
+        <p class="hint">
+          Available after the founding seal opens. Imports are recorded in the nutrient ledger and
+          exported intervention history.
+        </p>
+      </details>
       <div class="legend">
         <span><i style="--c: #e4b65e"></i>Forage</span><span><i style="--c: #ce8862"></i>Dig</span
         ><span><i style="--c: #bdace6"></i>Nurse</span

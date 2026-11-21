@@ -84,6 +84,13 @@ try {
       await page.evaluate(() => window.antFarm.simulation.world.trail.reduce((a, b) => a + b, 0)),
       0,
     );
+    await page.getByText('Experimental feeder', { exact: true }).click();
+    const imports = await page.evaluate(() => window.antFarm.snapshot().ledger.inputs);
+    await page.getByRole('button', { name: 'Provision entrance feeder', exact: true }).click();
+    const afterProvision = await page.evaluate(() => window.antFarm.snapshot().ledger.inputs);
+    assert.equal(afterProvision.c - imports.c, 1000);
+    assert.equal(afterProvision.p - imports.p, 200);
+    assert.deepEqual(await page.evaluate(() => window.antFarm.inspect()), []);
     await page.getByLabel('View layer').selectOption('tasks');
     await page.getByText('Colony diagnostics', { exact: true }).click();
     const downloadPromise = page.waitForEvent('download');

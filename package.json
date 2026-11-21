@@ -12,7 +12,8 @@
     "experiment": "node tools/experiments.mjs",
     "lifecycle": "node tools/lifecycle.mjs",
     "audit:baseline": "node tools/audit-baseline.mjs",
-    "format": "prettier --single-quote --print-width 100 --write src tools tests index.html style.css"
+    "format": "prettier --single-quote --print-width 100 --write src tools tests index.html style.css",
+    "benchmark": "node tools/benchmark.mjs"
   },
   "engines": {
     "node": ">=22"

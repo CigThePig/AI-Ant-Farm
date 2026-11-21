@@ -47,6 +47,10 @@ The scenario starts with finite food, so it is not a continuously provisioned co
 
 Run `npm run lifecycle -- --days=70 --seed=42` to repeat the complete spatial protocol. [Full daily measurements](spatial-70-days.json) and [A–J measurements](experiments.json) retain the actual outputs.
 
+## Performance profile
+
+[Execution-host measurements](performance.json) report p50/p95/p99 step times for 12, 100 and 500 synthetic workers over 900 biological seconds. The simulation maintains a spatial worker index; brood/corpse scans and full-grid decay remain scaling costs. These timings exclude rendering and do not validate large-colony biology or Galaxy S25 frame rates. Run `npm run benchmark` to reproduce locally.
+
 ## Scientific status
 
 Empirical validation remains **incomplete**. There is no held-out fit of feeding-network distributions, task responses, colony growth, 3D architecture or field foraging. The available evidence supports the selected kinds of mechanisms; it does not validate every numerical approximation. See [limitations](../biology/limitations.md).

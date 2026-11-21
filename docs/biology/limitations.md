@@ -14,7 +14,7 @@ This version replaces omniscience, centralized job quotas, generic energy sharin
 
 ## What is approximate or missing
 
-1. Navigation uses a birthplace home anchor and exact loop-erased odometry. It does not reproduce visual landmarks, antennal trajectories, noisy path integration, learning curves or all switching behaviour. Memory can be unrealistically precise.
+1. Navigation uses a birthplace home anchor and exact loop-erased odometry. Rendered body geometry is illustrative; soft congestion is not a resolved body-collision model. It does not reproduce visual landmarks, antennal trajectories, noisy path integration, learning curves or all switching behaviour. Memory can be unrealistically precise.
 2. Crop C/P are substrate-equivalent accounting variables. Solid prey capture/processing, digestion, excretion, differential assimilation, worker lipid storage and complete nutritional regulation are absent. Protein is an already processed soluble resource. Water is ad libitum.
 3. Age, movement, nursing probability, rest, crowding, mortality, 420–780 s exploration-return bouts and task tendencies are not fitted to L. niger distributions. Local rules can cause persistent or inefficient specializations. Adaptive division of labour is not empirically validated.
 4. Fecundity is constrained by individual reserves/crop and a provisional maturation interval. It does not model egg batches, ovarian physiology, sperm, unfertilized eggs, male/queen production or mature-colony demography. Seal opening at first emergence is an explicit scenario transition.

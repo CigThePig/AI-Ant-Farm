@@ -13,12 +13,13 @@ npm run check
 npm test
 npm run soak -- --seconds=86400 --seeds=1,42,1337
 npm run experiment
+npm run benchmark
 npm run lifecycle -- --days=70 --seed=42
 npx playwright install --with-deps chromium
 npm run test:browser
 ```
 
-Open http://localhost:8080. Choose a young established colony or a single claustral queen. Pan/zoom on desktop or mobile; select ants for their crop state, age, local stimuli and memory. Controls include substrate trail view, trail erasure, memory/trail ablation, surface temperature and locomotion sensitivity. Playback changes elapsed biological time, not developmental biology. A first worker takes weeks, not minutes.
+Open http://localhost:8080. Choose a young established colony or a single claustral queen. Pan/zoom on desktop or mobile; select ants for their crop state, age, local stimuli and memory. Controls include substrate trail view, trail erasure, memory/trail ablation, surface temperature, locomotion sensitivity and explicit finite feeder provisioning. Playback changes elapsed biological time, not developmental biology. A first worker takes weeks, not minutes.
 
 Exports include parameters, seed, initial scenario, interventions, nutrient ledgers, bounded colony history and contact edges. [Experiment results](docs/validation/experiments.json) include A–J and a controlled navigation assay, with explicit scope limits. See [validation interpretation](docs/validation/results.md).
 
